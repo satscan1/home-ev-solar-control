@@ -12,7 +12,7 @@
 
 Solar/Eco charging modes on many wallboxes only start when the house is exporting enough power. HPVC does the opposite: it curtails the inverters so that export stays near zero, for example at negative export prices. Both do their job, but together they block each other. The wallbox waits for surplus that never comes.
 
-HESC resolves this. When the EV is connected and waiting in Eco mode, HPVC is actively limiting, and the **solar power forecast** (optionally confirmed by a **local irradiance sensor**) says enough sun is coming, HESC briefly switches HPVC off so the charger can start. As soon as the EV charges, the sun drops, or the charger does not respond, HPVC takes over again.
+HESC resolves this. When the EV is connected and waiting in solar/Eco mode, HPVC is actively limiting, and the **solar power forecast** (optionally confirmed by a **local irradiance sensor**) says enough sun is coming, HESC briefly switches HPVC off so the charger can start. As soon as the EV charges, the sun drops, or the charger does not respond, HPVC takes over again.
 
 > [!IMPORTANT]
 > v0.3 is an early preview. It ships in **shadow mode**: it evaluates and logs every decision but never switches HPVC. Only switch shadow mode off after you have reviewed the report for your own installation.
@@ -60,7 +60,7 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 | Hysteresis (start/hold thresholds), stability timer, cooldown, daily attempt limit | ✅ |
 | Shadow mode: full evaluation without writes | ✅ |
 | Single write path: only the HPVC enable switch, with an ownership flag | ✅ |
-| Forecast vs actual per Eco charging session and per day | ✅ |
+| Forecast vs actual per solar/Eco charging session and per day | ✅ |
 | Source reliability: forecast and irradiance vs actual PV every 15 minutes | ✅ |
 | On-demand HTML support report | ✅ |
 | Separate Home Assistant dashboard in the HPVC layout: status badges, master-control toggles, live inputs, control-state timeline and a forecast vs actual graph | ✅ |
@@ -100,7 +100,7 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 
 Every 30 seconds HESC reads a bounded set of entities from the Node-RED Home Assistant state cache (no API reads, no copy of the full state table) and runs a small state machine:
 
-1. **Idle.** It waits until the EV is connected, not charging and in Eco mode, HPVC is enabled and actively limiting, the cautious forecast (now and +30 min) is above the start threshold, the irradiance confirms (optional), and there is no cooldown or attempt limit. All of this must hold for the stability time.
+1. **Idle.** It waits until the EV is connected, not charging and in solar/Eco mode, HPVC is enabled and actively limiting, the cautious forecast (now and +30 min) is above the start threshold, the irradiance confirms (optional), and there is no cooldown or attempt limit. All of this must hold for the stability time.
 2. **Release: waiting for EV.** HPVC is switched off and the ownership flag is set. The charger gets the configured time to start.
 3. **Release: EV charging.** HPVC stays off while the EV charges and the solar conditions stay above the hold thresholds.
 4. **Restore.** HPVC is switched on again, the ownership flag is cleared, and the cooldown starts.
@@ -120,7 +120,7 @@ In **shadow mode** steps 2–4 are simulated and logged, but nothing is written.
 
 ### Forecast vs actual
 
-For every daytime Eco charging session and every release, HESC records the forecast energy (Solcast median), the actual PV energy, **actual as % of forecast**, the EV energy and, when available, the solar share reported by the charger.
+For every daytime solar/Eco charging session and every release, HESC records the forecast energy (Solcast median), the actual PV energy, **actual as % of forecast**, the EV energy and, when available, the solar share reported by the charger.
 
 ### How reliable are the sources?
 
