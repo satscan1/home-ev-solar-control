@@ -11,7 +11,7 @@ views:
   - type: grid
     cards:
     - type: heading
-      heading: Home EV Solar Control (v0.1)
+      heading: Home EV Solar Control (v0.2)
       heading_style: title
       icon: mdi:ev-station
     - type: entities

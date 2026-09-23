@@ -27,7 +27,7 @@ Start conditions:
 - **Status:** `hesc_state`, `hesc_reason`, `hesc_last_action` and `hesc_insight_1..3`, written only on change.
 - **HPVC:** `input_boolean.turn_off` / `turn_on` on the configured HPVC switch, never in shadow mode.
 - **Ownership:** `input_boolean.hesc_owns_hpvc_off`.
-- **History:** one JSON line per event or session in `hesc-data/history.jsonl`.
+- **History:** one JSON line per event, session or 15-minute interval in `hesc-data/history.jsonl` (about 50 lines per sunny day).
 
 ## History records
 
@@ -36,6 +36,7 @@ Start conditions:
 | `event` | release / restore decisions with a snapshot of the inputs |
 | `release` | a full release: duration, forecast Wh, PV Wh, actual/forecast %, EV Wh, EV solar kWh, EV started, reason |
 | `eco_charge` | every daytime charging session in Eco mode, with the same forecast vs actual fields |
+| `accuracy` | every 15 minutes in daylight: median and cautious forecast (W), actual PV (W), irradiance (W/m², if set) and the share of time HPVC was limiting |
 
 ## Report
 

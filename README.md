@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="releases/v0.1.0/release.md"><img src="https://img.shields.io/badge/release-v0.1.0-blue" alt="Release v0.1.0"></a>
+  <a href="releases/v0.2.0/release.md"><img src="https://img.shields.io/badge/release-v0.2.0-blue" alt="Release v0.2.0"></a>
   <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-ready-41BDF5" alt="Home Assistant ready"></a>
   <a href="https://nodered.org/"><img src="https://img.shields.io/badge/Node--RED-flow-8F0000" alt="Node-RED flow"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later"></a>
@@ -15,7 +15,7 @@ Solar/Eco charging modes on many wallboxes only start when the house is exportin
 HESC resolves this. When the EV is connected and waiting in Eco mode, HPVC is actively limiting, and the **solar power forecast** (optionally confirmed by a **local irradiance sensor**) says enough sun is coming, HESC briefly switches HPVC off so the charger can start. As soon as the EV charges, the sun drops, or the charger does not respond, HPVC takes over again.
 
 > [!IMPORTANT]
-> v0.1 is an early preview. It ships in **shadow mode**: it evaluates and logs every decision but never switches HPVC. Only switch shadow mode off after you have reviewed the report for your own installation.
+> v0.2 is an early preview. It ships in **shadow mode**: it evaluates and logs every decision but never switches HPVC. Only switch shadow mode off after you have reviewed the report for your own installation.
 
 ## Contents
 
@@ -26,6 +26,7 @@ HESC resolves this. When the EV is connected and waiting in Eco mode, HPVC is ac
 - [How HESC works](#how-hesc-works)
 - [Safety and recovery](#safety-and-recovery)
 - [Accuracy, insights and reports](#accuracy-insights-and-reports)
+- [Tested with](#tested-with)
 - [Architecture and persistence](#architecture-and-persistence)
 - [Documentation](#documentation)
 - [Screenshots](#screenshots)
@@ -53,11 +54,13 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 |---|:-:|
 | Unblocks wallbox Eco/solar charging while HPVC curtails PV | ✅ |
 | Solar **power** forecast as primary source (Solcast `estimate10`, or any W sensor) | ✅ |
-| Local irradiance sensor as optional confirmation | ✅ |
+| Works with any charger that exposes connected, power and solar-mode entities | ✅ |
+| Local weather station (irradiance) fully optional | ✅ |
 | Hysteresis (start/hold thresholds), stability timer, cooldown, daily attempt limit | ✅ |
 | Shadow mode: full evaluation without writes | ✅ |
 | Single write path: only the HPVC enable switch, with an ownership flag | ✅ |
 | Forecast vs actual per Eco charging session and per day | ✅ |
+| Source reliability: forecast and irradiance vs actual PV every 15 minutes | ✅ |
 | On-demand HTML support report | ✅ |
 | Separate Home Assistant dashboard | ✅ |
 | No InfluxDB required (file-based history) | ✅ |
@@ -67,9 +70,9 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 - Home Assistant with package support
 - Node-RED with `node-red-contrib-home-assistant-websocket` (same version as HPVC recommends)
 - [Home PV Control](https://github.com/BioPC/home-pv-control) installed and working (HESC uses `input_boolean.hpvc_enabled` and `binary_sensor.hpvc_pv_limited`)
-- A wallbox with a solar/Eco charging mode exposed in Home Assistant (mode entity + charging power sensor + connected sensor)
-- A solar power forecast in watts (e.g. [Solcast PV Forecast](https://github.com/BJReplay/ha-solcast-solar) `power_now` / `power_in_30_minutes`)
-- Optional: a local irradiance sensor (W/m²)
+- A charger with a solar/Eco charging mode exposed in Home Assistant (connected sensor, charging power sensor and a mode entity). See [Chargers and sources](docs/05-chargers-and-sources.md)
+- A solar power forecast in watts (e.g. [Solcast PV Forecast](https://github.com/BJReplay/ha-solcast-solar) `power_now` / `power_in_30_minutes`, or any other forecast sensor in W)
+- Optional: a local weather station with an irradiance sensor (W/m²). HESC works without one
 - Optional: Home Battery Control. HESC only reads; it never writes to HBC
 
 ## Shipped defaults
@@ -117,6 +120,10 @@ In **shadow mode** steps 2–4 are simulated and logged, but nothing is written.
 
 For every daytime Eco charging session and every release, HESC records the forecast energy (Solcast median), the actual PV energy, **actual as % of forecast**, the EV energy and, when available, the solar share reported by the charger.
 
+### How reliable are the sources?
+
+Every 15 minutes in daylight HESC stores the forecast, the actual PV power and, if configured, the irradiance, also when no EV is connected. The report shows how close the forecast was, how often the cautious forecast held, and how well the weather station explains the PV output. Intervals in which HPVC limited PV are left out. See [Chargers and sources](docs/05-chargers-and-sources.md#how-reliable-are-my-sources).
+
 ### Today
 
 The dashboard shows today's releases (ok/failed), Eco sessions, forecast accuracy and EV solar kWh.
@@ -126,11 +133,16 @@ The dashboard shows today's releases (ok/failed), Eco sessions, forecast accurac
 **Generate report** builds an HTML report at `/local/hesc/report.html` with:
 
 - the forecast vs actual summary and distribution;
+- source reliability (forecast and irradiance vs actual PV, per day);
 - a per-day table (newest first, trend first);
 - all sessions and decisions;
 - live inputs with warnings;
 - all settings;
 - the runtime state.
+
+## Tested with
+
+HESC was developed and tested with a **Wallbox Pulsar Plus** (official Wallbox integration, solar charging mode *Eco*), **Solcast PV Forecast**, an **Ecowitt** weather station, **HPVC** and **HBC**. Other chargers should work when they expose the entities listed in [Chargers and sources](docs/05-chargers-and-sources.md); please test them in shadow mode first.
 
 ## Architecture and persistence
 
@@ -155,8 +167,10 @@ The Node-RED flow has four tabs: **Inputs** (30-second trigger and startup safet
 - [Settings](docs/02-configuration.md)
 - [How it works](docs/03-how-it-works.md)
 - [Troubleshooting](docs/04-troubleshooting.md)
+- [Chargers and sources](docs/05-chargers-and-sources.md)
 - [Documentation index](docs/README.md)
 - [Changelog](CHANGELOG.md)
+- [v0.2.0 release notes](releases/v0.2.0/release.md)
 - [v0.1.0 release notes](releases/v0.1.0/release.md)
 
 ## Screenshots
@@ -188,7 +202,7 @@ home assistant/
   hesc_dashboard.yaml   # Separate Home Assistant dashboard
 
 node-red/
-  hesc_flow.json        # Importable Node-RED flow with four v0.1 tabs
+  hesc_flow.json        # Importable Node-RED flow with four v0.2 tabs
 
 examples/
   wallbox-pulsar-plus-solcast.reference.yaml
@@ -201,15 +215,20 @@ docs/
   02-configuration.md
   03-how-it-works.md
   04-troubleshooting.md
+  05-chargers-and-sources.md
   README.md
 
 releases/
   v0.1.0/
+  v0.2.0/
 ```
 
 ## Credits
 
-HESC follows the structure and conventions of [Home PV Control](https://github.com/BioPC/home-pv-control) and [Home Battery Control](https://github.com/gitcodebob/marstek-venus-rs485-node-red), and is designed to work alongside both.
+HESC is designed to work alongside [Home PV Control](https://github.com/BioPC/home-pv-control) and [Home Battery Control](https://github.com/gitcodebob/marstek-venus-rs485-node-red).
+
+- **Layout and conventions:** the dashboard, the support report, the Node-RED tab structure (Inputs, Engine, Outputs, Reports), the first-install defaults and this repository layout are modelled on **Home PV Control** by [BioPC](https://github.com/BioPC) and **Home Battery Control** by [gitcodebob](https://github.com/gitcodebob). Thanks to both authors for the example they set.
+- **Forecast:** [Solcast PV Forecast](https://github.com/BJReplay/ha-solcast-solar) by BJReplay.
 
 ## License
 
