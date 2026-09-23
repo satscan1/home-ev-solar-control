@@ -14,7 +14,7 @@ The Inputs tab triggers the Engine every 30 seconds. The Engine reads about 20 e
 
 Start conditions:
 
-- the EV is connected, not charging, and in Eco mode;
+- the EV is connected, not charging, and in solar/Eco mode;
 - HPVC is enabled and limiting;
 - the lower of forecast-now and forecast-+30 min is at least the start threshold;
 - irradiance is at least its start threshold (optional);
@@ -35,7 +35,7 @@ Start conditions:
 |---|---|
 | `event` | release / restore decisions with a snapshot of the inputs |
 | `release` | a full release: duration, forecast Wh, PV Wh, actual/forecast %, EV Wh, EV solar kWh, EV started, reason |
-| `eco_charge` | every daytime charging session in Eco mode, with the same forecast vs actual fields |
+| `eco_charge` | every daytime charging session in solar/Eco mode, with the same forecast vs actual fields |
 | `accuracy` | every 15 minutes in daylight: median and cautious forecast (W), actual PV (W), irradiance (W/m², if set) and the share of time HPVC was limiting |
 
 ## Report
