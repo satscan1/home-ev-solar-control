@@ -1,0 +1,281 @@
+# =============================================================================
+# Home EV Solar Control (HESC) — Home Assistant package
+# Versie: 23-09-2026 20:00 · v0.1 (lokaal, nog niet gepubliceerd)
+# Project tag: [WALLBOX] [PV]
+#
+# Companion for Home PV Control (HPVC) and Home Battery Control (HBC):
+# when the EV waits in solar/Eco charging mode and enough solar power is
+# forecast, HESC temporarily switches HPVC off so the charger can start,
+# and switches HPVC back on afterwards. Node-RED flow: hesc_flow.json.
+# Shadow mode (default ON) evaluates only and never switches HPVC.
+# =============================================================================
+
+input_boolean:
+  hesc_enabled:
+    name: "HESC enabled"
+    icon: mdi:ev-station
+  hesc_shadow_mode:
+    name: "HESC shadow mode (evaluate only)"
+    icon: mdi:ghost-outline
+  hesc_use_irradiance:
+    name: "HESC use irradiance as confirmation"
+    icon: mdi:white-balance-sunny
+  hesc_owns_hpvc_off:
+    name: "HESC switched HPVC off (ownership)"
+    icon: mdi:key-variant
+  hesc_defaults_applied:
+    name: "HESC defaults applied"
+    icon: mdi:check-decagram
+  hesc_report_ready:
+    name: "HESC report ready"
+    icon: mdi:file-document-check-outline
+
+input_text:
+  # --- source selection ---
+  hesc_forecast_now_sensor:
+    name: "HESC forecast power now (sensor)"
+    max: 255
+  hesc_forecast_30m_sensor:
+    name: "HESC forecast power +30 min (sensor)"
+    max: 255
+  hesc_forecast_attribute:
+    name: "HESC forecast attribute (empty = state)"
+    max: 64
+  hesc_irradiance_sensor:
+    name: "HESC irradiance sensor (optional)"
+    max: 255
+  hesc_pv_power_sensor:
+    name: "HESC PV power sensor"
+    max: 255
+  hesc_grid_power_sensor:
+    name: "HESC grid power sensor"
+    max: 255
+  hesc_ev_connected_sensor:
+    name: "HESC EV connected (binary sensor)"
+    max: 255
+  hesc_ev_power_sensor:
+    name: "HESC EV charging power sensor"
+    max: 255
+  hesc_ev_green_energy_sensor:
+    name: "HESC EV solar energy sensor (optional)"
+    max: 255
+  hesc_charger_mode_entity:
+    name: "HESC charger mode entity"
+    max: 255
+  hesc_charger_eco_value:
+    name: "HESC charger Eco mode value"
+    max: 64
+  hesc_hpvc_enabled_entity:
+    name: "HESC HPVC enable switch"
+    max: 255
+  hesc_hpvc_limited_entity:
+    name: "HESC HPVC limiting indicator"
+    max: 255
+  # --- status (written by Node-RED) ---
+  hesc_state:
+    name: "HESC state"
+    max: 255
+  hesc_reason:
+    name: "HESC reason"
+    max: 255
+  hesc_last_action:
+    name: "HESC last action"
+    max: 255
+  hesc_insight_1:
+    name: "HESC insight 1"
+    max: 255
+  hesc_insight_2:
+    name: "HESC insight 2"
+    max: 255
+  hesc_insight_3:
+    name: "HESC insight 3"
+    max: 255
+  hesc_report_generated:
+    name: "HESC report generated"
+    max: 64
+
+input_number:
+  hesc_p_start:
+    name: "HESC forecast power to start"
+    min: 500
+    max: 10000
+    step: 50
+    unit_of_measurement: "W"
+    icon: mdi:solar-power
+    mode: box
+  hesc_p_hold:
+    name: "HESC forecast power to hold"
+    min: 500
+    max: 10000
+    step: 50
+    unit_of_measurement: "W"
+    icon: mdi:solar-power-variant
+    mode: box
+  hesc_irr_start:
+    name: "HESC irradiance to start"
+    min: 0
+    max: 1200
+    step: 10
+    unit_of_measurement: "W/m²"
+    icon: mdi:white-balance-sunny
+    mode: box
+  hesc_irr_hold:
+    name: "HESC irradiance to hold"
+    min: 0
+    max: 1200
+    step: 10
+    unit_of_measurement: "W/m²"
+    icon: mdi:weather-partly-cloudy
+    mode: box
+  hesc_t_stable:
+    name: "HESC conditions stable before release"
+    min: 1
+    max: 30
+    step: 1
+    unit_of_measurement: "min"
+    icon: mdi:timer-sand
+    mode: box
+  hesc_t_start:
+    name: "HESC wait for charger to start"
+    min: 2
+    max: 30
+    step: 1
+    unit_of_measurement: "min"
+    icon: mdi:timer-outline
+    mode: box
+  hesc_t_dip:
+    name: "HESC allowed solar dip"
+    min: 1
+    max: 30
+    step: 1
+    unit_of_measurement: "min"
+    icon: mdi:weather-cloudy-clock
+    mode: box
+  hesc_t_stop:
+    name: "HESC charger stopped before restore"
+    min: 1
+    max: 30
+    step: 1
+    unit_of_measurement: "min"
+    icon: mdi:timer-stop-outline
+    mode: box
+  hesc_t_max:
+    name: "HESC maximum release duration"
+    min: 30
+    max: 600
+    step: 10
+    unit_of_measurement: "min"
+    icon: mdi:timer-alert-outline
+    mode: box
+  hesc_cooldown:
+    name: "HESC cooldown after release"
+    min: 0
+    max: 180
+    step: 5
+    unit_of_measurement: "min"
+    icon: mdi:timer-refresh-outline
+    mode: box
+  hesc_max_attempts:
+    name: "HESC failed releases per day (max)"
+    min: 1
+    max: 10
+    step: 1
+    icon: mdi:counter
+    mode: box
+  hesc_ev_active_w:
+    name: "HESC EV charging threshold"
+    min: 100
+    max: 3000
+    step: 50
+    unit_of_measurement: "W"
+    icon: mdi:flash
+    mode: box
+
+input_button:
+  hesc_generate_report:
+    name: "HESC Generate report"
+    icon: mdi:file-document-plus-outline
+
+automation:
+  # Same pattern as HPVC: sensible defaults only once, on first install.
+  - id: hesc_apply_defaults_on_first_install
+    alias: "HESC - Apply defaults on first install"
+    mode: single
+    triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: state
+        entity_id: input_boolean.hesc_defaults_applied
+        to: "off"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.hesc_defaults_applied
+        state: "off"
+    actions:
+      - delay: "00:00:10"
+      - action: input_boolean.turn_on
+        target:
+          entity_id:
+            - input_boolean.hesc_enabled
+            - input_boolean.hesc_shadow_mode
+      - action: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.hesc_owns_hpvc_off
+            - input_boolean.hesc_use_irradiance
+      - action: input_text.set_value
+        target: { entity_id: input_text.hesc_forecast_now_sensor }
+        data: { value: "sensor.solcast_pv_forecast_power_now" }
+      - action: input_text.set_value
+        target: { entity_id: input_text.hesc_forecast_30m_sensor }
+        data: { value: "sensor.solcast_pv_forecast_power_in_30_minutes" }
+      - action: input_text.set_value
+        target: { entity_id: input_text.hesc_forecast_attribute }
+        data: { value: "estimate10" }
+      - action: input_text.set_value
+        target: { entity_id: input_text.hesc_charger_eco_value }
+        data: { value: "eco_mode" }
+      - action: input_text.set_value
+        target: { entity_id: input_text.hesc_hpvc_enabled_entity }
+        data: { value: "input_boolean.hpvc_enabled" }
+      - action: input_text.set_value
+        target: { entity_id: input_text.hesc_hpvc_limited_entity }
+        data: { value: "binary_sensor.hpvc_pv_limited" }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_p_start }
+        data: { value: 2500 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_p_hold }
+        data: { value: 2000 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_irr_start }
+        data: { value: 400 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_irr_hold }
+        data: { value: 300 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_t_stable }
+        data: { value: 5 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_t_start }
+        data: { value: 10 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_t_dip }
+        data: { value: 5 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_t_stop }
+        data: { value: 5 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_t_max }
+        data: { value: 240 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_cooldown }
+        data: { value: 30 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_max_attempts }
+        data: { value: 3 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_ev_active_w }
+        data: { value: 400 }
+      - action: input_boolean.turn_on
+        target: { entity_id: input_boolean.hesc_defaults_applied }
