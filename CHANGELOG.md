@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.4.0 — 2026-09-23
+
+- **Advisor:** plain-language setting advice from the last N days (default 30), only after a minimum number of sessions (default 8). It follows the seasons and notes when the advice moves. Advice only; it never changes settings.
+- Advice on the dashboard (`input_text.hesc_advice`) and at the top of the report.
+- New settings: *Advice based on last* and *Minimum sessions before advice*.
+- Release records now store the charger's start delay.
+
 ## v0.3.0 — 2026-09-23
 
 - Generic chargers: EV connected may be a binary **or** a status sensor (configurable "no car" values); power sensors in W or kW; several solar-mode values (comma separated); optional extra solar switch (go-e, Wattpilot).

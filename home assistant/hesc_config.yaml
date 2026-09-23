@@ -1,6 +1,6 @@
 # =============================================================================
 # Home EV Solar Control (HESC) — Home Assistant package
-# Version: v0.3.0 (2026-09-23)
+# Version: v0.4.0 (2026-09-23)
 # Project tag: [WALLBOX] [PV]
 #
 # Companion for Home PV Control (HPVC) and Home Battery Control (HBC):
@@ -99,6 +99,12 @@ input_text:
   hesc_report_generated:
     name: "HESC report generated"
     max: 64
+  hesc_advice:
+    name: "HESC advice"
+    max: 255
+  hesc_advice_updated:
+    name: "HESC advice updated"
+    max: 64
 
 input_number:
   hesc_p_start:
@@ -185,6 +191,21 @@ input_number:
     name: "HESC failed releases per day (max)"
     min: 1
     max: 10
+    step: 1
+    icon: mdi:counter
+    mode: box
+  hesc_advice_window_days:
+    name: "HESC advice based on last"
+    min: 7
+    max: 90
+    step: 1
+    unit_of_measurement: "days"
+    icon: mdi:calendar-range
+    mode: box
+  hesc_advice_min_runs:
+    name: "HESC advice minimum sessions"
+    min: 3
+    max: 50
     step: 1
     icon: mdi:counter
     mode: box
@@ -368,5 +389,11 @@ automation:
       - action: input_number.set_value
         target: { entity_id: input_number.hesc_ev_active_w }
         data: { value: 400 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_advice_window_days }
+        data: { value: 30 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_advice_min_runs }
+        data: { value: 8 }
       - action: input_boolean.turn_on
         target: { entity_id: input_boolean.hesc_defaults_applied }
