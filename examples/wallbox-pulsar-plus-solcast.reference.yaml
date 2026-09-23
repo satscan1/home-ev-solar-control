@@ -1,0 +1,16 @@
+# Reference source selection: Wallbox Pulsar Plus (official Wallbox integration),
+# Solcast PV Forecast (BJReplay) and an Ecowitt weather station.
+# Enter these values in the HESC Settings tab (input_text helpers).
+hesc_forecast_now_sensor: sensor.solcast_pv_forecast_power_now
+hesc_forecast_30m_sensor: sensor.solcast_pv_forecast_power_in_30_minutes
+hesc_forecast_attribute: estimate10
+hesc_irradiance_sensor: sensor.<weather_station>_solar_radiation
+hesc_pv_power_sensor: sensor.<total_pv_power_w>
+hesc_grid_power_sensor: sensor.<p1_meter_power>  # negative = export
+hesc_ev_connected_sensor: binary_sensor.<ev_connected>
+hesc_ev_power_sensor: sensor.<wallbox>_charging_power
+hesc_ev_green_energy_sensor: sensor.<wallbox>_added_green_energy
+hesc_charger_mode_entity: select.<wallbox>_solar_charging
+hesc_charger_eco_value: eco_mode
+hesc_hpvc_enabled_entity: input_boolean.hpvc_enabled
+hesc_hpvc_limited_entity: binary_sensor.hpvc_pv_limited

@@ -1,0 +1,137 @@
+# Home EV Solar Control (HESC) — dashboard
+# Add as a separate Home Assistant dashboard (YAML or paste into the raw configuration editor).
+title: Home EV Solar Control
+views:
+- type: sections
+  title: Main
+  path: home-ev-solar-control
+  icon: mdi:ev-station
+  max_columns: 3
+  sections:
+  - type: grid
+    cards:
+    - type: heading
+      heading: Home EV Solar Control (v0.1)
+      heading_style: title
+      icon: mdi:ev-station
+    - type: entities
+      title: Status
+      state_color: true
+      entities:
+      - entity: input_text.hesc_state
+        name: State
+        type: simple-entity
+      - entity: input_text.hesc_reason
+        name: Reason
+        type: simple-entity
+      - entity: input_text.hesc_last_action
+        name: Last action
+        type: simple-entity
+      - entity: input_boolean.hesc_owns_hpvc_off
+        name: HESC switched HPVC off
+    - type: entities
+      title: Today
+      state_color: true
+      entities:
+      - entity: input_text.hesc_insight_1
+        name: Releases
+        type: simple-entity
+      - entity: input_text.hesc_insight_2
+        name: Forecast vs actual
+        type: simple-entity
+      - entity: input_text.hesc_insight_3
+        name: Last snapshot
+        type: simple-entity
+  - type: grid
+    cards:
+    - type: heading
+      heading: Control
+      heading_style: subtitle
+      icon: mdi:tune
+    - type: entities
+      title: Switches
+      state_color: true
+      entities:
+      - entity: input_boolean.hesc_enabled
+        name: HESC enabled
+      - entity: input_boolean.hesc_shadow_mode
+        name: Shadow mode (evaluate only)
+      - entity: input_boolean.hesc_use_irradiance
+        name: Use irradiance as confirmation
+    - type: heading
+      heading: Report
+      heading_style: subtitle
+      icon: mdi:file-document-outline
+    - type: tile
+      entity: input_button.hesc_generate_report
+      name: Generate report
+      icon: mdi:file-document-plus-outline
+      color: blue
+      hide_state: true
+      tap_action:
+        action: toggle
+      icon_tap_action:
+        action: toggle
+    - type: tile
+      entity: input_boolean.hesc_report_ready
+      name: View report
+      icon: mdi:file-document-check-outline
+      color: green
+      hide_state: true
+      tap_action:
+        action: url
+        url_path: /local/hesc/report.html
+      icon_tap_action:
+        action: url
+        url_path: /local/hesc/report.html
+    - type: entities
+      entities:
+      - entity: input_text.hesc_report_generated
+        name: Last generated
+        type: simple-entity
+- type: sections
+  title: Settings
+  path: settings
+  icon: mdi:cog
+  max_columns: 3
+  sections:
+  - type: grid
+    cards:
+    - type: entities
+      title: Sources
+      entities:
+      - input_text.hesc_forecast_now_sensor
+      - input_text.hesc_forecast_30m_sensor
+      - input_text.hesc_forecast_attribute
+      - input_text.hesc_irradiance_sensor
+      - input_text.hesc_pv_power_sensor
+      - input_text.hesc_grid_power_sensor
+      - input_text.hesc_ev_connected_sensor
+      - input_text.hesc_ev_power_sensor
+      - input_text.hesc_ev_green_energy_sensor
+      - input_text.hesc_charger_mode_entity
+      - input_text.hesc_charger_eco_value
+      - input_text.hesc_hpvc_enabled_entity
+      - input_text.hesc_hpvc_limited_entity
+  - type: grid
+    cards:
+    - type: entities
+      title: Thresholds
+      entities:
+      - input_number.hesc_p_start
+      - input_number.hesc_p_hold
+      - input_number.hesc_irr_start
+      - input_number.hesc_irr_hold
+      - input_number.hesc_ev_active_w
+  - type: grid
+    cards:
+    - type: entities
+      title: Timing
+      entities:
+      - input_number.hesc_t_stable
+      - input_number.hesc_t_start
+      - input_number.hesc_t_dip
+      - input_number.hesc_t_stop
+      - input_number.hesc_t_max
+      - input_number.hesc_cooldown
+      - input_number.hesc_max_attempts

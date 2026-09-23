@@ -1,0 +1,738 @@
+[
+ {
+  "id": "97b779958855be4e",
+  "type": "tab",
+  "label": "HESC Inputs v0.1",
+  "disabled": false,
+  "info": "Home EV Solar Control — triggers. Evaluation every 30 s from the HA state cache (bounded set of entities, no API reads)."
+ },
+ {
+  "id": "930206db5491a35a",
+  "type": "tab",
+  "label": "HESC Engine v0.1",
+  "disabled": false,
+  "info": "Release state machine: IDLE → WAIT_START → CHARGING → restore. Shadow mode evaluates only."
+ },
+ {
+  "id": "d21a7a0e6b450f9a",
+  "type": "tab",
+  "label": "HESC Outputs v0.1",
+  "disabled": false,
+  "info": "Single write path: HPVC on/off + ownership flag (never in shadow mode), status helpers and JSONL history in /homeassistant/hesc-data/."
+ },
+ {
+  "id": "54b44e7ff62b4e0e",
+  "type": "comment",
+  "z": "97b779958855be4e",
+  "name": "HESC Inputs — evaluation trigger + startup safety",
+  "info": "",
+  "x": 240,
+  "y": 40,
+  "wires": []
+ },
+ {
+  "id": "7a9e5e33226ae757",
+  "type": "inject",
+  "z": "97b779958855be4e",
+  "name": "Every 30 seconds",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "30",
+  "crontab": "",
+  "once": true,
+  "onceDelay": "45",
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 170,
+  "y": 100,
+  "wires": [
+   [
+    "3739fb85b1197fb0"
+   ]
+  ]
+ },
+ {
+  "id": "3739fb85b1197fb0",
+  "type": "link out",
+  "z": "97b779958855be4e",
+  "name": "→ HESC Engine",
+  "mode": "link",
+  "links": [
+   "43d40050d1e973fb"
+  ],
+  "x": 385,
+  "y": 100,
+  "wires": []
+ },
+ {
+  "id": "13d802be57e96415",
+  "type": "inject",
+  "z": "97b779958855be4e",
+  "name": "On startup (after 30 s)",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "",
+  "crontab": "",
+  "once": true,
+  "onceDelay": "30",
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 180,
+  "y": 180,
+  "wires": [
+   [
+    "bb6f44eb8fbf23be"
+   ]
+  ]
+ },
+ {
+  "id": "bb6f44eb8fbf23be",
+  "type": "function",
+  "z": "97b779958855be4e",
+  "name": "Startup safety: restore HPVC if HESC owns it",
+  "func": "// HESC startup safety: if HESC still owns an \"HPVC off\" (e.g. after a Node-RED or HA restart),\n// switch HPVC back on and clear the ownership flag. HPVC must never stay off by accident.\nconst S = global.get('homeassistant.homeAssistant.states') || {};\nconst own = S['input_boolean.hesc_owns_hpvc_off'];\nif (!own) { node.status({ fill: 'yellow', shape: 'ring', text: 'HA cache not ready — retry' }); return [null, null, { payload: 'retry' }]; }\nflow.set('hesc', undefined);\nif (own.state !== 'on') { node.status({ fill: 'grey', shape: 'dot', text: 'Startup: nothing to restore' }); return [null, null, null]; }\nconst ent = (S['input_text.hesc_hpvc_enabled_entity'] && S['input_text.hesc_hpvc_enabled_entity'].state) || 'input_boolean.hpvc_enabled';\nnode.status({ fill: 'green', shape: 'dot', text: 'Startup: HPVC restored' });\nreturn [\n  { payload: { action: 'input_boolean.turn_on', target: { entity_id: [ent] }, data: {} } },\n  { payload: { action: 'input_boolean.turn_off', target: { entity_id: ['input_boolean.hesc_owns_hpvc_off'] }, data: {} } },\n  null\n];\n",
+  "outputs": 3,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 470,
+  "y": 180,
+  "wires": [
+   [
+    "d58ea024a5c6ee13"
+   ],
+   [
+    "9c6e11f750298ae7"
+   ],
+   [
+    "dca2c37507abdf8f"
+   ]
+  ]
+ },
+ {
+  "id": "dca2c37507abdf8f",
+  "type": "delay",
+  "z": "97b779958855be4e",
+  "name": "retry in 10 s",
+  "pauseType": "delay",
+  "timeout": "10",
+  "timeoutUnits": "seconds",
+  "rate": "1",
+  "nbRateUnits": "1",
+  "rateUnits": "second",
+  "randomFirst": "1",
+  "randomLast": "5",
+  "randomUnits": "seconds",
+  "drop": false,
+  "allowrate": false,
+  "outputs": 1,
+  "x": 470,
+  "y": 240,
+  "wires": [
+   [
+    "bb6f44eb8fbf23be"
+   ]
+  ]
+ },
+ {
+  "id": "d58ea024a5c6ee13",
+  "type": "link out",
+  "z": "97b779958855be4e",
+  "name": "→ Switch HPVC",
+  "mode": "link",
+  "links": [
+   "c7a95e363241c868"
+  ],
+  "x": 765,
+  "y": 160,
+  "wires": []
+ },
+ {
+  "id": "9c6e11f750298ae7",
+  "type": "link out",
+  "z": "97b779958855be4e",
+  "name": "→ Ownership flag",
+  "mode": "link",
+  "links": [
+   "2ecf5acb5e0b30f8"
+  ],
+  "x": 765,
+  "y": 200,
+  "wires": []
+ },
+ {
+  "id": "d5eb58605ba902be",
+  "type": "comment",
+  "z": "930206db5491a35a",
+  "name": "HESC Engine — see tab info",
+  "info": "",
+  "x": 180,
+  "y": 40,
+  "wires": []
+ },
+ {
+  "id": "43d40050d1e973fb",
+  "type": "link in",
+  "z": "930206db5491a35a",
+  "name": "← HESC Inputs",
+  "links": [
+   "3739fb85b1197fb0"
+  ],
+  "x": 95,
+  "y": 120,
+  "wires": [
+   [
+    "56e2ac8dcd77e7e6"
+   ]
+  ]
+ },
+ {
+  "id": "56e2ac8dcd77e7e6",
+  "type": "function",
+  "z": "930206db5491a35a",
+  "name": "Evaluate HESC",
+  "func": "// Home EV Solar Control (HESC) v0.1 — Engine\n// Reads a bounded set of entities from the Home Assistant state cache (no API calls,\n// no copy of the full state table), runs the release state machine and emits:\n//   out1: status/insight updates (HA action payloads)\n//   out2: HPVC on/off (HA action payload)       — never in shadow mode\n//   out3: ownership flag on/off (HA action payload)\n//   out4: history line (JSONL string)\nconst S = global.get('homeassistant.homeAssistant.states') || {};\nconst now = Date.now();\nconst BAD = ['unknown', 'unavailable', 'none', '', undefined, null];\nconst st = (id) => (id && S[id]) ? S[id].state : undefined;\nconst attr = (id, a) => (id && S[id] && S[id].attributes) ? S[id].attributes[a] : undefined;\nconst num = (v) => { const x = parseFloat(v); return isNaN(x) ? null : x; };\nconst txt = (id) => { const v = st(id); return BAD.includes(v) ? '' : String(v).trim(); };\nconst nset = (id, d) => { const v = num(st(id)); return v === null ? d : v; };\nconst on = (id) => st(id) === 'on';\n\n// ---- configuration (HA helpers) ----\nconst C = {\n  enabled: on('input_boolean.hesc_enabled'),\n  shadow: st('input_boolean.hesc_shadow_mode') !== 'off',\n  useIrr: on('input_boolean.hesc_use_irradiance'),\n  fcNow: txt('input_text.hesc_forecast_now_sensor'),\n  fc30: txt('input_text.hesc_forecast_30m_sensor'),\n  fcAttr: txt('input_text.hesc_forecast_attribute'),\n  irr: txt('input_text.hesc_irradiance_sensor'),\n  pv: txt('input_text.hesc_pv_power_sensor'),\n  grid: txt('input_text.hesc_grid_power_sensor'),\n  evConn: txt('input_text.hesc_ev_connected_sensor'),\n  evPow: txt('input_text.hesc_ev_power_sensor'),\n  evGreen: txt('input_text.hesc_ev_green_energy_sensor'),\n  mode: txt('input_text.hesc_charger_mode_entity'),\n  ecoVal: txt('input_text.hesc_charger_eco_value') || 'eco_mode',\n  hpvcEn: txt('input_text.hesc_hpvc_enabled_entity') || 'input_boolean.hpvc_enabled',\n  hpvcLim: txt('input_text.hesc_hpvc_limited_entity') || 'binary_sensor.hpvc_pv_limited',\n  pStart: nset('input_number.hesc_p_start', 2500),\n  pHold: nset('input_number.hesc_p_hold', 2000),\n  irrStart: nset('input_number.hesc_irr_start', 400),\n  irrHold: nset('input_number.hesc_irr_hold', 300),\n  tStable: nset('input_number.hesc_t_stable', 5) * 60000,\n  tStart: nset('input_number.hesc_t_start', 10) * 60000,\n  tDip: nset('input_number.hesc_t_dip', 5) * 60000,\n  tStop: nset('input_number.hesc_t_stop', 5) * 60000,\n  tMax: nset('input_number.hesc_t_max', 240) * 60000,\n  cooldown: nset('input_number.hesc_cooldown', 30) * 60000,\n  maxAttempts: nset('input_number.hesc_max_attempts', 3),\n  activeW: nset('input_number.hesc_ev_active_w', 400),\n};\n\n// ---- live values ----\nconst fcVal = (id) => { if (!id) return null; return C.fcAttr ? num(attr(id, C.fcAttr)) : num(st(id)); };\nconst L = {\n  fcNow: fcVal(C.fcNow),\n  fc30: fcVal(C.fc30),\n  fcMedian: num(st(C.fcNow)),\n  irr: C.irr ? num(st(C.irr)) : null,\n  pv: num(st(C.pv)),\n  grid: num(st(C.grid)),\n  evConn: on(C.evConn),\n  evPow: num(st(C.evPow)),\n  evGreen: C.evGreen ? num(st(C.evGreen)) : null,\n  mode: st(C.mode),\n  hpvcOn: on(C.hpvcEn),\n  hpvcLimited: on(C.hpvcLim),\n  sun: st('sun.sun') === 'above_horizon',\n  owns: on('input_boolean.hesc_owns_hpvc_off'),\n};\nconst missing = [];\nif (L.fcNow === null) missing.push('forecast now');\nif (L.fc30 === null) missing.push('forecast +30m');\nif (L.pv === null) missing.push('PV power');\nif (L.evPow === null) missing.push('EV power');\nif (!C.evConn || BAD.includes(st(C.evConn))) missing.push('EV connected');\nif (!C.mode || BAD.includes(L.mode)) missing.push('charger mode');\nif (BAD.includes(st(C.hpvcEn))) missing.push('HPVC enabled');\nconst irrUsed = C.useIrr && !!C.irr && L.irr !== null;\nconst valid = missing.length === 0;\n\n// ---- persistent runtime context ----\nconst today = new Date(now).toLocaleDateString('sv-SE', { timeZone: 'Europe/Amsterdam' });\nlet X = flow.get('hesc') || { state: 'IDLE', since: now, stableSince: null, dipSince: null, stopSince: null,\n  cooldownUntil: 0, lastTick: now, rel: null, eco: null, day: null, last: {} };\nif (!X.day || X.day.date !== today) X.day = { date: today, releases: 0, success: 0, failed: 0, ecoSessions: 0, fcWh: 0, pvWh: 0, evWh: 0, greenKwh: 0 };\nconst dtH = Math.min(Math.max((now - (X.lastTick || now)) / 3600000, 0), 0.05); // cap 3 min\nX.lastTick = now;\n\nconst evWaiting = L.evConn && L.mode === C.ecoVal && L.evPow !== null && L.evPow <= C.activeW;\nconst evCharging = L.evPow !== null && L.evPow > C.activeW;\nconst hpvcBlocks = L.hpvcOn && L.hpvcLimited;\nconst fcLow = (L.fcNow !== null && L.fc30 !== null) ? Math.min(L.fcNow, L.fc30) : null;\nconst fcStartOk = fcLow !== null && fcLow >= C.pStart;\nconst fcHoldOk = fcLow !== null && fcLow >= C.pHold;\nconst irrStartOk = !irrUsed || L.irr >= C.irrStart;\nconst irrHoldOk = !irrUsed || L.irr >= C.irrHold;\n\nconst msgs1 = [], msgs2 = [], msgs3 = [], msgs4 = [];\nconst act = (action, entity, data) => ({ payload: { action: action, target: { entity_id: [entity] }, data: data || {} } });\nconst hist = (o) => msgs4.push({ payload: JSON.stringify(Object.assign({ ts: new Date(now).toISOString(), shadow: C.shadow }, o)) });\nconst r0 = (v) => v === null || v === undefined ? null : Math.round(v);\n\nfunction snapshot() {\n  return { fc_now: r0(L.fcNow), fc_30m: r0(L.fc30), fc_median: r0(L.fcMedian), irr: r0(L.irr), pv: r0(L.pv), grid: r0(L.grid), ev: r0(L.evPow), mode: L.mode, hpvc_on: L.hpvcOn, hpvc_limited: L.hpvcLimited };\n}\nfunction integrate(sess) {\n  if (!sess) return;\n  if (L.fcMedian !== null) sess.fcWh += L.fcMedian * dtH;\n  if (L.pv !== null) sess.pvWh += L.pv * dtH;\n  if (L.evPow !== null) sess.evWh += L.evPow * dtH;\n}\nfunction closeSession(sess, type, reason) {\n  const green = (sess.greenStart !== null && L.evGreen !== null) ? Math.max(0, L.evGreen - sess.greenStart) : null;\n  const acc = sess.fcWh > 0 ? Math.round(100 * sess.pvWh / sess.fcWh) : null;\n  hist({ type: type, reason: reason, start: new Date(sess.start).toISOString(), minutes: Math.round((now - sess.start) / 60000),\n    forecast_wh: Math.round(sess.fcWh), pv_wh: Math.round(sess.pvWh), actual_vs_forecast_pct: acc, ev_wh: Math.round(sess.evWh),\n    ev_green_kwh: green === null ? null : Math.round(green * 100) / 100, ev_started: !!sess.evStarted, start_ctx: sess.ctx, end_ctx: snapshot() });\n  X.day.fcWh += sess.fcWh; X.day.pvWh += sess.pvWh; X.day.evWh += sess.evWh; if (green !== null) X.day.greenKwh += green;\n}\nfunction newSession() { return { start: now, fcWh: 0, pvWh: 0, evWh: 0, greenStart: L.evGreen, evStarted: false, ctx: snapshot() }; }\n\nlet reason = '';\nfunction restore(why) {\n  if (!C.shadow && L.owns) { msgs2.push(act('input_boolean.turn_on', C.hpvcEn)); msgs3.push(act('input_boolean.turn_off', 'input_boolean.hesc_owns_hpvc_off')); }\n  if (X.rel) { if (X.rel.evStarted) X.day.success++; else X.day.failed++; closeSession(X.rel, 'release', why); X.rel = null; }\n  X.cooldownUntil = now + C.cooldown;\n  X.state = 'IDLE'; X.since = now; X.stableSince = null; X.dipSince = null; X.stopSince = null;\n  reason = 'Restored HPVC: ' + why;\n}\n\n// ---- manual intervention / disable while owning ----\nif (!C.shadow && L.owns && (X.state === 'WAIT_START' || X.state === 'CHARGING') && L.hpvcOn && X.rel && now - X.rel.start > 90000) {\n  msgs3.push(act('input_boolean.turn_off', 'input_boolean.hesc_owns_hpvc_off'));\n  if (X.rel) { closeSession(X.rel, 'release', 'manual_hpvc_on'); X.rel = null; }\n  X.state = 'IDLE'; X.since = now; reason = 'HPVC switched on manually — release abandoned';\n}\nif (!C.enabled && X.state !== 'IDLE') restore('HESC disabled');\n\n// ---- state machine ----\nif (C.enabled && reason === '') {\n  if (X.state === 'IDLE') {\n    const attemptsLeft = (X.day.releases - X.day.success) < C.maxAttempts;\n    const ready = valid && L.sun && evWaiting && hpvcBlocks && fcStartOk && irrStartOk && now >= X.cooldownUntil && attemptsLeft;\n    if (ready) {\n      X.stableSince = X.stableSince || now;\n      if (now - X.stableSince >= C.tStable) {\n        X.state = 'WAIT_START'; X.since = now; X.stableSince = null; X.day.releases++;\n        X.rel = newSession();\n        if (!C.shadow) { msgs2.push(act('input_boolean.turn_off', C.hpvcEn)); msgs3.push(act('input_boolean.turn_on', 'input_boolean.hesc_owns_hpvc_off')); }\n        reason = 'Release: HPVC ' + (C.shadow ? 'would be' : 'is') + ' switched off so Eco can start';\n      } else reason = 'Conditions met, confirming (' + Math.round((now - X.stableSince) / 60000) + '/' + Math.round(C.tStable / 60000) + ' min)';\n    } else {\n      X.stableSince = null;\n      if (!valid) reason = 'Waiting for inputs: ' + missing.join(', ');\n      else if (!L.sun) reason = 'Night';\n      else if (!L.evConn) reason = 'No EV connected';\n      else if (L.mode !== C.ecoVal) reason = 'Charger not in Eco mode';\n      else if (evCharging) reason = 'EV is charging';\n      else if (!hpvcBlocks) reason = 'HPVC is not limiting PV — nothing to release';\n      else if (!fcStartOk) reason = 'Forecast too low (< ' + C.pStart + ' W)';\n      else if (!irrStartOk) reason = 'Irradiance too low (< ' + C.irrStart + ' W/m²)';\n      else if (now < X.cooldownUntil) reason = 'Cooldown until ' + new Date(X.cooldownUntil).toLocaleTimeString('nl-NL', { timeZone: 'Europe/Amsterdam', hour: '2-digit', minute: '2-digit' });\n      else reason = 'Maximum release attempts reached today';\n    }\n  } else if (X.state === 'WAIT_START') {\n    integrate(X.rel);\n    if (!valid) restore('inputs unavailable');\n    else if (!L.evConn || L.mode !== C.ecoVal) restore('EV disconnected or not in Eco');\n    else if (!L.sun) restore('sunset');\n    else if (evCharging) { X.state = 'CHARGING'; X.since = now; X.rel.evStarted = true; reason = 'EV started charging on solar'; }\n    else if (now - X.since >= C.tStart) restore('EV did not start within ' + Math.round(C.tStart / 60000) + ' min');\n    else reason = 'Waiting for Eco to start (' + Math.round((now - X.since) / 60000) + '/' + Math.round(C.tStart / 60000) + ' min)';\n  } else if (X.state === 'CHARGING') {\n    integrate(X.rel);\n    const holdOk = fcHoldOk && irrHoldOk;\n    X.dipSince = holdOk ? null : (X.dipSince || now);\n    X.stopSince = evCharging ? null : (X.stopSince || now);\n    if (!valid) restore('inputs unavailable');\n    else if (!L.evConn || L.mode !== C.ecoVal) restore('EV disconnected or not in Eco');\n    else if (!L.sun) restore('sunset');\n    else if (X.stopSince && now - X.stopSince >= C.tStop) restore('EV stopped charging');\n    else if (X.dipSince && now - X.dipSince >= C.tDip) restore('solar below hold threshold');\n    else if (now - X.rel.start >= C.tMax) restore('maximum release duration');\n    else reason = 'Release active — EV charging on solar';\n  }\n}\nif (!C.enabled && reason === '') reason = 'HESC disabled';\n\n// ---- independent Eco charge sessions (forecast vs actual while charging on Eco) ----\nconst ecoCharging = evCharging && L.mode === C.ecoVal && L.sun;\nif (ecoCharging && !X.eco) { X.eco = newSession(); X.day.ecoSessions++; }\nif (X.eco) integrate(X.eco);\nif (!ecoCharging && X.eco) { closeSession(X.eco, 'eco_charge', 'charging ended'); X.eco = null; }\n\n// ---- status publication (only on change) ----\nconst labels = { IDLE: 'Idle', WAIT_START: 'Release — waiting for EV', CHARGING: 'Release — EV charging' };\nconst stateTxt = (C.shadow ? '[shadow] ' : '') + (C.enabled ? labels[X.state] : 'Disabled');\nconst d = X.day; const acc = d.fcWh > 0 ? Math.round(100 * d.pvWh / d.fcWh) + '%' : '–';\nconst insight1 = ('Today: ' + d.releases + ' releases (' + d.success + ' ok, ' + d.failed + ' failed), ' + d.ecoSessions + ' Eco sessions').slice(0, 255);\nconst insight2 = ('Today: actual PV vs forecast during charging ' + acc + ', EV ' + (d.evWh / 1000).toFixed(1) + ' kWh (' + d.greenKwh.toFixed(1) + ' kWh solar)').slice(0, 255);\nconst insight3 = ('Now: forecast ' + (r0(fcLow) === null ? '–' : r0(fcLow) + ' W') + (C.irr ? ', irradiance ' + (r0(L.irr) === null ? '–' : r0(L.irr) + ' W/m²') : '') + ', PV ' + (r0(L.pv) === null ? '–' : r0(L.pv) + ' W') + ', HPVC ' + (hpvcBlocks ? 'limiting' : (L.hpvcOn ? 'on' : 'off'))).slice(0, 255);\nconst pub = { 'input_text.hesc_state': stateTxt, 'input_text.hesc_reason': reason.slice(0, 255), 'input_text.hesc_insight_1': insight1, 'input_text.hesc_insight_2': insight2 };\n// insight_3 (live values) is only published together with a state/reason change, to keep HA writes low\nif (X.last['input_text.hesc_reason'] !== reason.slice(0, 255)) pub['input_text.hesc_insight_3'] = insight3;\nfor (const [id, v] of Object.entries(pub)) {\n  if (X.last[id] !== v && S[id]) { X.last[id] = v; msgs1.push(act('input_text.set_value', id, { value: v })); }\n}\nif (reason && reason.startsWith('Re') && X.last.action !== reason) {\n  X.last.action = reason;\n  const la = (new Date(now).toLocaleTimeString('nl-NL', { timeZone: 'Europe/Amsterdam', hour: '2-digit', minute: '2-digit' }) + ' ' + reason).slice(0, 255);\n  if (S['input_text.hesc_last_action']) msgs1.push(act('input_text.set_value', 'input_text.hesc_last_action', { value: la }));\n  hist({ type: 'event', text: reason, ctx: snapshot() });\n}\nflow.set('hesc', X);\nglobal.set('hescRuntime', { state: X.state, since: X.since, cooldownUntil: X.cooldownUntil, day: X.day });\nnode.status({ fill: X.state === 'IDLE' ? 'grey' : (C.shadow ? 'yellow' : 'green'), shape: 'dot', text: stateTxt + ' · ' + reason.slice(0, 40) });\nreturn [msgs1, msgs2, msgs3, msgs4];",
+  "outputs": 4,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 260,
+  "y": 120,
+  "outputLabels": [
+   "status",
+   "HPVC",
+   "ownership",
+   "history"
+  ],
+  "wires": [
+   [
+    "a5e62354ba26540e"
+   ],
+   [
+    "50c437c1967ce6f9"
+   ],
+   [
+    "5472e1168acd14e3"
+   ],
+   [
+    "df91a0be11d1c63a"
+   ]
+  ]
+ },
+ {
+  "id": "a5e62354ba26540e",
+  "type": "link out",
+  "z": "930206db5491a35a",
+  "name": "→ Publish status",
+  "mode": "link",
+  "links": [
+   "32277e85b0b63bb8"
+  ],
+  "x": 475,
+  "y": 80,
+  "wires": []
+ },
+ {
+  "id": "50c437c1967ce6f9",
+  "type": "link out",
+  "z": "930206db5491a35a",
+  "name": "→ Switch HPVC",
+  "mode": "link",
+  "links": [
+   "c7a95e363241c868"
+  ],
+  "x": 475,
+  "y": 110,
+  "wires": []
+ },
+ {
+  "id": "5472e1168acd14e3",
+  "type": "link out",
+  "z": "930206db5491a35a",
+  "name": "→ Ownership flag",
+  "mode": "link",
+  "links": [
+   "2ecf5acb5e0b30f8"
+  ],
+  "x": 475,
+  "y": 140,
+  "wires": []
+ },
+ {
+  "id": "df91a0be11d1c63a",
+  "type": "link out",
+  "z": "930206db5491a35a",
+  "name": "→ History",
+  "mode": "link",
+  "links": [
+   "be735c858d058fa6"
+  ],
+  "x": 475,
+  "y": 170,
+  "wires": []
+ },
+ {
+  "id": "741055735743221a",
+  "type": "catch",
+  "z": "930206db5491a35a",
+  "name": "Engine errors",
+  "scope": [
+   "56e2ac8dcd77e7e6"
+  ],
+  "uncaught": false,
+  "x": 120,
+  "y": 220,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "4f273dfe62d8f60d",
+  "type": "comment",
+  "z": "d21a7a0e6b450f9a",
+  "name": "HESC Outputs — the only write path to HPVC",
+  "info": "",
+  "x": 230,
+  "y": 40,
+  "wires": []
+ },
+ {
+  "id": "32277e85b0b63bb8",
+  "type": "link in",
+  "z": "d21a7a0e6b450f9a",
+  "name": "← Publish status",
+  "links": [
+   "a5e62354ba26540e"
+  ],
+  "x": 115,
+  "y": 100,
+  "wires": [
+   [
+    "066befea56233f78"
+   ]
+  ]
+ },
+ {
+  "id": "c7a95e363241c868",
+  "type": "link in",
+  "z": "d21a7a0e6b450f9a",
+  "name": "← Switch HPVC",
+  "links": [
+   "50c437c1967ce6f9",
+   "d58ea024a5c6ee13"
+  ],
+  "x": 115,
+  "y": 180,
+  "wires": [
+   [
+    "04c919a0269987ea"
+   ]
+  ]
+ },
+ {
+  "id": "2ecf5acb5e0b30f8",
+  "type": "link in",
+  "z": "d21a7a0e6b450f9a",
+  "name": "← Ownership flag",
+  "links": [
+   "5472e1168acd14e3",
+   "9c6e11f750298ae7"
+  ],
+  "x": 115,
+  "y": 260,
+  "wires": [
+   [
+    "0f341ae786c0a48d"
+   ]
+  ]
+ },
+ {
+  "id": "066befea56233f78",
+  "type": "api-call-service",
+  "z": "d21a7a0e6b450f9a",
+  "name": "Publish status",
+  "server": "9cb97210.6be8b",
+  "version": 7,
+  "debugenabled": false,
+  "action": "{{$payload.action}}",
+  "floorId": [],
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "labelId": [],
+  "data": "payload.data",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "blockInputOverrides": false,
+  "domain": "",
+  "service": "",
+  "target": "payload.target",
+  "x": 400,
+  "y": 100,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "04c919a0269987ea",
+  "type": "api-call-service",
+  "z": "d21a7a0e6b450f9a",
+  "name": "Switch HPVC (never in shadow mode)",
+  "server": "9cb97210.6be8b",
+  "version": 7,
+  "debugenabled": false,
+  "action": "{{$payload.action}}",
+  "floorId": [],
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "labelId": [],
+  "data": "payload.data",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "blockInputOverrides": false,
+  "domain": "",
+  "service": "",
+  "target": "payload.target",
+  "x": 440,
+  "y": 180,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "0f341ae786c0a48d",
+  "type": "api-call-service",
+  "z": "d21a7a0e6b450f9a",
+  "name": "Ownership flag",
+  "server": "9cb97210.6be8b",
+  "version": 7,
+  "debugenabled": false,
+  "action": "{{$payload.action}}",
+  "floorId": [],
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "labelId": [],
+  "data": "payload.data",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "blockInputOverrides": false,
+  "domain": "",
+  "service": "",
+  "target": "payload.target",
+  "x": 400,
+  "y": 260,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "be735c858d058fa6",
+  "type": "link in",
+  "z": "d21a7a0e6b450f9a",
+  "name": "← History",
+  "links": [
+   "df91a0be11d1c63a"
+  ],
+  "x": 115,
+  "y": 340,
+  "wires": [
+   [
+    "9a5b097086d4fbd7"
+   ]
+  ]
+ },
+ {
+  "id": "9a5b097086d4fbd7",
+  "type": "file",
+  "z": "d21a7a0e6b450f9a",
+  "name": "Append HESC history (JSONL)",
+  "filename": "/homeassistant/hesc-data/history.jsonl",
+  "filenameType": "str",
+  "appendNewline": true,
+  "createDir": true,
+  "overwriteFile": "false",
+  "encoding": "utf8",
+  "x": 380,
+  "y": 340,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "5e3d61a18b6188ce",
+  "type": "tab",
+  "label": "HESC Reports v0.1",
+  "disabled": false,
+  "info": "On-demand HTML support report (settings, history, forecast vs actual). Written to /homeassistant/www/hesc/report.html → /local/hesc/report.html. Not part of the evaluation cycle."
+ },
+ {
+  "id": "2ac1bed046b6001b",
+  "type": "comment",
+  "z": "5e3d61a18b6188ce",
+  "name": "HESC Reports — on demand, outside the evaluation cycle",
+  "info": "",
+  "x": 260,
+  "y": 40,
+  "wires": []
+ },
+ {
+  "id": "4111e1607e65a9bf",
+  "type": "server-state-changed",
+  "z": "5e3d61a18b6188ce",
+  "name": "Generate report requested",
+  "server": "9cb97210.6be8b",
+  "version": 6,
+  "exposeAsEntityConfig": "",
+  "entities": {
+   "entity": [
+    "input_button.hesc_generate_report"
+   ],
+   "substring": [],
+   "regex": []
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "ifState": "",
+  "ifStateType": "str",
+  "ifStateOperator": "is",
+  "outputOnlyOnStateChange": true,
+  "for": "",
+  "forType": "num",
+  "forUnits": "minutes",
+  "ignorePrevStateNull": false,
+  "ignorePrevStateUnknown": false,
+  "ignorePrevStateUnavailable": true,
+  "ignoreCurrentStateUnknown": true,
+  "ignoreCurrentStateUnavailable": true,
+  "outputProperties": [],
+  "x": 170,
+  "y": 120,
+  "wires": [
+   [
+    "21779c2741e576da"
+   ]
+  ]
+ },
+ {
+  "id": "21779c2741e576da",
+  "type": "function",
+  "z": "5e3d61a18b6188ce",
+  "name": "Mark generating",
+  "func": "// Clear 'report ready' while a new report is built; pass the request on.\nconst busy = flow.get('hescReportBusy');\nif (busy && Date.now() - busy < 60000) { node.status({ fill: 'yellow', shape: 'ring', text: 'already generating' }); return [null, null]; }\nflow.set('hescReportBusy', Date.now());\nreturn [{ payload: { action: 'input_boolean.turn_off', target: { entity_id: ['input_boolean.hesc_report_ready'] }, data: {} } }, { payload: '' }];",
+  "outputs": 2,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 380,
+  "y": 120,
+  "wires": [
+   [
+    "ff215f49996ed242"
+   ],
+   [
+    "fa21a031181c37b0"
+   ]
+  ]
+ },
+ {
+  "id": "ff215f49996ed242",
+  "type": "api-call-service",
+  "z": "5e3d61a18b6188ce",
+  "name": "Report ready off",
+  "server": "9cb97210.6be8b",
+  "version": 7,
+  "debugenabled": false,
+  "action": "{{$payload.action}}",
+  "floorId": [],
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "labelId": [],
+  "data": "payload.data",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "blockInputOverrides": false,
+  "domain": "",
+  "service": "",
+  "target": "payload.target",
+  "x": 600,
+  "y": 80,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "fa21a031181c37b0",
+  "type": "file in",
+  "z": "5e3d61a18b6188ce",
+  "name": "Read HESC history",
+  "filename": "/homeassistant/hesc-data/history.jsonl",
+  "filenameType": "str",
+  "format": "utf8",
+  "chunk": false,
+  "sendError": false,
+  "encoding": "utf8",
+  "allProps": false,
+  "x": 600,
+  "y": 140,
+  "wires": [
+   [
+    "15b6a7ac79280b20"
+   ]
+  ]
+ },
+ {
+  "id": "aaa26a009198e3ed",
+  "type": "catch",
+  "z": "5e3d61a18b6188ce",
+  "name": "History missing",
+  "scope": [
+   "fa21a031181c37b0"
+  ],
+  "uncaught": false,
+  "x": 590,
+  "y": 200,
+  "wires": [
+   [
+    "2574ed862707a364"
+   ]
+  ]
+ },
+ {
+  "id": "2574ed862707a364",
+  "type": "function",
+  "z": "5e3d61a18b6188ce",
+  "name": "Empty history",
+  "func": "// No history file yet: build the report with an empty history.\nmsg.payload = '';\nreturn msg;",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 760,
+  "y": 200,
+  "wires": [
+   [
+    "15b6a7ac79280b20"
+   ]
+  ]
+ },
+ {
+  "id": "15b6a7ac79280b20",
+  "type": "function",
+  "z": "5e3d61a18b6188ce",
+  "name": "Build HESC report (HTML)",
+  "func": "// HESC — Build support report (HTML), on demand. Runs outside the evaluation cycle.\n// Input: msg.payload = contents of /homeassistant/hesc-data/history.jsonl ('' if missing)\nconst S = global.get('homeassistant.homeAssistant.states') || {};\nconst RT = global.get('hescRuntime') || null;\nconst VERSION = 'v0.1';\nconst now = new Date();\nconst esc = (v) => String(v === null || v === undefined ? '–' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst st = (id) => (id && S[id]) ? S[id].state : undefined;\nconst fmtT = (iso) => { try { return new Date(iso).toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { return iso; } };\nconst dayOf = (iso) => new Date(iso).toLocaleDateString('sv-SE', { timeZone: 'Europe/Amsterdam' });\nconst kwh = (wh) => (wh === null || wh === undefined || isNaN(wh)) ? '–' : (wh / 1000).toFixed(2).replace('.', ',');\nconst pct = (v) => (v === null || v === undefined || isNaN(v)) ? '–' : Math.round(v) + '%';\nconst qn = (a, p) => { const s = a.filter(x => x !== null && x !== undefined && !isNaN(x)).sort((x, y) => x - y); if (!s.length) return null; return s[Math.min(s.length - 1, Math.max(0, Math.round(p * (s.length - 1))))]; };\n\n// ---- parse history ----\nconst raw = typeof msg.payload === 'string' ? msg.payload : '';\nconst rows = []; let bad = 0;\nfor (const line of raw.split('\\n')) { if (!line.trim()) continue; try { rows.push(JSON.parse(line)); } catch (e) { bad++; } }\nconst sessions = rows.filter(r => r.type === 'release' || r.type === 'eco_charge');\nconst releases = rows.filter(r => r.type === 'release');\nconst eco = rows.filter(r => r.type === 'eco_charge');\nconst events = rows.filter(r => r.type === 'event');\nconst first = rows.length ? rows[0].ts : null;\n\n// ---- summary (patterns first) ----\nconst sum = (a, f) => a.reduce((s, r) => s + (Number(r[f]) || 0), 0);\nconst ecoFc = sum(eco, 'forecast_wh'), ecoPv = sum(eco, 'pv_wh'), ecoEv = sum(eco, 'ev_wh');\nconst ecoGreen = eco.reduce((s, r) => s + (r.ev_green_kwh === null || r.ev_green_kwh === undefined ? 0 : Number(r.ev_green_kwh)), 0);\nconst accList = eco.filter(r => r.minutes >= 10).map(r => r.actual_vs_forecast_pct);\nconst relOk = releases.filter(r => r.ev_started).length;\nconst relShadow = releases.filter(r => r.shadow).length;\n\n// ---- per day, newest first, trend first ----\nconst D = {};\nfor (const r of eco) { const k = dayOf(r.start || r.ts); const d = D[k] || (D[k] = { n: 0, fc: 0, pv: 0, ev: 0, green: 0, rel: 0, relOk: 0 }); d.n++; d.fc += r.forecast_wh || 0; d.pv += r.pv_wh || 0; d.ev += r.ev_wh || 0; d.green += Number(r.ev_green_kwh) || 0; }\nfor (const r of releases) { const k = dayOf(r.start || r.ts); const d = D[k] || (D[k] = { n: 0, fc: 0, pv: 0, ev: 0, green: 0, rel: 0, relOk: 0 }); d.rel++; if (r.ev_started) d.relOk++; }\nconst days = Object.keys(D).sort().reverse();\nconst dayAcc = (k) => D[k].fc > 0 ? 100 * D[k].pv / D[k].fc : null;\nlet dayRows = '';\ndays.slice(0, 31).forEach((k, i) => {\n  const cur = dayAcc(k), old = i + 1 < days.length ? dayAcc(days[i + 1]) : null;\n  let tr = '<span class=\"mut\">–</span>';\n  if (cur !== null && old !== null) { const dd = cur - old; tr = Math.abs(dd) < 5 ? '<span class=\"mut\">→</span>' : (dd > 0 ? '<span class=\"up\">↑</span>' : '<span class=\"dn\">↓</span>'); }\n  dayRows += '<tr><td>' + esc(k) + '</td><td>' + tr + '</td><td>' + D[k].n + '</td><td>' + kwh(D[k].fc) + '</td><td>' + kwh(D[k].pv) + '</td><td><b>' + pct(cur) + '</b></td><td>' + kwh(D[k].ev) + '</td><td>' + D[k].green.toFixed(2).replace('.', ',') + '</td><td>' + (D[k].rel ? D[k].relOk + '/' + D[k].rel : '–') + '</td></tr>';\n});\n\n// ---- accuracy distribution ----\nconst bins = [[0, 50, '< 50%'], [50, 80, '50–80%'], [80, 100, '80–100%'], [100, 120, '100–120%'], [120, 150, '120–150%'], [150, 1e9, '> 150%']];\nconst bn = bins.map(b => accList.filter(x => x !== null && x >= b[0] && x < b[1]).length);\nconst bmax = Math.max(1, ...bn);\nlet distRows = '';\nbins.forEach((b, i) => { distRows += '<div class=\"bar\"><span class=\"bl\">' + b[2] + '</span><span class=\"bt\"><span class=\"bf\" style=\"width:' + Math.round(100 * bn[i] / bmax) + '%\"></span></span><span class=\"bv\">' + bn[i] + '</span></div>'; });\n\n// ---- sessions, newest first ----\nlet sessRows = '';\nsessions.slice().reverse().slice(0, 40).forEach(r => {\n  sessRows += '<tr><td>' + fmtT(r.start || r.ts) + '</td><td>' + (r.type === 'release' ? 'Release' + (r.shadow ? ' (shadow)' : '') : 'Eco charge') + '</td><td>' + esc(r.minutes) + '</td><td>' + kwh(r.forecast_wh) + '</td><td>' + kwh(r.pv_wh) + '</td><td><b>' + pct(r.actual_vs_forecast_pct) + '</b></td><td>' + kwh(r.ev_wh) + '</td><td>' + (r.ev_green_kwh === null || r.ev_green_kwh === undefined ? '–' : String(r.ev_green_kwh).replace('.', ',')) + '</td><td>' + (r.type === 'release' ? (r.ev_started ? 'yes' : 'no') : '–') + '</td><td>' + esc(r.reason) + '</td></tr>';\n});\nlet evRows = '';\nevents.slice().reverse().slice(0, 30).forEach(r => { evRows += '<tr><td>' + fmtT(r.ts) + '</td><td>' + esc(r.text) + (r.shadow ? ' <span class=\"mut\">(shadow)</span>' : '') + '</td><td>' + esc(r.ctx && r.ctx.fc_now) + ' W</td><td>' + esc(r.ctx && r.ctx.irr) + '</td><td>' + esc(r.ctx && r.ctx.pv) + ' W</td></tr>'; });\n\n// ---- settings & live ----\nconst setIds = ['input_boolean.hesc_enabled', 'input_boolean.hesc_shadow_mode', 'input_boolean.hesc_use_irradiance', 'input_boolean.hesc_owns_hpvc_off',\n  'input_text.hesc_forecast_now_sensor', 'input_text.hesc_forecast_30m_sensor', 'input_text.hesc_forecast_attribute', 'input_text.hesc_irradiance_sensor', 'input_text.hesc_pv_power_sensor', 'input_text.hesc_grid_power_sensor',\n  'input_text.hesc_ev_connected_sensor', 'input_text.hesc_ev_power_sensor', 'input_text.hesc_ev_green_energy_sensor', 'input_text.hesc_charger_mode_entity', 'input_text.hesc_charger_eco_value', 'input_text.hesc_hpvc_enabled_entity', 'input_text.hesc_hpvc_limited_entity',\n  'input_number.hesc_p_start', 'input_number.hesc_p_hold', 'input_number.hesc_irr_start', 'input_number.hesc_irr_hold', 'input_number.hesc_ev_active_w',\n  'input_number.hesc_t_stable', 'input_number.hesc_t_start', 'input_number.hesc_t_dip', 'input_number.hesc_t_stop', 'input_number.hesc_t_max', 'input_number.hesc_cooldown', 'input_number.hesc_max_attempts'];\nlet setRows = '';\nfor (const id of setIds) { const e = S[id]; const u = e && e.attributes && e.attributes.unit_of_measurement ? ' ' + e.attributes.unit_of_measurement : ''; setRows += '<tr><td>' + esc(e && e.attributes && e.attributes.friendly_name || id) + '</td><td><code>' + esc(st(id)) + u + '</code></td></tr>'; }\nconst src = (id) => st('input_text.' + id);\nconst fcAttr = st('input_text.hesc_forecast_attribute');\nconst liveVal = (eid, a) => { if (!eid || !S[eid]) return 'missing'; if (a) return S[eid].attributes ? S[eid].attributes[a] : 'missing'; return S[eid].state; };\nconst live = [\n  ['Forecast now' + (fcAttr ? ' (' + fcAttr + ')' : ''), liveVal(src('hesc_forecast_now_sensor'), fcAttr), 'W'],\n  ['Forecast +30 min' + (fcAttr ? ' (' + fcAttr + ')' : ''), liveVal(src('hesc_forecast_30m_sensor'), fcAttr), 'W'],\n  ['Irradiance', liveVal(src('hesc_irradiance_sensor')), 'W/m²'],\n  ['PV power', liveVal(src('hesc_pv_power_sensor')), 'W'],\n  ['Grid power', liveVal(src('hesc_grid_power_sensor')), 'W'],\n  ['EV connected', liveVal(src('hesc_ev_connected_sensor')), ''],\n  ['EV charging power', liveVal(src('hesc_ev_power_sensor')), 'W'],\n  ['Charger mode', liveVal(src('hesc_charger_mode_entity')), ''],\n  ['HPVC enabled', liveVal(src('hesc_hpvc_enabled_entity')), ''],\n  ['HPVC limiting', liveVal(src('hesc_hpvc_limited_entity')), ''],\n];\nlet liveRows = ''; const issues = [];\nfor (const [n, v, u] of live) { const ok = !['missing', 'unknown', 'unavailable', undefined, null, ''].includes(v); if (!ok && !(n === 'Irradiance' && !src('hesc_irradiance_sensor'))) issues.push(n); liveRows += '<tr><td>' + esc(n) + '</td><td class=\"' + (ok ? '' : 'warn') + '\">' + esc(v) + (ok && u ? ' ' + u : '') + '</td></tr>'; }\nif (bad) issues.push(bad + ' unreadable history line(s)');\n\nconst shadow = st('input_boolean.hesc_shadow_mode') !== 'off';\nconst card = (label, big, sub, cls) => '<div class=\"kpi\"><div class=\"kl\">' + label + '</div><div class=\"kb ' + (cls || '') + '\">' + big + '</div><div class=\"ks\">' + sub + '</div></div>';\nconst kpis = card('ECO SESSIONS', String(eco.length), 'since ' + (first ? fmtT(first) : '–')) +\n  card('ACTUAL PV VS FORECAST', pct(ecoFc > 0 ? 100 * ecoPv / ecoFc : null), 'while charging on Eco · median per session ' + pct(qn(accList, 0.5))) +\n  card('EV ENERGY', kwh(ecoEv) + ' kWh', ecoGreen.toFixed(1).replace('.', ',') + ' kWh from solar (charger)') +\n  card('RELEASES', relOk + ' / ' + releases.length, 'EV started / attempts' + (relShadow ? ' · ' + relShadow + ' in shadow' : ''));\n\nconst css = ':root{--bg:#f6f7f9;--card:#fff;--tx:#1d2330;--mut:#667085;--ln:#e3e6ea;--ac:#1f7ae0;--ok:#2e9e5b;--wr:#d9822b;--bad:#d64545}' +\n  '@media (prefers-color-scheme: dark){:root{--bg:#15181e;--card:#1e2128;--tx:#e8eaed;--mut:#9aa0a6;--ln:#333744;--ac:#42a5f5;--ok:#66bb6a;--wr:#ffa726;--bad:#ef5350}}' +\n  '*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}' +\n  '.wrap{max-width:1100px;margin:0 auto;padding:16px}h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:24px 0 8px}' +\n  '.sub{color:var(--mut);font-size:13px}.box{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:14px;margin-top:10px;overflow-x:auto}' +\n  '.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:12px}.kpi{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:12px}' +\n  '.kl{font-size:11px;letter-spacing:.6px;color:var(--mut)}.kb{font-size:24px;font-weight:650;margin-top:2px}.ks{font-size:12px;color:var(--mut)}' +\n  'table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--mut);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--ln);white-space:nowrap}td{padding:6px 8px;border-bottom:1px solid var(--ln);vertical-align:top}' +\n  '.mut{color:var(--mut)}.up{color:var(--ok)}.dn{color:var(--wr)}.warn{color:var(--bad);font-weight:600}code{font-size:12px}' +\n  '.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;border:1px solid var(--ln);margin-right:6px}' +\n  '.bar{display:flex;align-items:center;gap:8px;margin:4px 0}.bl{width:80px;text-align:right;color:var(--mut);font-size:12px}.bt{flex:1;height:12px;background:var(--ln);border-radius:4px;overflow:hidden}.bf{display:block;height:12px;background:var(--ac)}.bv{width:30px;font-size:12px}';\n\nlet out = '<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>HESC report</title><style>' + css + '</style></head><body><div class=\"wrap\">' +\n  '<h1>Home EV Solar Control — report</h1><div class=\"sub\">' + VERSION + ' · generated ' + esc(now.toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam' })) + ' · history since ' + esc(first ? fmtT(first) : '–') + ' · ' + rows.length + ' records</div>' +\n  '<div style=\"margin-top:10px\"><span class=\"pill\">' + (shadow ? 'Shadow mode — evaluates only' : 'LIVE — switches HPVC') + '</span><span class=\"pill\">' + esc(st('input_text.hesc_state')) + '</span><span class=\"pill\">' + esc(st('input_text.hesc_reason')) + '</span></div>' +\n  (issues.length ? '<div class=\"box warn\">Attention: ' + esc(issues.join(', ')) + '</div>' : '') +\n  '<h2>How well did the forecast match reality while the EV charged on Eco?</h2><div class=\"kpis\">' + kpis + '</div>' +\n  '<div class=\"box\"><div class=\"sub\" style=\"margin-bottom:6px\">Actual PV as % of the Solcast forecast (median estimate), per Eco session of 10 min or longer</div>' + (accList.length ? distRows : '<span class=\"mut\">No Eco sessions recorded yet.</span>') + '</div>' +\n  '<h2>Per day (newest first)</h2><div class=\"box\"><table><tr><th>Day</th><th>Trend</th><th>Eco sessions</th><th>Forecast kWh</th><th>Actual PV kWh</th><th>Actual / forecast</th><th>EV kWh</th><th>EV solar kWh</th><th>Releases ok</th></tr>' + (dayRows || '<tr><td colspan=\"9\" class=\"mut\">No data yet.</td></tr>') + '</table><div class=\"sub\" style=\"margin-top:6px\">Trend compares actual/forecast with the previous day: ↑ higher, ↓ lower, → within 5 points.</div></div>' +\n  '<h2>Sessions (newest first)</h2><div class=\"box\"><table><tr><th>Start</th><th>Type</th><th>Min</th><th>Forecast kWh</th><th>Actual PV kWh</th><th>Actual / forecast</th><th>EV kWh</th><th>EV solar kWh</th><th>EV started</th><th>Reason</th></tr>' + (sessRows || '<tr><td colspan=\"10\" class=\"mut\">No sessions yet.</td></tr>') + '</table></div>' +\n  '<h2>Decisions and events (newest first)</h2><div class=\"box\"><table><tr><th>Time</th><th>Event</th><th>Forecast</th><th>Irradiance</th><th>PV</th></tr>' + (evRows || '<tr><td colspan=\"5\" class=\"mut\">No events yet.</td></tr>') + '</table></div>' +\n  '<h2>Live inputs</h2><div class=\"box\"><table>' + liveRows + '</table></div>' +\n  '<h2>Settings</h2><div class=\"box\"><table>' + setRows + '</table></div>' +\n  '<h2>Runtime</h2><div class=\"box\"><table>' +\n  '<tr><td>Engine state</td><td><code>' + esc(RT && RT.state) + '</code> since ' + esc(RT && RT.since ? fmtT(new Date(RT.since).toISOString()) : '–') + '</td></tr>' +\n  '<tr><td>Cooldown until</td><td>' + esc(RT && RT.cooldownUntil && RT.cooldownUntil > Date.now() ? fmtT(new Date(RT.cooldownUntil).toISOString()) : 'none') + '</td></tr>' +\n  '<tr><td>Today (engine)</td><td><code>' + esc(RT && RT.day ? JSON.stringify(RT.day) : '–') + '</code></td></tr>' +\n  '<tr><td>History file</td><td><code>/homeassistant/hesc-data/history.jsonl</code> · ' + rows.length + ' records · ' + Math.round(raw.length / 1024) + ' KiB</td></tr>' +\n  '</table></div><div class=\"sub\" style=\"margin:20px 0\">Home EV Solar Control is a companion for Home PV Control (HPVC) and Home Battery Control (HBC). It only switches the HPVC enable switch, and only outside shadow mode.</div></div></body></html>';\n\nmsg.payload = out;\nmsg.filename = '/homeassistant/www/hesc/report.html';\nnode.status({ fill: 'green', shape: 'dot', text: 'report ' + rows.length + ' records · ' + now.toLocaleTimeString('nl-NL', { timeZone: 'Europe/Amsterdam' }) });\nreturn msg;\n",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 820,
+  "y": 140,
+  "wires": [
+   [
+    "6804215ca5fea7ac"
+   ]
+  ]
+ },
+ {
+  "id": "6804215ca5fea7ac",
+  "type": "file",
+  "z": "5e3d61a18b6188ce",
+  "name": "Write report.html",
+  "filename": "filename",
+  "filenameType": "msg",
+  "appendNewline": false,
+  "createDir": true,
+  "overwriteFile": "true",
+  "encoding": "utf8",
+  "x": 1030,
+  "y": 140,
+  "wires": [
+   [
+    "256faf8e807f87f8"
+   ]
+  ]
+ },
+ {
+  "id": "256faf8e807f87f8",
+  "type": "function",
+  "z": "5e3d61a18b6188ce",
+  "name": "Mark ready",
+  "func": "// Report written: mark ready and store the generation time.\nflow.set('hescReportBusy', 0);\nconst t = new Date().toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam' });\nnode.status({ fill: 'green', shape: 'dot', text: 'ready ' + t });\nreturn [[\n  { payload: { action: 'input_boolean.turn_on', target: { entity_id: ['input_boolean.hesc_report_ready'] }, data: {} } },\n  { payload: { action: 'input_text.set_value', target: { entity_id: ['input_text.hesc_report_generated'] }, data: { value: t } } }\n]];",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1200,
+  "y": 140,
+  "wires": [
+   [
+    "d033acb3c3fbbe49"
+   ]
+  ]
+ },
+ {
+  "id": "d033acb3c3fbbe49",
+  "type": "api-call-service",
+  "z": "5e3d61a18b6188ce",
+  "name": "Report ready on",
+  "server": "9cb97210.6be8b",
+  "version": 7,
+  "debugenabled": false,
+  "action": "{{$payload.action}}",
+  "floorId": [],
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "labelId": [],
+  "data": "payload.data",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "blockInputOverrides": false,
+  "domain": "",
+  "service": "",
+  "target": "payload.target",
+  "x": 1390,
+  "y": 140,
+  "wires": [
+   []
+  ]
+ }
+]
