@@ -20,7 +20,7 @@ HESC does not talk to a charger or a forecast service directly. It only reads Ho
 
 ### Start and hold thresholds
 
-`hesc_p_start` and `hesc_p_hold` are **forecast production** thresholds. Your charger starts on **surplus**, which is production minus house load minus battery charging. Choose a start threshold that leaves enough surplus for your charger's solar-mode start level. The per-day tables in the report show whether releases actually led to charging; adjust from there.
+`hesc_p_start` and `hesc_p_hold` are **forecast production** thresholds. Your charger starts on **surplus**, which is production minus house load minus battery charging. Choose a start threshold that leaves enough surplus for your charger's solar-mode start level. The per-day tables in the report show whether releases actually led to charging; adjust from there. The **Advice** in the report does this for you: it works out the surplus at which Eco kept charging, adds your typical house-and-battery use, and gives the result as a start threshold.
 
 ## Tested with
 

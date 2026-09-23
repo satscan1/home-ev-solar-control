@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="releases/v0.4.0/release.md"><img src="https://img.shields.io/badge/release-v0.4.0-blue" alt="Release v0.4.0"></a>
+  <a href="releases/v0.4.1/release.md"><img src="https://img.shields.io/badge/release-v0.4.1-blue" alt="Release v0.4.1"></a>
   <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-ready-41BDF5" alt="Home Assistant ready"></a>
   <a href="https://nodered.org/"><img src="https://img.shields.io/badge/Node--RED-flow-8F0000" alt="Node-RED flow"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later"></a>
@@ -139,7 +139,9 @@ The dashboard shows today's releases (ok/failed), Eco sessions, forecast accurac
 
 ### Advice
 
-Once a day (and with every report) HESC looks back over a recent period (default 30 days) and gives short advice in plain language: *this is what was measured, this is the advice*. For example: "14 Eco sessions kept charging for 20 minutes or more. Most of them started when the cautious forecast was 2,100 W or higher. Set the start threshold to 2,100 W."
+Once a day (and with every report) HESC looks back over a recent period (default 30 days) and gives short advice in plain language: *this is what was measured, this is the advice*. For example: "Eco kept charging reliably from about 1,550 W expected surplus. House and battery used about 550 W together at those moments. Advice: start threshold 2,100 W."
+
+Two quantities are kept apart: the **surplus** (forecast minus what house and battery use, derived from PV, grid and EV power at the start of each session) explains *why*; the **start threshold** is what you actually set, because HESC compares it with the gross forecast. No battery sensor is needed. Without a grid power sensor the advice falls back to the gross forecast and says so.
 
 - **No advice without enough data.** Each advice needs a minimum number of sessions (default 8). Until then it says *collecting data*.
 - **Follows the seasons.** Only the recent period counts, so the advice moves with the season. When the threshold advice moves, the report says so for a week.
@@ -191,6 +193,7 @@ The Node-RED flow has four tabs: **Inputs** (30-second trigger and startup safet
 - [Chargers and sources](docs/05-chargers-and-sources.md)
 - [Documentation index](docs/README.md)
 - [Changelog](CHANGELOG.md)
+- [v0.4.1 release notes](releases/v0.4.1/release.md)
 - [v0.4.0 release notes](releases/v0.4.0/release.md)
 - [v0.3.0 release notes](releases/v0.3.0/release.md)
 - [v0.2.0 release notes](releases/v0.2.0/release.md)
@@ -246,6 +249,7 @@ releases/
   v0.2.0/
   v0.3.0/
   v0.4.0/
+  v0.4.1/
 ```
 
 ## Credits
