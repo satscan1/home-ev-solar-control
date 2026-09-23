@@ -44,7 +44,7 @@ The Reports tab also holds the **HESC Advisor**. It runs daily at 21:30, 90 seco
 
 | Advice | Based on | Minimum |
 |---|---|---|
-| Start / hold threshold | cautious forecast at the start of Eco sessions that kept charging for 20 min or more (3 of 4 started at or above the advice); hold = 80% of start | minimum sessions |
+| Start / hold threshold | Eco sessions that kept charging for 20 min or more. Per session: non-EV use = PV + grid − EV (house and battery together) and expected surplus = cautious forecast − non-EV use. Advice = surplus that worked (25th percentile) + typical non-EV use (median), i.e. translated back to the gross forecast that `hesc_p_start` uses. Hold = 80% of start. Without a grid sensor: 25th percentile of the gross forecast, marked as such | minimum sessions |
 | Wait for the charger | start delay after real releases (9 of 10 within the advice, plus 2 min) | half the minimum |
 | Releases without charging | share of real releases that led to charging (< 50% → raise start threshold) | half the minimum |
 | Forecast quality | actual PV vs forecast in daylight intervals without curtailment | 3 × minimum hours |

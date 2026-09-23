@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.4.1 — 2026-09-23
+
+- Advisor: threshold advice is now based on the **derived surplus** (cautious forecast − house and battery use, from PV + grid − EV at the start of each Eco session) and translated back to the **gross start threshold** that HESC uses. The regulation itself is unchanged.
+- Fallback: without a grid power sensor the advice uses the gross forecast and says so; fewer than the minimum usable sessions → no advice.
+
 ## v0.4.0 — 2026-09-23
 
 - **Advisor:** plain-language setting advice from the last N days (default 30), only after a minimum number of sessions (default 8). It follows the seasons and notes when the advice moves. Advice only; it never changes settings.
