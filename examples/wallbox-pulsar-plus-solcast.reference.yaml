@@ -14,3 +14,8 @@ hesc_charger_mode_entity: select.<wallbox>_solar_charging
 hesc_charger_eco_value: eco_mode
 hesc_hpvc_enabled_entity: input_boolean.hpvc_enabled
 hesc_hpvc_limited_entity: binary_sensor.hpvc_pv_limited
+hesc_charger_solar_switch_entity: ""        # not needed for Wallbox
+hesc_ev_disconnected_values: ""             # not needed with a binary EV-connected sensor
+# Alternative without a binary sensor:
+#   hesc_ev_connected_sensor: sensor.<wallbox>_status_description
+#   hesc_ev_disconnected_values: Ready, Disconnected

@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.0 — 2026-09-23
+
+- Generic chargers: EV connected may be a binary **or** a status sensor (configurable "no car" values); power sensors in W or kW; several solar-mode values (comma separated); optional extra solar switch (go-e, Wattpilot).
+- Mapping table for common chargers in [Chargers and sources](docs/05-chargers-and-sources.md).
+- Dashboard redesigned in the HPVC layout: badges, horizontal toggles, live inputs, control-state timeline and an apexcharts forecast vs actual graph.
+- Local weather station toggle now hides its settings and switches irradiance off completely.
+- New diagnostic helpers `sensor.hesc_diag_*` / `binary_sensor.hesc_diag_*` (power sensors update once per minute).
+
 ## v0.2.0 — 2026-09-23
 
 - Source reliability: every 15 minutes in daylight, the forecast (median and cautious), actual PV and irradiance are logged, also without charging. Intervals with HPVC limiting are flagged.

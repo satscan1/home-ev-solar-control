@@ -1,6 +1,6 @@
 # =============================================================================
 # Home EV Solar Control (HESC) — Home Assistant package
-# Version: v0.2.0 (2026-09-23)
+# Version: v0.3.0 (2026-09-23)
 # Project tag: [WALLBOX] [PV]
 #
 # Companion for Home PV Control (HPVC) and Home Battery Control (HBC):
@@ -18,7 +18,7 @@ input_boolean:
     name: "HESC shadow mode (evaluate only)"
     icon: mdi:ghost-outline
   hesc_use_irradiance:
-    name: "HESC use irradiance as confirmation"
+    name: "HESC local weather station"
     icon: mdi:white-balance-sunny
   hesc_owns_hpvc_off:
     name: "HESC switched HPVC off (ownership)"
@@ -63,8 +63,14 @@ input_text:
     name: "HESC charger mode entity"
     max: 255
   hesc_charger_eco_value:
-    name: "HESC charger Eco mode value"
-    max: 64
+    name: "HESC charger solar mode value(s)"
+    max: 128
+  hesc_charger_solar_switch_entity:
+    name: "HESC charger solar switch (optional)"
+    max: 255
+  hesc_ev_disconnected_values:
+    name: "HESC EV not-connected states"
+    max: 255
   hesc_hpvc_enabled_entity:
     name: "HESC HPVC enable switch"
     max: 255
@@ -190,6 +196,91 @@ input_number:
     unit_of_measurement: "W"
     icon: mdi:flash
     mode: box
+
+template:
+  # Diagnostic mirrors of the selected sources (same idea as the hpvc_diag_* sensors).
+  # They follow whatever entity is selected in Settings, convert kW to W, and give
+  # the dashboard graphs one fixed set of entity ids for every installation.
+  # The power sensors update once per minute to keep recorder writes low.
+  - triggers:
+      - trigger: time_pattern
+        minutes: "/1"
+      - trigger: homeassistant
+        event: start
+    sensor:
+      - name: "HESC diag PV power"
+        unique_id: hesc_diag_pv_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        availability: "{{ states(states('input_text.hesc_pv_power_sensor')) | is_number }}"
+        state: >
+          {% set e = states('input_text.hesc_pv_power_sensor') %}
+          {% set k = 1000 if (state_attr(e, 'unit_of_measurement') | string | lower) == 'kw' else 1 %}
+          {{ (states(e) | float(0) * k) | round(0) }}
+      - name: "HESC diag EV power"
+        unique_id: hesc_diag_ev_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        availability: "{{ states(states('input_text.hesc_ev_power_sensor')) | is_number }}"
+        state: >
+          {% set e = states('input_text.hesc_ev_power_sensor') %}
+          {% set k = 1000 if (state_attr(e, 'unit_of_measurement') | string | lower) == 'kw' else 1 %}
+          {{ (states(e) | float(0) * k) | round(0) }}
+      - name: "HESC diag forecast power"
+        unique_id: hesc_diag_forecast_power
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        availability: "{{ states(states('input_text.hesc_forecast_now_sensor')) | is_number }}"
+        state: "{{ states(states('input_text.hesc_forecast_now_sensor')) | float(0) | round(0) }}"
+      - name: "HESC diag forecast cautious"
+        unique_id: hesc_diag_forecast_cautious
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        availability: >
+          {% set e = states('input_text.hesc_forecast_now_sensor') %}
+          {% set a = states('input_text.hesc_forecast_attribute') %}
+          {{ (state_attr(e, a) if a not in ['', 'unknown', 'unavailable'] else states(e)) | is_number }}
+        state: >
+          {% set e = states('input_text.hesc_forecast_now_sensor') %}
+          {% set a = states('input_text.hesc_forecast_attribute') %}
+          {{ ((state_attr(e, a) if a not in ['', 'unknown', 'unavailable'] else states(e)) | float(0)) | round(0) }}
+      - name: "HESC diag irradiance"
+        unique_id: hesc_diag_irradiance
+        unit_of_measurement: "W/m²"
+        state_class: measurement
+        availability: "{{ is_state('input_boolean.hesc_use_irradiance', 'on') and states(states('input_text.hesc_irradiance_sensor')) | is_number }}"
+        state: "{{ states(states('input_text.hesc_irradiance_sensor')) | float(0) | round(0) }}"
+  - binary_sensor:
+      - name: "HESC diag EV connected"
+        unique_id: hesc_diag_ev_connected
+        icon: mdi:ev-plug-type2
+        state: >
+          {% set e = states('input_text.hesc_ev_connected_sensor') %}
+          {% set s = states(e) | string %}
+          {% set dv = states('input_text.hesc_ev_disconnected_values') %}
+          {% set off = (dv if dv not in ['', 'unknown', 'unavailable'] else 'off,disconnected,ready,available,no_ev_connected,unplugged,not_connected,no car,idle,ev disconnected') | lower %}
+          {% if e.split('.')[0] in ['binary_sensor', 'switch', 'input_boolean'] %}
+            {{ s == 'on' }}
+          {% else %}
+            {{ s not in ['unknown', 'unavailable', ''] and (s | lower) not in (off.split(',') | map('trim') | list) }}
+          {% endif %}
+      - name: "HESC diag charger solar mode"
+        unique_id: hesc_diag_charger_solar_mode
+        icon: mdi:solar-power
+        state: >
+          {% set m = states(states('input_text.hesc_charger_mode_entity')) | string | lower %}
+          {% set ev = states('input_text.hesc_charger_eco_value') %}
+          {% set vals = ((ev if ev not in ['', 'unknown', 'unavailable'] else 'eco_mode') | lower).split(',') | map('trim') | list %}
+          {% set sw = states('input_text.hesc_charger_solar_switch_entity') %}
+          {{ m in vals and (sw in ['', 'unknown', 'unavailable'] or is_state(sw, 'on')) }}
+      - name: "HESC diag release active"
+        unique_id: hesc_diag_release_active
+        icon: mdi:lock-open-variant-outline
+        state: "{{ 'Release' in states('input_text.hesc_state') }}"
 
 input_button:
   hesc_generate_report:

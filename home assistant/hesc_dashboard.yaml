@@ -1,5 +1,7 @@
-# Home EV Solar Control (HESC) — dashboard
-# Add as a separate Home Assistant dashboard (YAML or paste into the raw configuration editor).
+# Home EV Solar Control (HESC) v0.3 — dashboard
+# Layout follows Home PV Control (badges, master-control toggles, live inputs, control states, apexcharts graph).
+# Requires: apexcharts-card (HACS) for the graph section.
+# Add as a separate dashboard: Settings → Dashboards → Add → New from scratch → ⋮ → Raw configuration editor → paste.
 title: Home EV Solar Control
 views:
 - type: sections
@@ -7,15 +9,120 @@ views:
   path: home-ev-solar-control
   icon: mdi:ev-station
   max_columns: 3
+  badges:
+  - type: entity
+    entity: input_text.hesc_state
+    name: HESC Status
+    show_name: true
+    show_state: true
+    show_icon: true
+    icon: mdi:ev-station
+  - type: entity
+    entity: binary_sensor.hesc_diag_ev_connected
+    name: EV
+    show_name: true
+    show_state: true
+    show_icon: true
+  - type: entity
+    entity: binary_sensor.hesc_diag_charger_solar_mode
+    name: Solar mode
+    show_name: true
+    show_state: true
+    show_icon: true
+  - type: entity
+    entity: binary_sensor.hpvc_pv_limited
+    name: HPVC limiting
+    show_name: true
+    show_state: true
+    show_icon: true
+  - type: entity
+    entity: binary_sensor.hesc_diag_release_active
+    name: Release
+    show_name: true
+    show_state: true
+    show_icon: true
+    visibility:
+    - condition: state
+      entity: binary_sensor.hesc_diag_release_active
+      state: 'on'
   sections:
   - type: grid
     cards:
-    - type: heading
-      heading: Home EV Solar Control (v0.2)
-      heading_style: title
+    - type: markdown
+      content: |
+        ### 🎛️ EV Solar Master Control
+      grid_options:
+        columns: 12
+    - type: tile
+      entity: input_boolean.hesc_enabled
+      name: Enable HESC
       icon: mdi:ev-station
+      hide_state: true
+      vertical: false
+      features_position: inline
+      features:
+      - type: toggle
+    - type: tile
+      entity: input_boolean.hesc_shadow_mode
+      name: Shadow mode (evaluate only)
+      icon: mdi:ghost-outline
+      hide_state: true
+      vertical: false
+      features_position: inline
+      features:
+      - type: toggle
+    - type: conditional
+      conditions:
+      - entity: input_boolean.hesc_owns_hpvc_off
+        state: 'on'
+      card:
+        type: tile
+        entity: input_boolean.hesc_owns_hpvc_off
+        name: HESC switched HPVC off
+        icon: mdi:key-variant
+        color: amber
+    - type: tile
+      entity: input_button.hesc_generate_report
+      name: Generate report
+      icon: mdi:file-document-plus-outline
+      color: blue
+      hide_state: true
+      tap_action: &id001
+        action: perform-action
+        perform_action: input_button.press
+        target:
+          entity_id: input_button.hesc_generate_report
+      icon_tap_action: *id001
+      grid_options:
+        columns: 6
+    - type: conditional
+      conditions:
+      - entity: input_boolean.hesc_report_ready
+        state: 'on'
+      grid_options:
+        columns: 6
+      card:
+        type: tile
+        entity: input_boolean.hesc_report_ready
+        name: View report
+        icon: mdi:file-document-check-outline
+        color: green
+        hide_state: true
+        tap_action: &id002
+          action: url
+          url_path: /local/hesc/report.html
+        icon_tap_action: *id002
+        grid_options:
+          columns: 6
     - type: entities
-      title: Status
+      entities:
+      - entity: input_text.hesc_report_generated
+        name: Last report
+        type: simple-entity
+  - type: grid
+    cards:
+    - type: entities
+      title: 📊 Status
       state_color: true
       entities:
       - entity: input_text.hesc_state
@@ -27,68 +134,431 @@ views:
       - entity: input_text.hesc_last_action
         name: Last action
         type: simple-entity
-      - entity: input_boolean.hesc_owns_hpvc_off
-        name: HESC switched HPVC off
-    - type: entities
-      title: Today
-      state_color: true
-      entities:
       - entity: input_text.hesc_insight_1
-        name: Releases
+        name: Releases today
         type: simple-entity
       - entity: input_text.hesc_insight_2
-        name: Forecast vs actual
+        name: Forecast vs actual today
         type: simple-entity
       - entity: input_text.hesc_insight_3
         name: Last snapshot
         type: simple-entity
   - type: grid
     cards:
-    - type: heading
-      heading: Control
-      heading_style: subtitle
-      icon: mdi:tune
     - type: entities
-      title: Switches
+      title: 🔌 Live Inputs
       state_color: true
       entities:
-      - entity: input_boolean.hesc_enabled
-        name: HESC enabled
-      - entity: input_boolean.hesc_shadow_mode
-        name: Shadow mode (evaluate only)
-      - entity: input_boolean.hesc_use_irradiance
-        name: Use irradiance as confirmation
-    - type: heading
-      heading: Report
-      heading_style: subtitle
-      icon: mdi:file-document-outline
-    - type: tile
-      entity: input_button.hesc_generate_report
-      name: Generate report
-      icon: mdi:file-document-plus-outline
-      color: blue
-      hide_state: true
-      tap_action:
-        action: toggle
-      icon_tap_action:
-        action: toggle
-    - type: tile
-      entity: input_boolean.hesc_report_ready
-      name: View report
-      icon: mdi:file-document-check-outline
-      color: green
-      hide_state: true
-      tap_action:
-        action: url
-        url_path: /local/hesc/report.html
-      icon_tap_action:
-        action: url
-        url_path: /local/hesc/report.html
+      - entity: sensor.hesc_diag_forecast_power
+        name: Forecast now
+      - entity: sensor.hesc_diag_forecast_cautious
+        name: Cautious forecast now
+      - entity: sensor.hesc_diag_pv_power
+        name: Actual PV
+      - entity: sensor.hesc_diag_ev_power
+        name: EV charging power
+      - type: conditional
+        conditions:
+        - entity: input_boolean.hesc_use_irradiance
+          state: 'on'
+        row:
+          entity: sensor.hesc_diag_irradiance
+          name: Irradiance (weather station)
+  - type: grid
+    cards:
     - type: entities
+      title: 📈 Control States
+      state_color: true
       entities:
-      - entity: input_text.hesc_report_generated
-        name: Last generated
-        type: simple-entity
+      - entity: binary_sensor.hesc_diag_ev_connected
+        name: EV connected
+      - entity: binary_sensor.hesc_diag_charger_solar_mode
+        name: Charger in solar mode
+      - entity: binary_sensor.hpvc_pv_limited
+        name: HPVC limiting PV
+      - entity: binary_sensor.hesc_diag_release_active
+        name: Release active
+    - type: history-graph
+      hours_to_show: 12
+      entities:
+      - entity: binary_sensor.hesc_diag_ev_connected
+        name: EV connected
+      - entity: binary_sensor.hesc_diag_charger_solar_mode
+        name: Solar mode
+      - entity: binary_sensor.hpvc_pv_limited
+        name: HPVC limiting
+      - entity: binary_sensor.hesc_diag_release_active
+        name: Release
+  - type: custom:apexcharts-card
+    section_mode: true
+    update_interval: 30s
+    graph_span: 12h
+    header:
+      show: true
+      title: ☀️ Solar forecast vs actual · EV
+      show_states: true
+      colorize_states: true
+    yaxis:
+    - id: main
+      min: auto
+      max: auto
+      decimals: 0
+      apex_config:
+        title:
+          text: W
+    - id: raw_header
+      show: false
+      min: -50000
+      max: 50000
+      decimals: 0
+    apex_config:
+      chart:
+        height: 250
+        stacked: false
+        toolbar:
+          show: false
+        zoom:
+          enabled: false
+        pan:
+          enabled: false
+        animations:
+          enabled: false
+      stroke:
+        curve: smooth
+        connectNulls: false
+      fill:
+        opacity: 0.55
+      markers:
+        size: 0
+        hover:
+          size: 5
+          sizeOffset: 0
+      tooltip:
+        shared: true
+        intersect: false
+        followCursor: true
+        theme: false
+        custom: |
+          EVAL:function({ series, dataPointIndex }) {
+
+            const colors = [
+              '#F59E0B',
+              '#8B5CF6',
+              '#A78BFA',
+              '#06B6D4'
+            ];
+
+            const names = [
+              'PV actual',
+              'Forecast',
+              'Cautious forecast',
+              'EV charging'
+            ];
+
+            let rows = '';
+
+            // Only the first four visible graph series belong in the tooltip.
+            for (let i = 0; i < 4; i++) {
+              const value =
+                series[i] && dataPointIndex < series[i].length
+                  ? series[i][dataPointIndex]
+                  : null;
+
+              const display =
+                value === null ||
+                value === undefined ||
+                !Number.isFinite(value)
+                  ? '—'
+                  : Math.round(value).toLocaleString() + ' W';
+
+              rows +=
+                '<div style="display:flex;align-items:center;gap:6px;margin:2px 0;">' +
+                  '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' +
+                    colors[i] +
+                    ';flex-shrink:0;"></span>' +
+                  '<span style="color:var(--secondary-text-color);min-width:88px;font-weight:700;">' +
+                    names[i] +
+                    '</span>' +
+                  '<span style="font-weight:700;margin-left:auto;">' +
+                    display +
+                  '</span>' +
+                '</div>';
+            }
+
+            return (
+              '<div style="padding:8px 10px;font-size:10px;width:max-content;max-width:240px;box-sizing:border-box;background:color-mix(in srgb,var(--ha-card-background,var(--card-background-color)) 35%,transparent);backdrop-filter:blur(1px);-webkit-backdrop-filter:blur(1px);border-radius:6px;border:1px solid var(--divider-color);color:var(--primary-text-color);font-family:inherit;box-shadow:none;font-weight:600;">' +
+                rows +
+              '</div>'
+            );
+          }
+      grid:
+        borderColor: var(--divider-color)
+        strokeDashArray: 2
+        xaxis:
+          lines:
+            show: true
+        yaxis:
+          lines:
+            show: true
+      xaxis:
+        labels:
+          datetimeUTC: false
+          datetimeFormatter:
+            hour: HH:mm
+            day: d MMM
+          style:
+            fontSize: 11px
+        tooltip:
+          formatter: |
+            EVAL:function(value) {
+              const date = new Date(value);
+
+              const months = [
+                'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+              ];
+
+              const pad = number =>
+                String(number).padStart(2, '0');
+
+              return (
+                pad(date.getDate()) +
+                ' ' +
+                months[date.getMonth()] +
+                ' · ' +
+                pad(date.getHours()) +
+                ':' +
+                pad(date.getMinutes())
+              );
+            }
+      dataLabels:
+        enabled: false
+      legend:
+        show: false
+      annotations:
+        yaxis:
+        - 'y': 0
+          borderColor: var(--secondary-text-color)
+          strokeDashArray: 0
+    series:
+    - entity: sensor.hesc_diag_pv_power
+      name: PV actual
+      yaxis_id: main
+      type: area
+      color: '#F59E0B'
+      opacity: 0.55
+      stroke_width: 2
+      unit: W
+      float_precision: 0
+      extend_to: false
+      show:
+        in_header: false
+        legend_value: false
+      transform: |
+        const value = Number(x);
+
+        if (
+          !Number.isFinite(value) ||
+          value < 0 ||
+          value > 50000
+        ) {
+          return null;
+        }
+
+        return value;
+      group_by:
+        func: avg
+        duration: 5min
+        fill: zero
+        start_with_last: false
+    - entity: sensor.hesc_diag_forecast_power
+      name: Forecast
+      yaxis_id: main
+      type: line
+      color: '#8B5CF6'
+      opacity: 1
+      stroke_width: 2
+      unit: W
+      float_precision: 0
+      extend_to: false
+      show:
+        in_header: false
+        legend_value: false
+      transform: |
+        const value = Number(x);
+
+        if (
+          !Number.isFinite(value) ||
+          value < 0 ||
+          value > 50000
+        ) {
+          return null;
+        }
+
+        return value;
+      group_by:
+        func: avg
+        duration: 5min
+        fill: zero
+        start_with_last: false
+      stroke_dash: 5
+    - entity: sensor.hesc_diag_forecast_cautious
+      name: Cautious forecast
+      yaxis_id: main
+      type: line
+      color: '#A78BFA'
+      opacity: 1
+      stroke_width: 1
+      unit: W
+      float_precision: 0
+      extend_to: false
+      show:
+        in_header: false
+        legend_value: false
+      transform: |
+        const value = Number(x);
+
+        if (
+          !Number.isFinite(value) ||
+          value < 0 ||
+          value > 50000
+        ) {
+          return null;
+        }
+
+        return value;
+      group_by:
+        func: avg
+        duration: 5min
+        fill: zero
+        start_with_last: false
+      stroke_dash: 2
+    - entity: sensor.hesc_diag_ev_power
+      name: EV charging
+      yaxis_id: main
+      type: area
+      color: '#06B6D4'
+      opacity: 0.55
+      stroke_width: 2
+      unit: W
+      float_precision: 0
+      extend_to: false
+      show:
+        in_header: false
+        legend_value: false
+      transform: |
+        const value = Number(x);
+
+        if (
+          !Number.isFinite(value) ||
+          value < 0 ||
+          value > 50000
+        ) {
+          return null;
+        }
+
+        return value;
+      group_by:
+        func: avg
+        duration: 5min
+        fill: zero
+        start_with_last: false
+    - entity: sensor.hesc_diag_pv_power
+      name: Solar
+      yaxis_id: raw_header
+      type: line
+      color: '#F59E0B'
+      opacity: 0
+      stroke_width: 0
+      unit: W
+      float_precision: 0
+      extend_to: false
+      show:
+        in_header: true
+        name_in_header: true
+        legend_value: false
+      data_generator: |
+        const value = Number(entity.state);
+
+        if (
+          !Number.isFinite(value) ||
+          value < 0 ||
+          value > 50000
+        ) {
+          return [];
+        }
+
+        return [[Date.now(), value]];
+    - entity: sensor.hesc_diag_forecast_power
+      name: Forecast
+      yaxis_id: raw_header
+      type: line
+      color: '#8B5CF6'
+      opacity: 0
+      stroke_width: 0
+      unit: W
+      float_precision: 0
+      extend_to: false
+      show:
+        in_header: true
+        name_in_header: true
+        legend_value: false
+      data_generator: |
+        const value = Number(entity.state);
+
+        if (
+          !Number.isFinite(value) ||
+          value < 0 ||
+          value > 50000
+        ) {
+          return [];
+        }
+
+        return [[Date.now(), value]];
+    - entity: sensor.hesc_diag_ev_power
+      name: EV
+      yaxis_id: raw_header
+      type: line
+      color: '#06B6D4'
+      opacity: 0
+      stroke_width: 0
+      unit: W
+      float_precision: 0
+      extend_to: false
+      show:
+        in_header: true
+        name_in_header: true
+        legend_value: false
+      data_generator: |
+        const value = Number(entity.state);
+
+        if (
+          !Number.isFinite(value) ||
+          value < 0 ||
+          value > 50000
+        ) {
+          return [];
+        }
+
+        return [[Date.now(), value]];
+    - entity: input_number.hesc_p_start
+      name: Start threshold
+      yaxis_id: main
+      type: line
+      color: '#94A3B8'
+      opacity: 1
+      stroke_width: 1
+      unit: W
+      float_precision: 0
+      extend_to: false
+      show:
+        in_header: false
+        legend_value: false
+      stroke_dash: 6
+      data_generator: |
+        const v = Number(entity.state);
+        if (!Number.isFinite(v)) { return []; }
+        return [[start.getTime(), v], [end.getTime(), v]];
 - type: sections
   title: Settings
   path: settings
@@ -97,41 +567,111 @@ views:
   sections:
   - type: grid
     cards:
+    - type: markdown
+      content: |-
+        ### ☀️ Solar forecast & PV
+        Forecast sensors in W. For Solcast use attribute `estimate10` (cautious estimate).
+      grid_options:
+        columns: 12
     - type: entities
-      title: Sources
       entities:
-      - input_text.hesc_forecast_now_sensor
-      - input_text.hesc_forecast_30m_sensor
-      - input_text.hesc_forecast_attribute
-      - input_text.hesc_irradiance_sensor
-      - input_text.hesc_pv_power_sensor
-      - input_text.hesc_grid_power_sensor
-      - input_text.hesc_ev_connected_sensor
-      - input_text.hesc_ev_power_sensor
-      - input_text.hesc_ev_green_energy_sensor
-      - input_text.hesc_charger_mode_entity
-      - input_text.hesc_charger_eco_value
-      - input_text.hesc_hpvc_enabled_entity
-      - input_text.hesc_hpvc_limited_entity
+      - entity: input_text.hesc_forecast_now_sensor
+        name: Forecast power now
+      - entity: input_text.hesc_forecast_30m_sensor
+        name: Forecast power +30 min
+      - entity: input_text.hesc_forecast_attribute
+        name: Forecast attribute (empty = state)
+      - entity: input_text.hesc_pv_power_sensor
+        name: Actual PV power
+      - entity: input_text.hesc_grid_power_sensor
+        name: Grid power (negative = export)
+    - type: markdown
+      content: |-
+        ### 🌤️ Local weather station
+        Optional. When off, HESC works on the forecast alone.
+      grid_options:
+        columns: 12
+    - type: tile
+      entity: input_boolean.hesc_use_irradiance
+      name: Use local weather station
+      icon: mdi:weather-sunny
+      hide_state: true
+      vertical: false
+      features_position: inline
+      features:
+      - type: toggle
+    - type: conditional
+      conditions:
+      - entity: input_boolean.hesc_use_irradiance
+        state: 'on'
+      card:
+        type: entities
+        entities:
+        - entity: input_text.hesc_irradiance_sensor
+          name: Irradiance sensor (W/m²)
+        - entity: input_number.hesc_irr_start
+          name: Irradiance to start
+        - entity: input_number.hesc_irr_hold
+          name: Irradiance to hold
   - type: grid
     cards:
+    - type: markdown
+      content: |-
+        ### 🔌 EV charger
+        Any charger with a solar mode. See the guide *Chargers and sources* for examples (Wallbox, Alfen, Peblar, Zappi, go-e, Wattpilot, SMA, evcc).
+      grid_options:
+        columns: 12
     - type: entities
-      title: Thresholds
       entities:
-      - input_number.hesc_p_start
-      - input_number.hesc_p_hold
-      - input_number.hesc_irr_start
-      - input_number.hesc_irr_hold
-      - input_number.hesc_ev_active_w
+      - entity: input_text.hesc_ev_connected_sensor
+        name: EV connected (binary or status sensor)
+      - entity: input_text.hesc_ev_disconnected_values
+        name: Status values meaning "no car" (optional)
+      - entity: input_text.hesc_ev_power_sensor
+        name: Charging power (W or kW)
+      - entity: input_text.hesc_charger_mode_entity
+        name: Charger mode entity
+      - entity: input_text.hesc_charger_eco_value
+        name: Solar mode value(s), comma separated
+      - entity: input_text.hesc_charger_solar_switch_entity
+        name: Extra solar switch (optional)
+      - entity: input_text.hesc_ev_green_energy_sensor
+        name: Solar energy counter (optional)
+      - entity: input_number.hesc_ev_active_w
+        name: EV counts as charging above
+    - type: markdown
+      content: '### 🔗 Home PV Control'
+      grid_options:
+        columns: 12
+    - type: entities
+      entities:
+      - entity: input_text.hesc_hpvc_enabled_entity
+        name: HPVC enable switch
+      - entity: input_text.hesc_hpvc_limited_entity
+        name: HPVC limiting indicator
   - type: grid
     cards:
+    - type: markdown
+      content: '### 🎚️ Thresholds & timing'
+      grid_options:
+        columns: 12
     - type: entities
-      title: Timing
       entities:
-      - input_number.hesc_t_stable
-      - input_number.hesc_t_start
-      - input_number.hesc_t_dip
-      - input_number.hesc_t_stop
-      - input_number.hesc_t_max
-      - input_number.hesc_cooldown
-      - input_number.hesc_max_attempts
+      - entity: input_number.hesc_p_start
+        name: Forecast power to start
+      - entity: input_number.hesc_p_hold
+        name: Forecast power to hold
+      - entity: input_number.hesc_t_stable
+        name: Conditions stable before release
+      - entity: input_number.hesc_t_start
+        name: Wait for charger to start
+      - entity: input_number.hesc_t_dip
+        name: Allowed solar dip
+      - entity: input_number.hesc_t_stop
+        name: Charger stopped before restore
+      - entity: input_number.hesc_t_max
+        name: Maximum release duration
+      - entity: input_number.hesc_cooldown
+        name: Cooldown after release
+      - entity: input_number.hesc_max_attempts
+        name: Failed releases per day (max)
