@@ -9,6 +9,10 @@
 | `Cooldown until …` | A release ended recently |
 | `Maximum release attempts reached today` | Too many failed releases today; resets at midnight |
 
+**No source reliability data.** Records are written every 15 minutes in daylight, only when the forecast and PV sensors are valid. Wait at least 15 minutes after sunrise or after a restart.
+
+**Irradiance shows *off*.** No irradiance sensor is set. That is fine: HESC works on the forecast alone.
+
 **The report is empty.** Sessions are written when they end. Charge first, then generate the report again. Refresh the browser if an old version is shown.
 
 **HPVC stays off.** HESC always restores HPVC on Node-RED startup when it owned it. If HPVC was switched off by someone else, HESC does not touch it (ownership flag off).
