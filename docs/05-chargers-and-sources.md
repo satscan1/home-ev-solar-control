@@ -6,10 +6,12 @@ HESC does not talk to a charger or a forecast service directly. It only reads Ho
 
 | Need | Helper | Typical entity | Notes |
 |---|---|---|---|
-| Is the EV connected? | `hesc_ev_connected_sensor` | `binary_sensor.*` | Must be `on` when a car is plugged in. No binary sensor? See [Template helpers](#template-helpers) |
-| How much does the EV draw? | `hesc_ev_power_sensor` | `sensor.*` in W | kW sensors must be converted to W (template helper) |
+| Is the EV connected? | `hesc_ev_connected_sensor` | `binary_sensor.*` **or** a status `sensor.*` | A binary sensor counts as connected when `on`. For a status sensor, every state that is **not** in *EV not-connected states* counts as connected |
+| Which status values mean "no car"? | `hesc_ev_disconnected_values` | text, comma separated | Optional. Default: `off, disconnected, ready, available, no_ev_connected, unplugged, not_connected, no car, idle, ev disconnected` (case does not matter) |
+| How much does the EV draw? | `hesc_ev_power_sensor` | `sensor.*` in W or kW | kW is converted automatically (unit of measurement) |
 | Is the charger in its solar mode? | `hesc_charger_mode_entity` | `select.*`, `sensor.*` or `switch.*` | Whatever tells you the charger waits for surplus |
-| Which value means solar mode? | `hesc_charger_eco_value` | text | The exact state, e.g. `eco_mode`, `solar`, `pv` or `on` for a switch |
+| Which value means solar mode? | `hesc_charger_eco_value` | text, comma separated | One or more values, e.g. `eco_mode, full_solar`. Case does not matter |
+| Extra solar switch (optional) | `hesc_charger_solar_switch_entity` | `switch.*` | For chargers that need a mode **and** a PV-surplus switch (go-e, Wattpilot). Must be `on` |
 | Solar energy per session (optional) | `hesc_ev_green_energy_sensor` | `sensor.*` in kWh | Only used for the solar share in the report |
 
 ### EV charging threshold
@@ -22,7 +24,7 @@ HESC does not talk to a charger or a forecast service directly. It only reads Ho
 
 ## Tested with
 
-HESC v0.2 was developed and tested with:
+HESC was developed and tested with:
 
 | Part | Used |
 |---|---|
@@ -46,9 +48,31 @@ This is why HPVC and Eco block each other: HPVC keeps export near zero, and the 
 
 A reference selection is in [examples/wallbox-pulsar-plus-solcast.reference.yaml](../examples/wallbox-pulsar-plus-solcast.reference.yaml).
 
-### Other chargers
+### Other common chargers
 
-Other chargers have not been tested yet. Before switching shadow mode off:
+HESC only helps when the charger (or its controller) has its **own** solar mode that waits for export. The table lists what to select. It is based on the integration source code, not on tests: entity ids are patterns (`<name>` = your device name), so always pick the real entities in **Developer tools → States**.
+
+| Charger · integration | EV connected | Charging power | Mode entity → solar value(s) | Extra solar switch | Solar mode waits for export? |
+|---|---|---|---|---|---|
+| **Wallbox** Pulsar Plus / Copper · core `wallbox` | `sensor.<name>_status_description` (not-connected: `Ready, Disconnected`) or your own binary sensor | `sensor.<name>_charging_power` (kW) | `select.<name>_solar_charging` → `eco_mode` and/or `full_solar` | — | ✅ tested |
+| **Alfen** Eve · `leeyuentuen/alfen_wallbox` | `sensor.<name>_status_code_socket_1` (not-connected: `Available`) | `sensor.<name>_active_power_total_socket_1` (W) | `select.<name>_solar_charging_mode` → `Green` (or `Comfort`) | — | ✅ needs a meter on the Alfen load balancing |
+| **Peblar** · core `peblar` | `sensor.<name>_state` (not-connected: `no_ev_connected`) | `sensor.<name>_power` (W) | `select.<name>_smart_charging` → `pure_solar` (or `smart_solar`) | — | ✅ |
+| **myenergi Zappi** · `CJNE/ha-myenergi` | `sensor.myenergi_<name>_plug_status` (not-connected: `EV Disconnected`) | Zappi internal-load CT power sensor (W) | `select.myenergi_<name>_charge_mode` → `Eco+` (or `Eco`) | — | ✅ |
+| **go-e Charger** · `marq24/ha-goecharger-api2` | `binary_sensor.goe_<serial>_car_0` | `sensor.goe_<serial>_nrg_11` (W) | `select.goe_<serial>_lmo` → `4` (Eco) | `switch.goe_<serial>_fup` | ✅ needs grid/PV data (go-e Controller or pushed from HA) |
+| **Fronius Wattpilot** · `mk-maddin/wattpilot-HA` | `sensor.<name>_car_connected` (not-connected: `no car`) | `sensor.<name>_charging_power` | `select.<name>_charging_mode` → `Eco` | `switch.<name>_pv_surplus` | ✅ uses the Fronius meter |
+| **SMA EV Charger** · `alengwenus/ha-sma-ev-charger` | `sensor.<name>_charging_session_status` (not-connected: `not_connected`) | `sensor.<name>_charging_station_power` (W) | `select.<name>_operating_mode_of_charge_session` → `optimized_charging` | — | ✅ via Sunny Home Manager |
+| **evcc** (any charger) · `marq24/ha-evcc` | `binary_sensor.evcc_<lp>_connected` | `sensor.evcc_<lp>_chargepower` (W) | `select.evcc_<lp>_mode` → `pv` (or `minpv`) | — | ✅ read evcc's loadpoint, not the charger |
+| **Ohme** · core `ohme` | `sensor.<name>_status` (not-connected: `unplugged`) | `sensor.<name>_power` (kW) | `switch.<name>_solar_boost` → `on` | — | ⚠️ partly (Home Pro with clamp) |
+| **Easee** · `nordicopen/easee_hass` | `sensor.<name>_status` (not-connected: `disconnected`) | `sensor.<name>_power` (kW) | Equalizer *surplus charging* switch → `on` | — | ⚠️ only with an Easee Equalizer |
+| **Zaptec**, **Tesla Wall Connector**, **OCPP** | — | — | no solar mode of their own | — | ❌ use evcc and select evcc's entities |
+
+**Solar-only or mixed?** Many chargers offer a *solar-only* mode (Wallbox `full_solar`, Peblar `pure_solar`, Alfen `Green`, Zappi `Eco+`, evcc `pv`) and a *solar plus grid* mode. Both can be listed, comma separated. The solar-only modes profit most from HESC, because they never start while export is held at zero.
+
+Sources: Home Assistant core integrations (`wallbox`, `peblar`, `ohme`, `tesla_wall_connector`) and the GitHub repositories named in the table.
+
+### Checking another charger
+
+Only the Wallbox Pulsar Plus has been tested in practice. Before switching shadow mode off:
 
 1. Fill in the five charger helpers.
 2. Check the report's **Live inputs**: nothing should show *missing*.
@@ -68,13 +92,14 @@ The primary source is a **solar power forecast in watts**, for now and for 30 mi
 
 A local irradiance sensor (W/m²) is **not required**.
 
-| Irradiance sensor | *Use irradiance as confirmation* | Behaviour |
-|---|---|---|
-| empty | any | Forecast only. The report shows *off* for irradiance |
-| set | off | Forecast only; irradiance is logged so you can compare it with PV |
-| set | on | Forecast **and** irradiance must be above their thresholds |
+Switch **Use local weather station** on in Settings to show its fields.
 
-Tip: leave the confirmation off at first. After a few weeks the report shows whether your irradiance sensor explains your PV output better than the forecast.
+| *Use local weather station* | Behaviour |
+|---|---|
+| off | Forecast only. The irradiance fields are hidden and the report shows *off* |
+| on | Irradiance is logged every 15 minutes and must also be above its start/hold thresholds |
+
+Tip: start with low irradiance thresholds. After a few weeks the report shows how well your weather station explains your PV output.
 
 ## How reliable are my sources?
 
@@ -94,14 +119,10 @@ Intervals in which HPVC limited PV are left out: curtailed PV says nothing about
 
 ## Template helpers
 
-If your charger integration lacks one of the entities, create a template helper in Home Assistant (**Settings → Devices & services → Helpers → Template**). Examples:
+Since v0.3 a status sensor and kW power sensors work directly. A template helper is only needed for special cases, for example when "connected" depends on two entities:
 
 ```yaml
-# EV connected from a status text sensor
-{{ states('sensor.<charger>_status') not in ['Ready', 'Disconnected', 'unavailable', 'unknown'] }}
-
-# Charging power in W from a kW sensor
-{{ (states('sensor.<charger>_power_kw') | float(0) * 1000) | round(0) }}
+{{ is_state('binary_sensor.<charger>_cable', 'on') and is_state('binary_sensor.<charger>_car', 'on') }}
 ```
 
 Check the status values of your own charger in **Developer tools → States**.
