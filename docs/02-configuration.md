@@ -26,6 +26,13 @@ How to map your own charger: [Chargers and sources](05-chargers-and-sources.md).
 
 See the *Shipped defaults* table in the [README](../README.md#shipped-defaults).
 
+## Advice
+
+| Setting | Default | Meaning |
+|---|---|---|
+| Advice based on last | 30 days | Only this recent period is used, so the advice follows the season |
+| Minimum sessions before advice | 8 | No advice until this many Eco sessions of 20 minutes or more are collected (half of it for release-based advice) |
+
 ## Switches
 
 | Switch | Meaning |

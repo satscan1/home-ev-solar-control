@@ -38,6 +38,18 @@ Start conditions:
 | `eco_charge` | every daytime charging session in solar/Eco mode, with the same forecast vs actual fields |
 | `accuracy` | every 15 minutes in daylight: median and cautious forecast (W), actual PV (W), irradiance (W/m², if set) and the share of time HPVC was limiting |
 
+## Advisor
+
+The Reports tab also holds the **HESC Advisor**. It runs daily at 21:30, 90 seconds after a deploy, and before every report. It reads the history of the last *N* days and writes one short line to `input_text.hesc_advice`. The report gets the full advice. The Advisor never changes settings.
+
+| Advice | Based on | Minimum |
+|---|---|---|
+| Start / hold threshold | cautious forecast at the start of Eco sessions that kept charging for 20 min or more (3 of 4 started at or above the advice); hold = 80% of start | minimum sessions |
+| Wait for the charger | start delay after real releases (9 of 10 within the advice, plus 2 min) | half the minimum |
+| Releases without charging | share of real releases that led to charging (< 50% → raise start threshold) | half the minimum |
+| Forecast quality | actual PV vs forecast in daylight intervals without curtailment | 3 × minimum hours |
+| Weather station | irradiance at the start of lasting Eco sessions; hold = 75% of start | minimum sessions |
+
 ## Report
 
 The Reports tab reads the history, builds a self-contained HTML page and writes it to `www/hesc/report.html`. It runs on demand and never inside the evaluation cycle.

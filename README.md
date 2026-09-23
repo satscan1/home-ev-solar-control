@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="releases/v0.3.0/release.md"><img src="https://img.shields.io/badge/release-v0.3.0-blue" alt="Release v0.3.0"></a>
+  <a href="releases/v0.4.0/release.md"><img src="https://img.shields.io/badge/release-v0.4.0-blue" alt="Release v0.4.0"></a>
   <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-ready-41BDF5" alt="Home Assistant ready"></a>
   <a href="https://nodered.org/"><img src="https://img.shields.io/badge/Node--RED-flow-8F0000" alt="Node-RED flow"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later"></a>
@@ -15,7 +15,7 @@ Solar/Eco charging modes on many wallboxes only start when the house is exportin
 HESC resolves this. When the EV is connected and waiting in solar/Eco mode, HPVC is actively limiting, and the **solar power forecast** (optionally confirmed by a **local irradiance sensor**) says enough sun is coming, HESC briefly switches HPVC off so the charger can start. As soon as the EV charges, the sun drops, or the charger does not respond, HPVC takes over again.
 
 > [!IMPORTANT]
-> v0.3 is an early preview. It ships in **shadow mode**: it evaluates and logs every decision but never switches HPVC. Only switch shadow mode off after you have reviewed the report for your own installation.
+> v0.4 is an early preview. It ships in **shadow mode**: it evaluates and logs every decision but never switches HPVC. Only switch shadow mode off after you have reviewed the report for your own installation.
 
 ## Contents
 
@@ -63,6 +63,7 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 | Forecast vs actual per solar/Eco charging session and per day | ✅ |
 | Source reliability: forecast and irradiance vs actual PV every 15 minutes | ✅ |
 | On-demand HTML support report | ✅ |
+| Plain-language setting advice from your own history, only after a minimum number of sessions, following the seasons | ✅ |
 | Separate Home Assistant dashboard in the HPVC layout: status badges, master-control toggles, live inputs, control-state timeline and a forecast vs actual graph | ✅ |
 | No InfluxDB required (file-based history) | ✅ |
 
@@ -136,10 +137,22 @@ The graph and timeline use eight `hesc_diag_*` helper entities from the package.
 
 The dashboard shows today's releases (ok/failed), Eco sessions, forecast accuracy and EV solar kWh.
 
+### Advice
+
+Once a day (and with every report) HESC looks back over a recent period (default 30 days) and gives short advice in plain language: *this is what was measured, this is the advice*. For example: "14 Eco sessions kept charging for 20 minutes or more. Most of them started when the cautious forecast was 2,100 W or higher. Set the start threshold to 2,100 W."
+
+- **No advice without enough data.** Each advice needs a minimum number of sessions (default 8). Until then it says *collecting data*.
+- **Follows the seasons.** Only the recent period counts, so the advice moves with the season. When the threshold advice moves, the report says so for a week.
+- **Advice only.** HESC never changes a setting itself.
+- Covers: start/hold threshold, wait time for the charger (needs real releases, so shadow mode off), releases without charging, forecast quality and, if switched on, the weather-station thresholds.
+
+The current advice is shown on the dashboard and at the top of the report.
+
 ### Support report
 
 **Generate report** builds an HTML report at `/local/hesc/report.html` with:
 
+- the current advice;
 - the forecast vs actual summary and distribution;
 - source reliability (forecast and irradiance vs actual PV, per day);
 - a per-day table (newest first, trend first);
@@ -178,6 +191,7 @@ The Node-RED flow has four tabs: **Inputs** (30-second trigger and startup safet
 - [Chargers and sources](docs/05-chargers-and-sources.md)
 - [Documentation index](docs/README.md)
 - [Changelog](CHANGELOG.md)
+- [v0.4.0 release notes](releases/v0.4.0/release.md)
 - [v0.3.0 release notes](releases/v0.3.0/release.md)
 - [v0.2.0 release notes](releases/v0.2.0/release.md)
 - [v0.1.0 release notes](releases/v0.1.0/release.md)
@@ -211,7 +225,7 @@ home assistant/
   hesc_dashboard.yaml   # Separate Home Assistant dashboard
 
 node-red/
-  hesc_flow.json        # Importable Node-RED flow with four v0.3 tabs
+  hesc_flow.json        # Importable Node-RED flow with four v0.4 tabs
 
 examples/
   wallbox-pulsar-plus-solcast.reference.yaml
@@ -231,6 +245,7 @@ releases/
   v0.1.0/
   v0.2.0/
   v0.3.0/
+  v0.4.0/
 ```
 
 ## Credits

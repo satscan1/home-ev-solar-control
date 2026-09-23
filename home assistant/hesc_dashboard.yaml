@@ -1,4 +1,4 @@
-# Home EV Solar Control (HESC) v0.3 — dashboard
+# Home EV Solar Control (HESC) v0.4 — dashboard
 # Layout follows Home PV Control (badges, master-control toggles, live inputs, control states, apexcharts graph).
 # Requires: apexcharts-card (HACS) for the graph section.
 # Add as a separate dashboard: Settings → Dashboards → Add → New from scratch → ⋮ → Raw configuration editor → paste.
@@ -143,6 +143,10 @@ views:
       - entity: input_text.hesc_insight_3
         name: Last snapshot
         type: simple-entity
+      - entity: input_text.hesc_advice
+        name: Advice
+        type: simple-entity
+        icon: mdi:lightbulb-on-outline
   - type: grid
     cards:
     - type: entities
@@ -675,3 +679,18 @@ views:
         name: Cooldown after release
       - entity: input_number.hesc_max_attempts
         name: Failed releases per day (max)
+    - type: markdown
+      content: '### 💡 Advice
+
+        HESC gives advice only after enough sessions, based on a recent period so it follows the seasons. It never changes settings itself.'
+      grid_options:
+        columns: 12
+    - type: entities
+      entities:
+      - entity: input_number.hesc_advice_window_days
+        name: Advice based on last
+      - entity: input_number.hesc_advice_min_runs
+        name: Minimum sessions before advice
+      - entity: input_text.hesc_advice_updated
+        name: Advice updated
+        type: simple-entity
