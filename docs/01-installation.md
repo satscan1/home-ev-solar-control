@@ -36,6 +36,6 @@ Open the **Settings** view and enter your entities. See [02 Settings](02-configu
 Keep shadow mode on for at least a week of charging days. Press **Generate report** and check:
 
 - whether the would-be releases happen at sensible moments;
-- how actual PV compares with the forecast during Eco charging.
+- how actual PV compares with the forecast during solar/Eco charging.
 
 Adjust the thresholds, then switch shadow mode off.
