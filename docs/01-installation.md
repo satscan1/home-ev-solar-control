@@ -27,6 +27,21 @@ Files are written to the Home Assistant configuration mount of the Node-RED add-
 
 Add `home assistant/hesc_dashboard.yaml` as a new dashboard (Settings → Dashboards → Add → New dashboard from scratch → ⋮ → Raw configuration editor → paste).
 
+### Frontend cards
+
+Install these through HACS (Frontend) before adding the dashboard:
+
+| Card | Needed for | Required |
+|---|---|---|
+| [apexcharts-card](https://github.com/RomRider/apexcharts-card) | *Solar forecast vs actual · EV* and *Solar charging forecast* charts | Yes |
+| [button-card](https://github.com/custom-cards/button-card) | *Expected solar charging* bar (sunrise → sunset, a green block per 30 minutes where charging is expected) | Optional |
+
+The *Expected solar charging* bar is only shown when button-card is installed. The dashboard checks this with the HACS update entity `update.button_card_update`. Without button-card the bar simply stays hidden; the rest of the dashboard works as normal. If you installed button-card manually (not through HACS), that entity does not exist: remove the `visibility` block from the card to show it.
+
+### Solcast: half-hourly forecast
+
+The forecast chart and the charging bar use 30-minute blocks. Turn this on in the Solcast integration: **Settings → Devices & services → Solcast PV Forecast → Configure → Attribute breakdown → add `attr_brk_halfhourly`**. Without it, both fall back to the hourly forecast (`attr_brk_hourly`).
+
 ## 4. Configure
 
 Open the **Settings** view and enter your entities. See [02 Settings](02-configuration.md) and the example in `examples/`.
