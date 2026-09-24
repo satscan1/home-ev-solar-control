@@ -337,12 +337,135 @@ template:
           {% endfor %}
           {{ ok.v and (states('input_text.hesc_charger_eco_value') | trim) not in ['', 'unknown', 'unavailable'] }}
 
+  # Charger profile: ONE table with the data per charger (edit only here), plus a search for
+  # matching entities. Recomputed only when the charger type changes, on start and on 'Search again'.
+  - triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: event
+        event_type: event_template_reloaded
+      - trigger: state
+        entity_id:
+          - input_select.hesc_charger_type
+          - input_button.hesc_charger_search
+    sensor:
+      - name: "HESC charger profile"
+        unique_id: hesc_charger_profile
+        icon: mdi:ev-plug-type2
+        state: "{{ states('input_select.hesc_charger_type') }}"
+        attributes:
+          profile: >-
+            {#- One table for all supported chargers. Add or correct a charger here only.
+                mode: regex for the entity that holds the solar mode (searched in all entities).
+                conn / power / switch: entity-id endings, searched on the same device as the mode entity.
+                Based on the integrations' source code; only Wallbox has been tested in practice. -#}
+            {%- set T = {
+              'Wallbox': {'values': 'eco_mode, full_solar', 'nc': 'Ready, Disconnected', 'mode': '^select\\..*_solar_charging$', 'conn': '_status_description$', 'power': '_charging_power$', 'switch': '', 'tested': true, 'note': 'Official Wallbox integration. Tested with a Pulsar Plus.'},
+              'Alfen Eve': {'values': 'Green', 'nc': 'Available', 'mode': '^select\\..*_solar_charging_mode$', 'conn': '_status_code_socket_1$', 'power': '_active_power_total_socket_1$', 'switch': '', 'tested': false, 'note': 'Needs a meter on the Alfen load balancing.'},
+              'Peblar': {'values': 'pure_solar', 'nc': 'no_ev_connected', 'mode': '^select\\..*_smart_charging$', 'conn': '_state$', 'power': '_power$', 'switch': '', 'tested': false, 'note': ''},
+              'myenergi Zappi': {'values': 'Eco+', 'nc': 'EV Disconnected', 'mode': '^select\\.myenergi_.*_charge_mode$', 'conn': '_plug_status$', 'power': '', 'switch': '', 'tested': false, 'note': 'Charging power: pick the Zappi internal-load CT power sensor yourself.'},
+              'go-e Charger': {'values': '4', 'nc': '', 'mode': '^select\\.goe_.*_lmo$', 'conn': '_car_0$', 'power': '_nrg_11$', 'switch': '_fup$', 'tested': false, 'note': 'Needs grid/PV data (go-e Controller or pushed from Home Assistant).'},
+              'Fronius Wattpilot': {'values': 'Eco', 'nc': 'no car', 'mode': '^select\\..*_charging_mode$', 'conn': '_car_connected$', 'power': '_charging_power$', 'switch': '_pv_surplus$', 'tested': false, 'note': 'Uses the Fronius meter.'},
+              'SMA EV Charger': {'values': 'optimized_charging', 'nc': 'not_connected', 'mode': '^select\\..*_operating_mode_of_charge_session$', 'conn': '_charging_session_status$', 'power': '_charging_station_power$', 'switch': '', 'tested': false, 'note': 'Via Sunny Home Manager.'},
+              'evcc (any charger)': {'values': 'pv', 'nc': '', 'mode': '^select\\.evcc_.*_mode$', 'conn': '_connected$', 'power': '_chargepower$', 'switch': '', 'tested': false, 'note': 'Read the evcc loadpoint, not the charger itself.'},
+              'Ohme': {'values': 'on', 'nc': 'unplugged', 'mode': '^switch\\..*_solar_boost$', 'conn': '_status$', 'power': '_power$', 'switch': '', 'tested': false, 'note': 'Only partly: Home Pro with its own clamp.'},
+              'Easee': {'values': 'on', 'nc': 'disconnected', 'mode': '', 'conn': '_status$', 'power': '_power$', 'switch': '', 'tested': false, 'note': 'Only with an Easee Equalizer; pick its surplus-charging switch as mode entity yourself.'}
+            } -%}
+            {%- set type = states('input_select.hesc_charger_type') -%}
+            {%- set p = T.get(type) -%}
+            {%- if p is none -%}
+            {{ {'type': type, 'known': false} }}
+            {%- else -%}
+            {#- Search is language independent where possible: the mode entity is found by its options
+                (they contain the solar value), the power sensor by device_class power on the same device. -#}
+            {%- set vals = p['values'].split(',') | map('trim') | list -%}
+            {%- set ns = namespace(m=[]) -%}
+            {%- for s in states if s.attributes.options is defined and s.attributes.options is iterable and s.attributes.options is not string -%}
+              {%- if vals | select('in', s.attributes.options | map('string') | list) | list | count > 0 -%}{%- set ns.m = ns.m + [s.entity_id] -%}{%- endif -%}
+            {%- endfor -%}
+            {%- if ns.m | count == 0 and p.mode -%}{%- set ns.m = states | map(attribute='entity_id') | select('match', p.mode) | list -%}{%- endif -%}
+            {%- set modes = ns.m[:5] -%}
+            {%- set dev = device_id(modes[0]) if modes | count == 1 else none -%}
+            {%- set near = device_entities(dev) if dev else [] -%}
+            {%- set power = near | select('match', '^sensor\\.') | select('is_state_attr', 'device_class', 'power') | list -%}
+            {%- set conn = near | select('match', '^binary_sensor\\.') | select('is_state_attr', 'device_class', 'plug') | list -%}
+            {%- if conn | count == 0 and p.conn -%}{%- set conn = near | select('search', p.conn) | list -%}{%- endif -%}
+            {%- if conn | count == 0 -%}{%- set conn = near | select('match', '^sensor\\.') | select('search', '(status|state|plug|car|connect)') | reject('search', '(power|energy|current|voltage)') | reject('is_state_attr', 'state_class', 'measurement') | list -%}{%- endif -%}
+            {%- set sw = near | select('search', p.switch) | list if p.switch else [] -%}
+            {{ {'type': type, 'known': true, 'values': p['values'], 'not_connected': p.nc, 'tested': p.tested, 'note': p.note,
+                'mode': modes, 'connected': conn[:5], 'power': power[:5], 'switch': sw[:5]} }}
+            {%- endif -%}
+
 input_button:
   hesc_generate_report:
     name: "HESC Generate report"
     icon: mdi:file-document-plus-outline
+  hesc_charger_search:
+    name: "HESC search charger entities again"
+    icon: mdi:magnify
+
+# Charger type: fills the brand-specific values and suggests the charger entities.
+# The data per charger lives in one place: sensor.hesc_charger_profile (template section).
+input_select:
+  hesc_charger_type:
+    name: "HESC charger type"
+    icon: mdi:ev-plug-type2
+    options:
+      - "Not chosen"
+      - "Wallbox"
+      - "Alfen Eve"
+      - "Peblar"
+      - "myenergi Zappi"
+      - "go-e Charger"
+      - "Fronius Wattpilot"
+      - "SMA EV Charger"
+      - "evcc (any charger)"
+      - "Ohme"
+      - "Easee"
+      - "Other (manual)"
 
 automation:
+  # Charger type chosen: fill the brand values, and the charger entities when exactly one match was found.
+  # Filled-in entity fields are never overwritten.
+  - id: hesc_apply_charger_type
+    alias: "HESC - Apply charger type"
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: sensor.hesc_charger_profile
+        not_from: [unavailable, unknown]
+    conditions:
+      - "{{ (state_attr('sensor.hesc_charger_profile', 'profile') or {}).get('known', false) }}"
+    actions:
+      - variables:
+          p: "{{ state_attr('sensor.hesc_charger_profile', 'profile') }}"
+          brand_changed: >-
+            {{ trigger.from_state.state != trigger.to_state.state
+               and trigger.from_state.state not in ['Not chosen', 'Other (manual)', 'unknown', 'unavailable'] }}
+          empty: "{{ ['', 'unknown', 'unavailable'] }}"
+      - if: "{{ brand_changed or (states('input_text.hesc_charger_eco_value') | trim) in empty }}"
+        then:
+          - action: input_text.set_value
+            target: { entity_id: input_text.hesc_charger_eco_value }
+            data: { value: "{{ p['values'] }}" }
+      - if: "{{ p.not_connected != '' and (brand_changed or (states('input_text.hesc_ev_disconnected_values') | trim) in empty) }}"
+        then:
+          - action: input_text.set_value
+            target: { entity_id: input_text.hesc_ev_disconnected_values }
+            data: { value: "{{ p.not_connected }}" }
+      - repeat:
+          for_each:
+            - { field: hesc_charger_mode_entity, key: mode }
+            - { field: hesc_ev_connected_sensor, key: connected }
+            - { field: hesc_ev_power_sensor, key: power }
+            - { field: hesc_charger_solar_switch_entity, key: switch }
+          sequence:
+            - if: "{{ (states('input_text.' ~ repeat.item.field) | trim) in empty and (p[repeat.item.key] | count) == 1 }}"
+              then:
+                - action: input_text.set_value
+                  target: { entity_id: "input_text.{{ repeat.item.field }}" }
+                  data: { value: "{{ p[repeat.item.key][0] }}" }
+
   # PV and grid power are taken over from HPVC, so a new user does not have to pick them twice.
   # Switch 'Use HPVC sensors' off in Settings to choose other sensors.
   - id: hesc_sync_sources_from_hpvc
