@@ -22,7 +22,7 @@ views:
         visibility:
           - condition: state
             entity: binary_sensor.hesc_configuration_valid
-            state: "on"
+            state: 'on'
       - type: entity
         entity: binary_sensor.hesc_diag_ev_connected
         name: EV
@@ -32,7 +32,7 @@ views:
         visibility:
           - condition: state
             entity: binary_sensor.hesc_configuration_valid
-            state: "on"
+            state: 'on'
       - type: entity
         entity: binary_sensor.hesc_diag_charger_solar_mode
         name: Solar mode
@@ -42,7 +42,7 @@ views:
         visibility:
           - condition: state
             entity: binary_sensor.hesc_configuration_valid
-            state: "on"
+            state: 'on'
       - type: entity
         entity: binary_sensor.hpvc_pv_limited
         name: HPVC limiting
@@ -52,7 +52,7 @@ views:
         visibility:
           - condition: state
             entity: binary_sensor.hesc_configuration_valid
-            state: "on"
+            state: 'on'
       - type: entity
         entity: binary_sensor.hesc_diag_release_active
         name: Release
@@ -62,16 +62,16 @@ views:
         visibility:
           - condition: state
             entity: binary_sensor.hesc_diag_release_active
-            state: "on"
+            state: 'on'
           - condition: state
             entity: binary_sensor.hesc_configuration_valid
-            state: "on"
+            state: 'on'
     sections:
       - type: grid
         visibility:
           - condition: state
             entity: binary_sensor.hesc_configuration_valid
-            state_not: "on"
+            state_not: 'on'
         cards:
           - type: markdown
             grid_options:
@@ -140,7 +140,7 @@ views:
           - type: conditional
             conditions:
               - entity: input_boolean.hesc_owns_hpvc_off
-                state: "on"
+                state: 'on'
             card:
               type: tile
               entity: input_boolean.hesc_owns_hpvc_off
@@ -150,7 +150,7 @@ views:
           - type: conditional
             conditions:
               - entity: input_boolean.hesc_report_ready
-                state: "off"
+                state: 'off'
             card:
               type: tile
               entity: input_button.hesc_generate_report
@@ -173,7 +173,7 @@ views:
           - type: conditional
             conditions:
               - entity: input_boolean.hesc_report_ready
-                state: "on"
+                state: 'on'
             card:
               type: tile
               entity: input_boolean.hesc_report_ready
@@ -192,53 +192,51 @@ views:
                 columns: 6
             grid_options:
               columns: 12
-          - type: entities
-            entities:
-              - entity: input_text.hesc_report_generated
-                name: Last report
-                type: simple-entity
-            grid_options:
-              columns: full
-              rows: 4
         visibility:
           - condition: state
             entity: binary_sensor.hesc_configuration_valid
-            state: "on"
+            state: 'on'
       - type: grid
         cards:
-          - type: entities
+          - type: markdown
             title: 📊 Status
-            state_color: true
-            entities:
-              - entity: input_text.hesc_state
-                name: State
-                type: simple-entity
-              - entity: input_text.hesc_reason
-                name: Reason
-                type: simple-entity
-              - entity: input_text.hesc_last_action
-                name: Last action
-                type: simple-entity
-              - entity: input_text.hesc_insight_1
-                name: Releases today
-                type: simple-entity
-              - entity: input_text.hesc_insight_2
-                name: Forecast vs actual today
-                type: simple-entity
-              - entity: input_text.hesc_insight_3
-                name: Last snapshot
-                type: simple-entity
-              - entity: input_text.hesc_advice
-                name: Advice
-                type: simple-entity
-                icon: mdi:lightbulb-on-outline
+            content: |-
+              {% set st = states('input_text.hesc_state') %}
+              {% set rs = states('input_text.hesc_reason') %}
+              {% set la = states('input_text.hesc_last_action') %}
+              {% set i1 = states('input_text.hesc_insight_1') %}
+              {% set i2 = states('input_text.hesc_insight_2') %}
+              {% set adv = states('input_text.hesc_advice') %}
+              {% set r = i1 | regex_findall('(\\d+) releases \\((\\d+) ok, (\\d+) failed\\)') %}
+              {% set ses = i1 | regex_findall('(\\d+) solar sessions') %}
+              {% set pct = i2 | regex_findall('(\\d+)%') %}
+              {% set ev = i2 | regex_findall('EV ([\\d.]+) kWh') %}
+              {% set evs = i2 | regex_findall('([\\d.]+) kWh solar') %}
+              {% set col = adv | regex_findall('(\\d+) of (\\d+)') %}
+              | | |
+              |:--|:--|
+              | **State** | {{ st.replace('[shadow] ', '') }}{{ ' · ' ~ rs if rs not in ['', 'unknown', 'unavailable'] }}{{ ' · shadow' if st.startswith('[shadow]') }} |
+              {%- if la not in ['', 'unknown', 'unavailable'] %}
+              | **Last action** | {{ la }} |
+              {%- endif %}
+              | **Today** | {{ ses[0] if ses else 0 }} solar sessions · {{ r[0][0] if r else 0 }} HPVC releases{{ ' (' ~ r[0][2] ~ ' failed)' if r and r[0][2] | int > 0 }} |
+              {%- if ev %}
+              | **EV today** | {{ ev[0] | float | round(0) | int }} kWh{{ ', ' ~ (evs[0] | float | round(0) | int) ~ ' from sun' if evs }} |
+              {%- endif %}
+              {%- if pct %}
+              | **Sun vs forecast** | {{ pct[0] }} %¹ |
+              {%- endif %}
+              | **Advice** | {% if col %}not yet · {{ col[0][1] | int - col[0][0] | int }} more solar sessions needed{% elif adv in ['', 'unknown', 'unavailable'] %}–{% else %}available · see report{% endif %} |
+              {% if pct %}
+              <small>¹ actual solar power as % of the forecast, while the car was charging on sun</small>
+              {% endif %}
             grid_options:
               columns: full
-              rows: 8
+              rows: auto
         visibility:
           - condition: state
             entity: binary_sensor.hesc_configuration_valid
-            state: "on"
+            state: 'on'
       - type: grid
         cards:
           - type: entities
@@ -256,17 +254,16 @@ views:
               - type: conditional
                 conditions:
                   - entity: input_boolean.hesc_use_irradiance
-                    state: "on"
+                    state: 'on'
                 row:
                   entity: sensor.hesc_diag_irradiance
                   name: Irradiance (weather station)
             grid_options:
               columns: full
-              rows: 8
         visibility:
           - condition: state
             entity: binary_sensor.hesc_configuration_valid
-            state: "on"
+            state: 'on'
       - type: grid
         cards:
           - type: entities
@@ -301,7 +298,7 @@ views:
         visibility:
           - condition: state
             entity: binary_sensor.hesc_configuration_valid
-            state: "on"
+            state: 'on'
       - type: custom:apexcharts-card
         section_mode: true
         update_interval: 30s
@@ -450,13 +447,13 @@ views:
             yaxis:
               - borderColor: var(--secondary-text-color)
                 strokeDashArray: 0
-                "y": 0
+                'y': 0
         series:
           - entity: sensor.hesc_diag_forecast_power
             name: Forecast
             yaxis_id: main
             type: area
-            color: "#8B5CF6"
+            color: '#8B5CF6'
             opacity: 0.45
             stroke_width: 2
             unit: W
@@ -486,7 +483,7 @@ views:
             name: PV actual
             yaxis_id: main
             type: area
-            color: "#F59E0B"
+            color: '#F59E0B'
             opacity: 0.9
             stroke_width: 2
             unit: W
@@ -516,7 +513,7 @@ views:
             name: EV charging
             yaxis_id: main
             type: area
-            color: "#06B6D4"
+            color: '#06B6D4'
             opacity: 0.55
             stroke_width: 2
             unit: W
@@ -547,7 +544,7 @@ views:
             name: Solar
             yaxis_id: raw_header
             type: line
-            color: "#F59E0B"
+            color: '#F59E0B'
             opacity: 0
             stroke_width: 0
             unit: W
@@ -573,7 +570,7 @@ views:
             name: Forecast
             yaxis_id: raw_header
             type: line
-            color: "#8B5CF6"
+            color: '#8B5CF6'
             opacity: 0
             stroke_width: 0
             unit: W
@@ -599,7 +596,7 @@ views:
             name: EV
             yaxis_id: raw_header
             type: line
-            color: "#06B6D4"
+            color: '#06B6D4'
             opacity: 0
             stroke_width: 0
             unit: W
@@ -625,7 +622,7 @@ views:
             name: Start threshold
             yaxis_id: main
             type: line
-            color: "#94A3B8"
+            color: '#94A3B8'
             opacity: 1
             stroke_width: 1
             unit: W
@@ -642,7 +639,7 @@ views:
         visibility:
           - condition: state
             entity: binary_sensor.hesc_configuration_valid
-            state: "on"
+            state: 'on'
       - type: grid
         cards:
           - type: custom:apexcharts-card
@@ -670,15 +667,15 @@ views:
               annotations:
                 xaxis:
                   - x: EVAL:new Date().getTime()
-                    borderColor: "#009ac7"
+                    borderColor: '#009ac7'
                     strokeDashArray: 0
                     label:
                       text: Now
                       orientation: horizontal
                       offsetY: -12
                       style:
-                        background: "#009ac7"
-                        color: "#ffffff"
+                        background: '#009ac7'
+                        color: '#ffffff'
               plotOptions:
                 bar:
                   borderRadius: 2
@@ -758,8 +755,8 @@ views:
             series:
               - entity: sensor.solcast_pv_forecast_power_now
                 name: Forecast now
-                color: "#8B5CF6"
-                unit: " W"
+                color: '#8B5CF6'
+                unit: ' W'
                 float_precision: 0
                 extend_to: false
                 show:
@@ -773,8 +770,8 @@ views:
                   return [[Date.now(), v]];
               - entity: input_number.hesc_p_start
                 name: Start threshold
-                color: "#4caf50"
-                unit: " W"
+                color: '#4caf50'
+                unit: ' W'
                 float_precision: 0
                 extend_to: false
                 show:
@@ -946,7 +943,7 @@ views:
                     const past = isToday && end <= now;
                     const left = pct(t), width = pct(end) - pct(t);
                     const colour = cls === 'go' ? '#4caf50' : '#ff9800';
-                    slots += '<div style="position:absolute;top:0;bottom:0;left:' + left + '%;width:calc(' + width + '% - 1px);background:' + colour + ';opacity:' + (past ? 0.35 : 1) + ';border-radius:2px;"></div>';
+                    slots += '<div style="position:absolute;top:0;bottom:0;left:' + left + '%;width:calc(' + width + '% - 1px);background:' + colour + ';opacity:' + (past ? 0.35 : 1) + ';border-radius:2px;" title="' + hm(t) + '–' + hm(end) + ' · ' + (cls === 'go' ? 'can start' : 'keeps charging') + ' (~' + (v / 1000).toFixed(1) + ' kW forecast)"></div>';
                   });
                   const track = '<div style="position:absolute;top:0;bottom:0;left:0;right:0;background:rgba(255,255,255,0.04);border-radius:3px;"></div>';
                   const daylight = '<div style="position:absolute;top:0;bottom:0;left:' + pct(rise) + '%;width:' + (pct(set) - pct(rise)) + '%;background:rgba(255,255,255,0.10);border-radius:3px;"></div>';
@@ -978,9 +975,10 @@ views:
                 ]]]
             styles:
               card:
-                - "padding: 0px"
+                - 'padding: 0px'
+                - 'cursor: default'
               grid:
-                - grid-template-areas: "\"bar\""
+                - grid-template-areas: '"bar"'
                 - grid-template-columns: 1fr
               custom_fields:
                 bar:
@@ -988,6 +986,7 @@ views:
                   - justify-self: stretch
                   - text-align: left
                   - display: block
+                  - pointer-events: auto
             grid_options:
               columns: full
               rows: 3
@@ -996,14 +995,14 @@ views:
                 conditions:
                   - condition: state
                     entity: update.button_card_update
-                    state: "on"
+                    state: 'on'
                   - condition: state
                     entity: update.button_card_update
-                    state: "off"
+                    state: 'off'
         visibility:
           - condition: state
             entity: binary_sensor.hesc_configuration_valid
-            state: "on"
+            state: 'on'
   - type: sections
     title: Settings
     path: settings
@@ -1114,7 +1113,7 @@ views:
           - type: conditional
             conditions:
               - entity: input_boolean.hesc_use_hpvc_sources
-                state: "off"
+                state: 'off'
             card:
               type: entities
               entities:
@@ -1136,7 +1135,7 @@ views:
           - type: conditional
             conditions:
               - entity: input_boolean.hesc_edit_sources
-                state: "on"
+                state: 'on'
             card:
               type: entities
               entities:
@@ -1170,7 +1169,7 @@ views:
           - type: conditional
             conditions:
               - entity: input_boolean.hesc_show_optional
-                state: "on"
+                state: 'on'
             card:
               type: entities
               entities:
@@ -1198,7 +1197,7 @@ views:
           - type: conditional
             conditions:
               - entity: input_boolean.hesc_use_irradiance
-                state: "on"
+                state: 'on'
             card:
               type: entities
               entities:
@@ -1230,7 +1229,7 @@ views:
           - type: conditional
             conditions:
               - entity: input_boolean.hesc_show_thresholds
-                state: "on"
+                state: 'on'
             card:
               type: entities
               entities:
@@ -1254,7 +1253,7 @@ views:
           - type: conditional
             conditions:
               - entity: input_boolean.hesc_show_timing
-                state: "on"
+                state: 'on'
             card:
               type: entities
               entities:
@@ -1286,7 +1285,7 @@ views:
           - type: conditional
             conditions:
               - entity: input_boolean.hesc_show_advice
-                state: "on"
+                state: 'on'
             card:
               type: entities
               entities:
