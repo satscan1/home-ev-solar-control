@@ -5,6 +5,7 @@
 **Settings and onboarding**
 - Settings in three steps: *1 · Your charger* (the only required fields), *2 · Taken over automatically* and *3 · Advanced*, with separate switches for thresholds, timing and advice.
 - PV and grid power are taken over from Home PV Control (`input_boolean.hesc_use_hpvc_sources`, kept in sync by an automation). Switch it off to pick other sensors.
+- **Charger type** selection (`input_select.hesc_charger_type`) for 10 chargers plus *Other (manual)*: fills in the brand values, suggests the charger entities (language independent) and fills a field only when exactly one match is found. All charger data sits in one table (`sensor.hesc_charger_profile`).
 - Setup check `binary_sensor.hesc_configuration_valid` with a checklist and live values. Until the essentials are filled in, Main shows only a welcome card (same idea as HPVC's onboarding).
 
 **Charger-independent wording and data**
