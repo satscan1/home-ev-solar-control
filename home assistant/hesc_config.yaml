@@ -1,9 +1,9 @@
 # =============================================================================
 # Home EV Solar Control (HESC) — Home Assistant package
-# Version: v0.4.0 (2026-09-23)
+# Version: v0.5.0 (2026-09-24)
 # Project tag: [WALLBOX] [PV]
 #
-# Companion for Home PV Control (HPVC) and Home Battery Control (HBC):
+# Works alongside Home PV Control (HPVC):
 # when the EV waits in solar/Eco charging mode and enough solar power is
 # forecast, HESC temporarily switches HPVC off so the charger can start,
 # and switches HPVC back on afterwards. Node-RED flow: hesc_flow.json.
@@ -29,6 +29,25 @@ input_boolean:
   hesc_report_ready:
     name: "HESC report ready"
     icon: mdi:file-document-check-outline
+  # --- simplified Settings screen (v0.5) ---
+  hesc_use_hpvc_sources:
+    name: "HESC use HPVC sensors for PV and grid"
+    icon: mdi:link-variant
+  hesc_edit_sources:
+    name: "HESC change automatic sources"
+    icon: mdi:pencil-outline
+  hesc_show_optional:
+    name: "HESC show optional charger fields"
+    icon: mdi:tune-variant
+  hesc_show_thresholds:
+    name: "HESC show thresholds"
+    icon: mdi:tune-vertical
+  hesc_show_timing:
+    name: "HESC show timing"
+    icon: mdi:timer-cog-outline
+  hesc_show_advice:
+    name: "HESC show advice settings"
+    icon: mdi:lightbulb-on-outline
 
 input_text:
   # --- source selection ---
@@ -303,12 +322,76 @@ template:
         icon: mdi:lock-open-variant-outline
         state: "{{ 'Release' in states('input_text.hesc_state') }}"
 
+  # Setup check (same idea as binary_sensor.hpvc_configuration_valid).
+  # On only when every essential source is filled in and exists. Only checks that
+  # entities exist, not their current value, so a short outage does not hide the dashboard.
+  - binary_sensor:
+      - name: "HESC configuration valid"
+        unique_id: hesc_configuration_valid
+        icon: mdi:clipboard-check-outline
+        state: >
+          {% set ok = namespace(v=true) %}
+          {% for f in ['hesc_ev_connected_sensor', 'hesc_ev_power_sensor', 'hesc_charger_mode_entity', 'hesc_pv_power_sensor', 'hesc_forecast_now_sensor', 'hesc_hpvc_enabled_entity', 'hesc_hpvc_limited_entity'] %}
+            {% set e = states('input_text.' ~ f) | trim %}
+            {% if e in ['', 'unknown', 'unavailable'] or (states(e) == 'unknown' and state_attr(e, 'friendly_name') is none) %}{% set ok.v = false %}{% endif %}
+          {% endfor %}
+          {{ ok.v and (states('input_text.hesc_charger_eco_value') | trim) not in ['', 'unknown', 'unavailable'] }}
+
 input_button:
   hesc_generate_report:
     name: "HESC Generate report"
     icon: mdi:file-document-plus-outline
 
 automation:
+  # PV and grid power are taken over from HPVC, so a new user does not have to pick them twice.
+  # Switch 'Use HPVC sensors' off in Settings to choose other sensors.
+  - id: hesc_sync_sources_from_hpvc
+    alias: "HESC - Take over PV and grid sensors from HPVC"
+    mode: queued
+    triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: state
+        entity_id:
+          - input_text.hpvc_pv_power_sensor
+          - input_text.hpvc_grid_power_sensor
+      - trigger: state
+        entity_id: input_boolean.hesc_use_hpvc_sources
+        to: "on"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.hesc_use_hpvc_sources
+        state: "on"
+    actions:
+      - variables:
+          pv: "{{ states('input_text.hpvc_pv_power_sensor') | trim }}"
+          grid: "{{ states('input_text.hpvc_grid_power_sensor') | trim }}"
+      - if: "{{ pv not in ['', 'unknown', 'unavailable'] and pv != states('input_text.hesc_pv_power_sensor') }}"
+        then:
+          - action: input_text.set_value
+            target: { entity_id: input_text.hesc_pv_power_sensor }
+            data: { value: "{{ pv }}" }
+      - if: "{{ grid not in ['', 'unknown', 'unavailable'] and grid != states('input_text.hesc_grid_power_sensor') }}"
+        then:
+          - action: input_text.set_value
+            target: { entity_id: input_text.hesc_grid_power_sensor }
+            data: { value: "{{ grid }}" }
+
+  # Same pattern as HPVC: opening the report resets the tile to "Generate report".
+  - id: hesc_reset_report_after_view
+    alias: "HESC - Reset report after viewing"
+    description: "Resets the report tile to Generate report when the generated HTML report is opened."
+    mode: restart
+    triggers:
+      - trigger: webhook
+        webhook_id: hesc_report_viewed
+        allowed_methods: [POST]
+        local_only: false
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.hesc_report_ready
+
   # Same pattern as HPVC: sensible defaults only once, on first install.
   - id: hesc_apply_defaults_on_first_install
     alias: "HESC - Apply defaults on first install"
@@ -330,6 +413,7 @@ automation:
           entity_id:
             - input_boolean.hesc_enabled
             - input_boolean.hesc_shadow_mode
+            - input_boolean.hesc_use_hpvc_sources
       - action: input_boolean.turn_off
         target:
           entity_id:
