@@ -6,9 +6,11 @@
   <img src="https://img.shields.io/badge/status-shadow%20mode%20%2F%20early%20preview-orange" alt="Early preview">
 </p>
 
+<p align="center"><img src="screenshots/banner.png" alt="HEVS – Home Energy & Vehicle System" width="100%"></p>
+
 # Home EV Solar Control
 
-**Home EV Solar Control (HESC)** is a companion for [Home PV Control (HPVC)](https://github.com/BioPC/home-pv-control) and [Home Battery Control (HBC)](https://github.com/gitcodebob/marstek-venus-rs485-node-red). It keeps EV charging on solar working while HPVC limits your PV output.
+**Home EV Solar Control (HESC)** works alongside [Home PV Control (HPVC)](https://github.com/BioPC/home-pv-control). It keeps EV charging on solar working while HPVC limits your PV output.
 
 Solar/Eco charging modes on many wallboxes only start when the house is exporting enough power. HPVC does the opposite: it curtails the inverters so that export stays near zero, for example at negative export prices. Both do their job, but together they block each other. The wallbox waits for surplus that never comes.
 
@@ -135,11 +137,11 @@ The graph and timeline use eight `hesc_diag_*` helper entities from the package.
 
 ### Today
 
-The dashboard shows today's releases (ok/failed), Eco sessions, forecast accuracy and EV solar kWh.
+The dashboard shows today's releases (ok/failed), solar sessions, forecast accuracy and EV solar kWh.
 
 ### Advice
 
-Once a day (and with every report) HESC looks back over a recent period (default 30 days) and gives short advice in plain language: *this is what was measured, this is the advice*. For example: "Eco kept charging reliably from about 1,550 W expected surplus. House and battery used about 550 W together at those moments. Advice: start threshold 2,100 W."
+Once a day (and with every report) HESC looks back over a recent period (default 30 days) and gives short advice in plain language: *this is what was measured, this is the advice*. For example: "Solar charging kept going reliably from about 1,550 W expected surplus. House and battery used about 550 W together at those moments. Advice: start threshold 2,100 W."
 
 Two quantities are kept apart: the **surplus** (forecast minus what house and battery use, derived from PV, grid and EV power at the start of each session) explains *why*; the **start threshold** is what you actually set, because HESC compares it with the gross forecast. No battery sensor is needed. Without a grid power sensor the advice falls back to the gross forecast and says so.
 
