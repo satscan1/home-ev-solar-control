@@ -168,7 +168,7 @@ The current advice is shown on the dashboard and at the top of the report.
 
 ## Tested with
 
-HESC was developed and tested with a **Wallbox Pulsar Plus** (official Wallbox integration, solar charging mode *Eco*), **Solcast PV Forecast**, an **Ecowitt** weather station, **HPVC** and **HBC**. Other chargers should work when they expose the entities listed in [Chargers and sources](docs/05-chargers-and-sources.md); please test them in shadow mode first.
+HESC was developed and tested with a **Wallbox Pulsar Plus** (official Wallbox integration, solar charging mode *Eco*), **Solcast PV Forecast**, an **Ecowitt** weather station, **HPVC** and **HBC**. Checked against **HPVC v1.5.0** (24-09-2026): no changes needed in HESC. Other chargers should work when they expose the entities listed in [Chargers and sources](docs/05-chargers-and-sources.md); please test them in shadow mode first.
 
 ## Architecture and persistence
 
