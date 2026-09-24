@@ -1,37 +1,60 @@
 # Settings
 
-## Sources (`input_text.hesc_*`)
+The **Settings** tab is split into three steps. A new user only fills in step 1; everything else is taken over from Home PV Control (HPVC) or has a working default.
 
-| Helper | Required | Description |
-|---|:-:|---|
-| `hesc_forecast_now_sensor` | ✅ | Forecast PV power now (W) |
-| `hesc_forecast_30m_sensor` | ✅ | Forecast PV power in 30 minutes (W) |
-| `hesc_forecast_attribute` | | Attribute to use instead of the state, e.g. `estimate10` (Solcast cautious estimate). Empty = state |
-| `hesc_irradiance_sensor` | | Local irradiance (W/m²), optional. Used and logged only when *Use local weather station* is on |
-| `hesc_pv_power_sensor` | ✅ | Actual PV power (W or kW), used for forecast vs actual |
-| `hesc_grid_power_sensor` | | Grid power (W, negative = export), for context in the history |
-| `hesc_ev_connected_sensor` | ✅ | EV connected: binary sensor, or a status sensor |
-| `hesc_ev_disconnected_values` | | Status values that mean "no car", comma separated (only for a status sensor) |
-| `hesc_ev_power_sensor` | ✅ | EV charging power (W or kW) |
-| `hesc_ev_green_energy_sensor` | | Charger's solar energy counter (kWh), for the solar share per session |
-| `hesc_charger_mode_entity` | ✅ | Charger mode entity (select/sensor) |
-| `hesc_charger_eco_value` | ✅ | Value(s) of that entity that mean solar mode, comma separated, e.g. `eco_mode, full_solar` |
-| `hesc_charger_solar_switch_entity` | | Extra switch that must be `on` as well (go-e, Wattpilot) |
-| `hesc_hpvc_enabled_entity` | ✅ | Default `input_boolean.hpvc_enabled` |
-| `hesc_hpvc_limited_entity` | ✅ | Default `binary_sensor.hpvc_pv_limited` |
+Until step 1 is complete, the **Main** tab shows only a welcome card with a setup checklist (same idea as HPVC's onboarding). The rest of the dashboard appears as soon as `binary_sensor.hesc_configuration_valid` turns on. The checklist is repeated at the bottom of step 1, with the live value of every source, so you can see straight away whether an entity works.
 
-How to map your own charger: [Chargers and sources](05-chargers-and-sources.md).
+## 1 · Your charger — required
 
-## Thresholds and timing
+| Field (`input_text.*`) | What to enter |
+|---|---|
+| `hesc_ev_connected_sensor` | The entity that shows the car is plugged in: a binary sensor, or a status sensor |
+| `hesc_ev_power_sensor` | The charging power, in W or kW |
+| `hesc_charger_mode_entity` | The select or sensor with the charger's charging mode |
+| `hesc_charger_eco_value` | The value(s) of that entity that mean solar charging, comma separated (e.g. Wallbox `eco_mode`, Zappi `Eco+`) |
 
-See the *Shipped defaults* table in the [README](../README.md#shipped-defaults).
+Examples per charger: [Chargers and sources](05-chargers-and-sources.md).
 
-## Advice
+## 2 · Taken over automatically
 
-| Setting | Default | Meaning |
+Only change these if you really have to.
+
+| Field | Default | Where it comes from |
 |---|---|---|
-| Advice based on last | 30 days | Only this recent period is used, so the advice follows the season |
-| Minimum sessions before advice | 8 | No advice until this many Eco sessions of 20 minutes or more are collected (half of it for release-based advice) |
+| `hesc_pv_power_sensor` | HPVC's PV power sensor | Kept in sync with `input_text.hpvc_pv_power_sensor` while **PV & grid from HPVC** is on |
+| `hesc_grid_power_sensor` | HPVC's grid power sensor | Kept in sync with `input_text.hpvc_grid_power_sensor` (optional; used for the surplus in the advice) |
+| `hesc_forecast_now_sensor` | `sensor.solcast_pv_forecast_power_now` | Set on first install |
+| `hesc_forecast_30m_sensor` | `sensor.solcast_pv_forecast_power_in_30_minutes` | Set on first install |
+| `hesc_forecast_attribute` | `estimate10` (Solcast cautious estimate) | Empty = use the state |
+| `hesc_hpvc_enabled_entity` | `input_boolean.hpvc_enabled` | HPVC |
+| `hesc_hpvc_limited_entity` | `binary_sensor.hpvc_pv_limited` | HPVC |
+
+- Switch **PV & grid from HPVC** (`input_boolean.hesc_use_hpvc_sources`) off to pick other PV or grid sensors; the two fields then appear.
+- Switch **Change forecast & HPVC** (`input_boolean.hesc_edit_sources`) on to edit the forecast and HPVC entities.
+
+## Optional
+
+Shown with **Show optional fields** (`input_boolean.hesc_show_optional`).
+
+| Field | When you need it |
+|---|---|
+| `hesc_ev_disconnected_values` | Only when *EV connected* is a status sensor: the values that mean "no car", comma separated |
+| `hesc_charger_solar_switch_entity` | Chargers that need an extra switch to be `on` for solar mode (go-e, Wattpilot) |
+| `hesc_ev_green_energy_sensor` | The charger's solar energy counter, for "kWh from solar" in the report |
+
+**Local weather station**: switch *Use local weather station* on to show the irradiance sensor and its start/hold thresholds. Without it HESC works on the forecast alone.
+
+## 3 · Advanced — only if needed
+
+Three separate blocks, each with its own switch. The defaults work for most installations; the advice in the report tells you when a change would help.
+
+| Block (switch) | Settings | Defaults |
+|---|---|---|
+| Thresholds (`hesc_show_thresholds`) | Forecast power to start / hold, EV counts as charging above | 2 500 W / 2 000 W, 400 W |
+| Timing (`hesc_show_timing`) | Stable before release, wait for charger, allowed dip, charger stopped before restore, maximum duration, cooldown, failed releases per day | 5, 10, 5, 5, 240, 30 min, 3 |
+| Advice (`hesc_show_advice`) | Advice based on last, minimum sessions before advice | 30 days, 8 sessions |
+
+More on the defaults: *Shipped defaults* in the [README](../README.md#shipped-defaults). Manual or scheduled starts are left out of the advice automatically, see [How it works](03-how-it-works.md#manual-and-scheduled-starts).
 
 ## Switches
 
