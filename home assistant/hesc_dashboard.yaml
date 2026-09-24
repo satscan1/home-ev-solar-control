@@ -97,10 +97,13 @@ views:
               {%- set req = [exists(conn) == 'True', exists(pow) == 'True', exists(mode) == 'True' and solar_ok] -%}
               {%- set done = req | select | list | count -%}
               {%- set ok = '✅' -%}{%- set no = '❌' -%}
+              {%- set pr = state_attr('sensor.hesc_charger_profile', 'profile') or {} -%}
+              {%- macro sug(key, good) -%}{%- if not good and (pr.get(key) or []) | count > 0 -%}<br>&nbsp;&nbsp;💡 Suggested: {{ pr.get(key) | map('string') | map('regex_replace', '^(.*)$', '<code>\\1</code>') | join(' or ') }}{%- endif -%}{%- endmacro -%}
               **Your charger ({{ done }} of 3 done)**
-              {{ ok if req[0] else no }} **EV connected**: {{ '<code>' ~ conn ~ '</code> · now ' ~ states(conn) if req[0] else 'pick the sensor that shows the car is plugged in' }}
-              {{ ok if req[1] else no }} **Charging power**: {{ '<code>' ~ pow ~ '</code> · now ' ~ now(pow) if req[1] else 'pick the sensor with the charging power (W or kW)' }}
-              {{ ok if req[2] else no }} **Solar mode**: {{ '<code>' ~ mode ~ '</code> = <code>' ~ solar ~ '</code> · now ' ~ states(mode) ~ (' (solar mode)' if in_solar else '') if req[2] else 'pick the charger mode entity and the value that means solar charging' }}
+              🔌 **Charger type**: {{ (pr.type ~ (' · tested' if pr.tested else ' · not tested yet, check it in shadow mode') ~ (' · ' ~ pr.note if pr.note else '')) if pr.get('known') else ('Other: fill in the fields yourself' if pr.get('type') == 'Other (manual)' else 'pick your charger above, HESC then fills in what it can') }}
+              {{ ok if req[0] else no }} **EV connected**: {{ '<code>' ~ conn ~ '</code> · now ' ~ states(conn) if req[0] else 'pick the sensor that shows the car is plugged in' }}{{ sug('connected', req[0]) }}
+              {{ ok if req[1] else no }} **Charging power**: {{ '<code>' ~ pow ~ '</code> · now ' ~ now(pow) if req[1] else 'pick the sensor with the charging power (W or kW)' }}{{ sug('power', req[1]) }}
+              {{ ok if req[2] else no }} **Solar mode**: {{ '<code>' ~ mode ~ '</code> = <code>' ~ solar ~ '</code> · now ' ~ states(mode) ~ (' (solar mode)' if in_solar else '') if req[2] else 'pick the charger mode entity and the value that means solar charging' }}{{ sug('mode', req[2]) }}
 
               **Taken over automatically**
               {{ ok if exists(pv) == 'True' else no }} **PV power**: <code>{{ pv or '–' }}</code>{{ ' (from HPVC)' if from_hpvc else '' }} · now {{ now(pv) }}
@@ -1012,9 +1015,38 @@ views:
           - type: markdown
             content: |-
               ### 🔌 1 · Your charger — required
-              This is all HESC needs from you. Pick the entities of your charger; the check below shows straight away whether they work. Examples per charger: guide *Chargers and sources*.
+              This is all HESC needs from you. Choose your charger type first: HESC fills in the brand values and suggests the entities it finds. Check the fields; the check below shows straight away whether they work.
             grid_options:
               columns: 12
+          - type: tile
+            entity: input_select.hesc_charger_type
+            name: Charger type
+            icon: mdi:ev-plug-type2
+            hide_state: true
+            vertical: false
+            features_position: bottom
+            features:
+              - type: select-options
+            grid_options:
+              columns: 9
+          - type: tile
+            entity: input_button.hesc_charger_search
+            name: Search again
+            icon: mdi:magnify
+            hide_state: true
+            vertical: true
+            tap_action:
+              action: perform-action
+              perform_action: input_button.press
+              target:
+                entity_id: input_button.hesc_charger_search
+            icon_tap_action:
+              action: perform-action
+              perform_action: input_button.press
+              target:
+                entity_id: input_button.hesc_charger_search
+            grid_options:
+              columns: 3
           - type: entities
             entities:
               - entity: input_text.hesc_ev_connected_sensor
@@ -1045,10 +1077,13 @@ views:
               {%- set req = [exists(conn) == 'True', exists(pow) == 'True', exists(mode) == 'True' and solar_ok] -%}
               {%- set done = req | select | list | count -%}
               {%- set ok = '✅' -%}{%- set no = '❌' -%}
+              {%- set pr = state_attr('sensor.hesc_charger_profile', 'profile') or {} -%}
+              {%- macro sug(key, good) -%}{%- if not good and (pr.get(key) or []) | count > 0 -%}<br>&nbsp;&nbsp;💡 Suggested: {{ pr.get(key) | map('string') | map('regex_replace', '^(.*)$', '<code>\\1</code>') | join(' or ') }}{%- endif -%}{%- endmacro -%}
               **Your charger ({{ done }} of 3 done)**
-              {{ ok if req[0] else no }} **EV connected**: {{ '<code>' ~ conn ~ '</code> · now ' ~ states(conn) if req[0] else 'pick the sensor that shows the car is plugged in' }}
-              {{ ok if req[1] else no }} **Charging power**: {{ '<code>' ~ pow ~ '</code> · now ' ~ now(pow) if req[1] else 'pick the sensor with the charging power (W or kW)' }}
-              {{ ok if req[2] else no }} **Solar mode**: {{ '<code>' ~ mode ~ '</code> = <code>' ~ solar ~ '</code> · now ' ~ states(mode) ~ (' (solar mode)' if in_solar else '') if req[2] else 'pick the charger mode entity and the value that means solar charging' }}
+              🔌 **Charger type**: {{ (pr.type ~ (' · tested' if pr.tested else ' · not tested yet, check it in shadow mode') ~ (' · ' ~ pr.note if pr.note else '')) if pr.get('known') else ('Other: fill in the fields yourself' if pr.get('type') == 'Other (manual)' else 'pick your charger above, HESC then fills in what it can') }}
+              {{ ok if req[0] else no }} **EV connected**: {{ '<code>' ~ conn ~ '</code> · now ' ~ states(conn) if req[0] else 'pick the sensor that shows the car is plugged in' }}{{ sug('connected', req[0]) }}
+              {{ ok if req[1] else no }} **Charging power**: {{ '<code>' ~ pow ~ '</code> · now ' ~ now(pow) if req[1] else 'pick the sensor with the charging power (W or kW)' }}{{ sug('power', req[1]) }}
+              {{ ok if req[2] else no }} **Solar mode**: {{ '<code>' ~ mode ~ '</code> = <code>' ~ solar ~ '</code> · now ' ~ states(mode) ~ (' (solar mode)' if in_solar else '') if req[2] else 'pick the charger mode entity and the value that means solar charging' }}{{ sug('mode', req[2]) }}
 
               **Taken over automatically**
               {{ ok if exists(pv) == 'True' else no }} **PV power**: <code>{{ pv or '–' }}</code>{{ ' (from HPVC)' if from_hpvc else '' }} · now {{ now(pv) }}
