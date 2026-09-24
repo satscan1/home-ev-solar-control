@@ -6,6 +6,8 @@ Until step 1 is complete, the **Main** tab shows only a welcome card with a setu
 
 ## 1 · Your charger — required
 
+Start with **Charger type** (`input_select.hesc_charger_type`): HESC fills in the brand values and suggests the entities it finds (only fills a field when there is exactly one match). **Search again** (`input_button.hesc_charger_search`) repeats the search. See [Chargers and sources](05-chargers-and-sources.md#charger-type-in-settings).
+
 | Field (`input_text.*`) | What to enter |
 |---|---|
 | `hesc_ev_connected_sensor` | The entity that shows the car is plugged in: a binary sensor, or a status sensor |
