@@ -48,7 +48,19 @@ This is why HPVC and Eco block each other: HPVC keeps export near zero, and the 
 
 A reference selection is in [examples/wallbox-pulsar-plus-solcast.reference.yaml](../examples/wallbox-pulsar-plus-solcast.reference.yaml).
 
-### Other common chargers
+### Charger type in Settings
+
+Since v0.5 you can pick your charger under **Settings → 1 · Your charger → Charger type**. HESC then:
+
+- fills in the value(s) that mean solar mode and the status values that mean "no car" for that brand;
+- searches for the charger's entities and fills in a field only when it finds exactly **one** match; with more matches the setup check lists them as *Suggested*. Fields you already filled in are never overwritten;
+- shows whether the charger has been tested and any brand notes.
+
+The search does not depend on your Home Assistant language: the mode entity is found by its options (they contain the solar value), the charging power by `device_class: power` on the same device. Press **Search again** after installing or renaming the charger integration. Choose **Other (manual)** for any charger not in the list.
+
+All charger data lives in **one table**: the `sensor.hesc_charger_profile` template in `hesc_config.yaml`. To add or correct a charger, change only that table (and, for the documentation, the table below). Corrections from users with other chargers are very welcome as an issue.
+
+## Other common chargers
 
 HESC only helps when the charger (or its controller) has its **own** solar mode that waits for export. The table lists what to select. It is based on the integration source code, not on tests: entity ids are patterns (`<name>` = your device name), so always pick the real entities in **Developer tools → States**.
 
@@ -74,7 +86,7 @@ Sources: Home Assistant core integrations (`wallbox`, `peblar`, `ohme`, `tesla_w
 
 Only the Wallbox Pulsar Plus has been tested in practice. Before switching shadow mode off:
 
-1. Fill in the five charger helpers.
+1. Pick your charger type (or *Other (manual)*) and check the charger fields.
 2. Check the report's **Live inputs**: nothing should show *missing*.
 3. Plug in the EV in solar mode and watch the dashboard reason change from *EV not connected* to the next condition.
 4. Let HESC run in shadow mode for a few sunny days and check that simulated releases are followed by charging in the report.
