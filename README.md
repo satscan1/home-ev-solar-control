@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="releases/v0.4.1/release.md"><img src="https://img.shields.io/badge/release-v0.4.1-blue" alt="Release v0.4.1"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v0.5.0-blue" alt="Release v0.5.0"></a>
   <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-ready-41BDF5" alt="Home Assistant ready"></a>
   <a href="https://nodered.org/"><img src="https://img.shields.io/badge/Node--RED-flow-8F0000" alt="Node-RED flow"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later"></a>
@@ -17,7 +17,7 @@ Solar/Eco charging modes on many wallboxes only start when the house is exportin
 HESC resolves this. When the EV is connected and waiting in solar/Eco mode, HPVC is actively limiting, and the **solar power forecast** (optionally confirmed by a **local irradiance sensor**) says enough sun is coming, HESC briefly switches HPVC off so the charger can start. As soon as the EV charges, the sun drops, or the charger does not respond, HPVC takes over again.
 
 > [!IMPORTANT]
-> v0.4 is an early preview. It ships in **shadow mode**: it evaluates and logs every decision but never switches HPVC. Only switch shadow mode off after you have reviewed the report for your own installation.
+> v0.5 is an early preview. It ships in **shadow mode**: it evaluates and logs every decision but never switches HPVC. Only switch shadow mode off after you have reviewed the report for your own installation.
 
 ## Contents
 
@@ -45,7 +45,7 @@ HESC resolves this. When the EV is connected and waiting in solar/Eco mode, HPVC
 3. Restart Home Assistant (first install creates the helpers and applies the defaults once)
 4. Import `node-red/hesc_flow.json` into Node-RED, select your Home Assistant server on the action and trigger nodes, and deploy
 5. Add `home assistant/hesc_dashboard.yaml` as a separate dashboard
-6. Open **Settings** and select your forecast, PV, grid, EV and charger entities (see [examples](examples/))
+6. Open **Settings** and fill in step 1, *Your charger* (see [examples](examples/)). PV and grid are taken over from HPVC and the forecast from Solcast; until step 1 is complete the dashboard shows a setup checklist
 7. Leave **shadow mode** on and check the report after a few charging days
 
 Full guide: [docs/01-installation.md](docs/01-installation.md)
@@ -78,7 +78,8 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 - A solar power forecast in watts (e.g. [Solcast PV Forecast](https://github.com/BJReplay/ha-solcast-solar) `power_now` / `power_in_30_minutes`, or any other forecast sensor in W)
 - Optional: a local weather station with an irradiance sensor (W/m²). HESC works without one
 - Optional: Home Battery Control. HESC only reads; it never writes to HBC
-- For the dashboard graph: [apexcharts-card](https://github.com/RomRider/apexcharts-card) (HACS), the same card HPVC uses
+- For the dashboard graphs: [apexcharts-card](https://github.com/RomRider/apexcharts-card) (HACS), the same card HPVC uses
+- Optional: [button-card](https://github.com/custom-cards/button-card) (HACS) for the *Expected solar charging* bar. Without it the bar simply stays hidden
 
 ## Shipped defaults
 
@@ -131,7 +132,7 @@ Every 15 minutes in daylight HESC stores the forecast, the actual PV power and, 
 
 ### Dashboard
 
-The dashboard follows the Home PV Control layout: status badges at the top, **EV Solar Master Control** with horizontal toggles, **Live Inputs**, **Control States** with a 12-hour timeline, and a **Solar forecast vs actual · EV** graph (actual PV, median and cautious forecast, EV charging power and the start threshold). The Settings tab groups forecast, the optional weather station (its fields are hidden when switched off), the charger, HPVC, and thresholds.
+The dashboard follows the Home PV Control layout: status badges at the top, **EV Solar Master Control** with horizontal toggles, **Live Inputs**, **Control States** with a 12-hour timeline, and a **Solar forecast vs actual · EV** graph (actual PV, median and cautious forecast, EV charging power and the start threshold). The Settings tab works in three steps: *1 · Your charger* (the only required fields, with a live check), *2 · Taken over automatically* (PV and grid from HPVC, Solcast forecast, HPVC entities) and *3 · Advanced* (thresholds, timing and advice, each behind its own switch). See [Settings](docs/02-configuration.md).
 
 The graph and timeline use eight `hesc_diag_*` helper entities from the package. They mirror whatever sources you selected, so the dashboard works unchanged on every installation. The power helpers update once per minute to keep database writes low. If your recorder uses an include list, add them to it.
 
