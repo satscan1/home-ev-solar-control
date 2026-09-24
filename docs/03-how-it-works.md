@@ -10,11 +10,11 @@ The Inputs tab triggers the Engine every 30 seconds. The Engine reads about 20 e
 |---|---|---|
 | Idle | default | all start conditions hold for the stability time → Release |
 | Release — waiting for EV | HPVC switched off (or would be, in shadow mode) | EV charges → Charging · no start within the wait time → Restore |
-| Release — EV charging | EV above the charging threshold | EV stopped, solar below hold for longer than the allowed dip, EV disconnected / not Eco, sunset, maximum duration → Restore |
+| Release — EV charging | EV above the charging threshold | EV stopped, solar below hold for longer than the allowed dip, EV disconnected / charger not in solar mode, sunset, maximum duration → Restore |
 
 Start conditions:
 
-- the EV is connected, not charging, and in solar/Eco mode;
+- the EV is connected, not charging, and in solar mode;
 - HPVC is enabled and limiting;
 - the lower of forecast-now and forecast-+30 min is at least the start threshold;
 - irradiance is at least its start threshold (optional);
@@ -35,8 +35,12 @@ Start conditions:
 |---|---|
 | `event` | release / restore decisions with a snapshot of the inputs |
 | `release` | a full release: duration, forecast Wh, PV Wh, actual/forecast %, EV Wh, EV solar kWh, EV started, reason |
-| `eco_charge` | every daytime charging session in solar/Eco mode, with the same forecast vs actual fields |
+| `eco_charge` | every daytime charging session in solar mode, with the same forecast vs actual fields, plus `forced_start` (see below) |
 | `accuracy` | every 15 minutes in daylight: median and cautious forecast (W), actual PV (W), irradiance (W/m², if set) and the share of time HPVC was limiting |
+
+### Manual and scheduled starts
+
+Many chargers keep reporting their solar mode (for example Wallbox *Eco*) when you press start yourself or when a schedule starts charging. To keep the advice and the accuracy figures clean, HESC checks every solar session at its start: if the forecast (the estimate chosen in Settings) **and** the actual PV are both below the hold threshold, the session was started by hand or by a schedule. It is still logged (`forced_start: true`) and shown in the report as *Manual/scheduled (not counted)*, but it is left out of the advice, the accuracy figures and the daily solar totals. This only uses forecast and PV, so it works the same for every charger.
 
 ## Advisor
 
@@ -44,11 +48,11 @@ The Reports tab also holds the **HESC Advisor**. It runs daily at 21:30, 90 seco
 
 | Advice | Based on | Minimum |
 |---|---|---|
-| Start / hold threshold | Eco sessions that kept charging for 20 min or more. Per session: non-EV use = PV + grid − EV (house and battery together) and expected surplus = cautious forecast − non-EV use. Advice = surplus that worked (25th percentile) + typical non-EV use (median), i.e. translated back to the gross forecast that `hesc_p_start` uses. Hold = 80% of start. Without a grid sensor: 25th percentile of the gross forecast, marked as such | minimum sessions |
+| Start / hold threshold | Solar sessions that kept charging for 20 min or more. Per session: non-EV use = PV + grid − EV (house and battery together) and expected surplus = cautious forecast − non-EV use. Advice = surplus that worked (25th percentile) + typical non-EV use (median), i.e. translated back to the gross forecast that `hesc_p_start` uses. Hold = 80% of start. Without a grid sensor: 25th percentile of the gross forecast, marked as such | minimum sessions |
 | Wait for the charger | start delay after real releases (9 of 10 within the advice, plus 2 min) | half the minimum |
 | Releases without charging | share of real releases that led to charging (< 50% → raise start threshold) | half the minimum |
 | Forecast quality | actual PV vs forecast in daylight intervals without curtailment | 3 × minimum hours |
-| Weather station | irradiance at the start of lasting Eco sessions; hold = 75% of start | minimum sessions |
+| Weather station | irradiance at the start of lasting solar sessions; hold = 75% of start | minimum sessions |
 
 ## Report
 
