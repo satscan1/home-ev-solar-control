@@ -1189,12 +1189,6 @@ views:
       grid_options:
         columns: 9
         rows: 2
-    - type: entities
-      entities:
-      - entity: input_text.hesc_price_sensor
-        name: Day-ahead price sensor (raw_today / raw_tomorrow)
-      grid_options:
-        columns: 12
     - type: markdown
       content: |-
         {%- set r = state_attr('sensor.hesc_charge_plan', 'plan') -%}{%- set p = r if r is mapping else (r | from_json if r else {}) -%}
@@ -1339,6 +1333,12 @@ views:
         state: Mode value
       grid_options:
         columns: 6
+    - type: entities
+      entities:
+      - entity: input_text.hesc_price_sensor
+        name: Day-ahead price sensor (raw_today / raw_tomorrow)
+      grid_options:
+        columns: 12
     - type: markdown
       content: <small>In a planned quarter HESC starts the charger (switch on, or the 'charge now' mode). Afterwards, or when the charger stops by itself, it goes back to how it was (switch off, or the previous mode). HESC never takes over a charge it did not start.</small>
       grid_options:
