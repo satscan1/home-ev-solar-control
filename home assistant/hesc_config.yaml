@@ -769,16 +769,16 @@ automation:
         data: { value: "binary_sensor.hpvc_pv_limited" }
       - action: input_number.set_value
         target: { entity_id: input_number.hesc_p_start }
-        data: { value: 2500 }
+        data: { value: 1500 }
       - action: input_number.set_value
         target: { entity_id: input_number.hesc_p_hold }
-        data: { value: 2000 }
+        data: { value: 1200 }
       - action: input_number.set_value
         target: { entity_id: input_number.hesc_irr_start }
-        data: { value: 400 }
+        data: { value: 150 }
       - action: input_number.set_value
         target: { entity_id: input_number.hesc_irr_hold }
-        data: { value: 300 }
+        data: { value: 120 }
       - action: input_number.set_value
         target: { entity_id: input_number.hesc_t_stable }
         data: { value: 5 }

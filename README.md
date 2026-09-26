@@ -96,9 +96,9 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 
 | Setting | Default | Meaning |
 |---|---|---|
-| Forecast power to start | 2 500 W | cautious forecast (now and +30 min) must reach this before a release |
-| Forecast power to hold | 2 000 W | keep the release while above this (hysteresis) |
-| Irradiance to start / hold | 400 / 300 W/m² | only when irradiance confirmation is enabled |
+| Forecast power to start | 1 500 W | cautious forecast (now and +30 min) must reach this before a release |
+| Forecast power to hold | 1 200 W | keep the release while above this (hysteresis, 80% of start) |
+| Irradiance to start / hold | 150 / 120 W/m² | only when irradiance confirmation is enabled; start/hold divided by ~10 W PV per W/m² |
 | Conditions stable before release | 5 min | ignore short sun peaks |
 | Wait for charger to start | 10 min | wallboxes add their own start delay |
 | Allowed solar dip | 5 min | a passing cloud does not end the release |
@@ -109,7 +109,7 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 | EV charging threshold | 400 W | above this the EV counts as charging |
 
 > [!NOTE]
-> The start threshold is a **production** forecast, while the wallbox looks at **surplus** (production minus house load minus battery charging). Tune the thresholds with the report of your own installation.
+> The start threshold is a **production** forecast, while the wallbox looks at **surplus** (production minus house load minus battery charging). The defaults come from the test installation: every real solar/Eco start (8 starts over 3 days, September) happened at a cautious forecast of 1 500 W or more, with actual PV 3.2–5.8 kW. The Solcast cautious estimate is often well below the actual PV. Tune the thresholds with the report and the advice of your own installation.
 
 ## How HESC works
 

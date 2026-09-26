@@ -24,6 +24,11 @@ Dashboard
 - Main: master-control text describes the release request; *HPVC released PV* tile while HPVC confirms a release.
 - Settings: new block *Charge plan* in step 3 (start/stop switch or mode value, price sensor).
 
+Defaults (from the test installation, 8 real solar starts over 3 days)
+- Forecast power to start / hold: 2 500 / 2 000 W → **1 500 / 1 200 W**. The lowest cautious forecast at a real start was 1 504 W; the Solcast cautious estimate was up to ~30% below actual PV.
+- Irradiance to start / hold: 400 / 300 W/m² → **150 / 120 W/m²** (≈ 10 W PV per W/m²; 6 of 8 real starts happened below 400 W/m²).
+- Existing installations keep their own values; only new installs get the new defaults.
+
 Wish list: expected prices beyond the known day-ahead prices (from own price history).
 
 ## v0.5.2 — 2026-09-25
