@@ -16,9 +16,9 @@ HESC does not talk to a charger or a forecast service directly. It only reads Ho
 
 ### Charging from the grid (charge plan)
 
-Only needed for the charge plan. Chargers do this in one of two ways; pick the one that matches yours in Settings → *Charging from the grid*.
+Only needed for the charge plan. Chargers do this in one of two ways; fill in the matching field in Settings → step 3 → *Charge plan*.
 
-| Method | Use when | Examples (check your own entities) |
+| Field | Use when | Examples (check your own entities) |
 |---|---|---|
 | Start/stop switch | the charger has a switch that pauses/resumes charging | Wallbox *Pause/resume* (`switch.<name>_pause_resume`), some Easee and Ohme setups |
 | Mode value | "charge now" is a value of the same mode entity you use for solar mode | Zappi `Fast`, evcc `now`, go-e / Wattpilot non-Eco mode, Peblar / Alfen / SMA non-solar mode |

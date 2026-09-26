@@ -56,6 +56,7 @@ Three separate blocks, each with its own switch. The defaults work for most inst
 | Thresholds (`hesc_show_thresholds`) | Forecast power to start / hold, EV counts as charging above | 2 500 W / 2 000 W, 400 W |
 | Timing (`hesc_show_timing`) | Stable before release, wait for charger, allowed dip, charger stopped before restore, maximum duration, cooldown, failed releases per day | 5, 10, 5, 5, 240, 30 min, 3 |
 | Advice (`hesc_show_advice`) | Advice based on last, minimum sessions before advice | 30 days, 8 sessions |
+| Charge plan (`hesc_show_plan_settings`) | Charger start/stop switch **or** "charge now" mode value, day-ahead price sensor | empty (no grid charging) |
 
 More on the defaults: *Shipped defaults* in the [README](../README.md#shipped-defaults). Manual or scheduled starts are left out of the advice automatically, see [How it works](03-how-it-works.md#manual-and-scheduled-starts).
 
@@ -71,14 +72,15 @@ On the **Charge plan** tab.
 | Usable battery capacity | kWh, to work out the energy needed |
 | Grid charging power | kW your charger delivers from the grid, to work out the number of quarters |
 
-**Charging from the grid**
+**Grid charging settings** are on the **Settings** tab, step 3, block *Charge plan* (switch `input_boolean.hesc_show_plan_settings`). Fill in **one** of the first two:
 
 | Field | Meaning |
 |---|---|
-| `input_select.hesc_grid_charge_method` | *Off*, *Start/stop switch* or *Mode value* |
-| `input_text.hesc_charger_start_stop_entity` | Start/stop switch: `on` = charge, `off` = pause (back to solar mode). E.g. Wallbox *Pause/resume* |
+| `input_text.hesc_charger_start_stop_entity` | A start/stop switch: switched on in a planned quarter. E.g. Wallbox *Pause/resume* |
+| `input_text.hesc_charger_grid_mode_value` | Or: the value of the mode entity (step 1) that means "charge now", e.g. Zappi `Fast`, evcc `now` |
 | `input_text.hesc_price_sensor` | Your day-ahead price sensor with `raw_today` / `raw_tomorrow` attributes (e.g. Nord Pool). Also replace it in the dashboard's price chart |
-| `input_text.hesc_charger_grid_mode_value` | Mode value: the value of the mode entity (step 1) that means "charge now", e.g. Zappi `Fast`, evcc `now` |
+
+Afterwards, or when the charger stops by itself, it always goes back to how it was before charging started (the switch to its previous state, or the previous mode). Nothing filled in = no grid charging.
 
 ## Switches
 

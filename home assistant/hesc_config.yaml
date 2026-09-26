@@ -13,6 +13,10 @@
 
 input_boolean:
   # v0.6.0 charge plan: set while HESC itself started grid charging (restart safety)
+  # v0.6.0 Settings: show the charge plan block (step 3)
+  hesc_show_plan_settings:
+    name: "HESC show charge plan settings"
+    icon: mdi:calendar-clock
   hesc_plan_owns_charging:
     name: "HESC charge plan owns charging"
     icon: mdi:ev-station
@@ -93,7 +97,8 @@ input_boolean:
     icon: mdi:lightbulb-on-outline
 
 input_text:
-  # v0.6.0 charge plan: charger start/stop entity (switch on = charge) or the mode value that means "charge now"
+  # v0.6.0 charge plan: fill in ONE of these. A start/stop switch (on = charge; afterwards back to its previous state)
+  # or the value of the charger mode entity that means "charge now" (afterwards back to the previous mode)
   hesc_charger_start_stop_entity:
     name: "HESC charger start/stop entity"
     max: 255
@@ -588,11 +593,6 @@ input_datetime:
 # Charger type: fills the brand-specific values and suggests the charger entities.
 # The data per charger lives in one place: sensor.hesc_charger_profile (template section).
 input_select:
-  # v0.6.0 charge plan: how the charger is made to charge from the grid in a planned quarter
-  hesc_grid_charge_method:
-    name: "HESC grid charging method"
-    options: ["Off", "Start/stop switch", "Mode value"]
-    icon: mdi:ev-plug-type2
   # --- Charge plan (v0.6) ---
   hesc_plan_day:
     name: "HESC charge plan day"

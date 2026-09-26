@@ -74,7 +74,7 @@ The *Charge plan* node in the Engine tab runs every 30 seconds and decides:
 | Finished, charger stopped by itself | the charger drew no power for the *charger stopped* time after the *wait for charger* time; back to how it was, and left alone until the deadline |
 | EV already charging, left alone | a charge HESC did not start (for example on sun) is never taken over |
 
-Back to how it was: with *Start/stop switch* the switch goes off; with *Mode value* the mode that was active before HESC started is selected again (or the first solar value). After a restart, `input_boolean.hesc_plan_owns_charging` tells HESC that it had started the charger, so it is put back.
+How it starts follows from what is filled in: a start/stop switch is switched on; otherwise the mode is set to the "charge now" value. Back to how it was: the switch returns to the state it had before HESC started (normally off), or the mode that was active before is selected again (or the first solar value). After a restart, `input_boolean.hesc_plan_owns_charging` tells HESC that it had started the charger, so it is put back.
 
 Every start and stop is written to the history (`type: charge_plan`).
 
