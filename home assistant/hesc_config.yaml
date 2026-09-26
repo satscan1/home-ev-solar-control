@@ -1,6 +1,6 @@
 # =============================================================================
 # Home EV Solar Control (HESC) — Home Assistant package
-# Version: v0.6.0 (2026-09-26)
+# Version: v1.0.0 (2026-09-26)
 # Project tag: [WALLBOX] [PV]
 #
 # Works alongside Home PV Control (HPVC):
@@ -12,15 +12,15 @@
 # =============================================================================
 
 input_boolean:
-  # v0.6.0 charge plan: set while HESC itself started grid charging (restart safety)
-  # v0.6.0 Settings: show the charge plan block (step 3)
+  # Charge plan: set while HESC itself started grid charging (restart safety)
+  # Settings: show the charge plan block (step 3)
   hesc_show_plan_settings:
     name: "HESC show charge plan settings"
     icon: mdi:calendar-clock
   hesc_plan_owns_charging:
     name: "HESC charge plan owns charging"
     icon: mdi:ev-station
-  # v0.6.0: fallback to the old release method (switch HPVC off + set inverters to full). Default off = use the HPVC external release request.
+  # Fallback to the old release method (switch HPVC off + set inverters to full). Default off = use the HPVC external release request.
   hesc_release_legacy:
     name: HESC release via HPVC off (legacy fallback)
     icon: mdi:backup-restore
@@ -51,7 +51,7 @@ input_boolean:
   hesc_plan_opportunity:
     name: "HESC charge plan: take cheap chances"
     icon: mdi:lightning-bolt-circle
-  # --- Charge plan (v0.6) ---
+  # --- Charge plan ---
   hesc_plan_enabled:
     name: "HESC charge plan"
     icon: mdi:calendar-check
@@ -76,7 +76,7 @@ input_boolean:
   hesc_report_ready:
     name: "HESC report ready"
     icon: mdi:file-document-check-outline
-  # --- simplified Settings screen (v0.5) ---
+  # --- simplified Settings screen ---
   hesc_use_hpvc_sources:
     name: "HESC use HPVC sensors for PV and grid"
     icon: mdi:link-variant
@@ -97,7 +97,7 @@ input_boolean:
     icon: mdi:lightbulb-on-outline
 
 input_text:
-  # v0.6.0 charge plan: fill in ONE of these. A start/stop switch (on = charge; afterwards back to its previous state)
+  # Charge plan: fill in ONE of these. A start/stop switch (on = charge; afterwards back to its previous state)
   # or the value of the charger mode entity that means "charge now" (afterwards back to the previous mode)
   hesc_charger_start_stop_entity:
     name: "HESC charger start/stop entity"
@@ -108,7 +108,7 @@ input_text:
   hesc_plan_status:
     name: "HESC charge plan status"
     max: 255
-  # v0.6.0 charge plan: day-ahead price sensor with raw_today / raw_tomorrow (e.g. Nord Pool)
+  # Charge plan: day-ahead price sensor with raw_today / raw_tomorrow (e.g. Nord Pool)
   hesc_price_sensor:
     name: "HESC day-ahead price sensor"
     max: 255
@@ -199,7 +199,7 @@ input_number:
     unit_of_measurement: "€/kWh"
     icon: mdi:cash-fast
     mode: box
-  # --- Charge plan (v0.6) ---
+  # --- Charge plan ---
   hesc_plan_target_soc:
     name: "HESC charge plan target battery level"
     min: 20
@@ -501,7 +501,7 @@ template:
             {{ {'type': type, 'known': true, 'values': p['values'], 'not_connected': p.nc, 'tested': p.tested, 'note': p.note,
                 'mode': modes, 'connected': conn[:5], 'power': power[:5], 'switch': sw[:5]} }}
             {%- endif -%}
-  # --- Charge plan (v0.6): calculates the plan; the Node-RED "Charge plan" node acts on it ---
+  # --- Charge plan: calculates the plan; the Node-RED "Charge plan" node acts on it ---
   - triggers:
       - trigger: time_pattern
         minutes: "/1"
@@ -582,7 +582,7 @@ input_button:
     name: "HESC search charger entities again"
     icon: mdi:magnify
 
-# --- Charge plan (v0.6) ---
+# --- Charge plan ---
 input_datetime:
   hesc_plan_deadline:
     name: "HESC charge plan ready by"
@@ -593,7 +593,7 @@ input_datetime:
 # Charger type: fills the brand-specific values and suggests the charger entities.
 # The data per charger lives in one place: sensor.hesc_charger_profile (template section).
 input_select:
-  # --- Charge plan (v0.6) ---
+  # --- Charge plan ---
   hesc_plan_day:
     name: "HESC charge plan day"
     options: ["Today", "Tomorrow", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]

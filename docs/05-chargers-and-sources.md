@@ -61,7 +61,7 @@ A reference selection is in [examples/wallbox-pulsar-plus-solcast.reference.yaml
 
 ### Charger type in Settings
 
-Since v0.5 you can pick your charger under **Settings → 1 · Your charger → Charger type**. HESC then:
+You can pick your charger under **Settings → 1 · Your charger → Charger type**. HESC then:
 
 - fills in the value(s) that mean solar mode and the status values that mean "no car" for that brand;
 - searches for the charger's entities and fills in a field only when it finds exactly **one** match; with more matches the setup check lists them as *Suggested*. Fields you already filled in are never overwritten;
@@ -142,7 +142,7 @@ Intervals in which HPVC limited PV are left out: curtailed PV says nothing about
 
 ## Template helpers
 
-Since v0.3 a status sensor and kW power sensors work directly. A template helper is only needed for special cases, for example when "connected" depends on two entities:
+A status sensor and kW power sensors work directly. A template helper is only needed for special cases, for example when "connected" depends on two entities:
 
 ```yaml
 {{ is_state('binary_sensor.<charger>_cable', 'on') and is_state('binary_sensor.<charger>_car', 'on') }}
