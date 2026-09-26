@@ -193,12 +193,14 @@ The **Charge plan** tab lets you say *"100% by Tuesday 10:00"* (one-off) or *"80
 4. **safety net:** when the remaining time is only just enough, it starts right away;
 5. optional **take cheap chances:** charges whenever the price is at or below a price you set.
 
-How the charger is started is a setting, so it works for every charger:
+How the charger is started follows from what you fill in (Settings → step 3 → *Charge plan*), so it works for every charger:
 
-| Grid charging method | What HESC does | Example |
+| You fill in | What HESC does | Example |
 |---|---|---|
-| Start/stop switch | switch on to charge, off afterwards (back to solar mode) | Wallbox *Pause/resume* |
-| Mode value | selects the "charge now" mode, afterwards the previous mode again | Zappi *Fast*, evcc *now* |
+| a start/stop switch | switches it on to charge | Wallbox *Pause/resume* |
+| or a "charge now" mode value | selects that mode to charge | Zappi *Fast*, evcc *now* |
+
+Afterwards the charger always goes back to how it was before charging started.
 
 When the charger stops by itself (EV full, the car's own charge limit), HESC puts it back and leaves it alone for the rest of that plan. It never takes over a charge it did not start, for example a solar session. See [How it works](docs/03-how-it-works.md#charge-plan).
 

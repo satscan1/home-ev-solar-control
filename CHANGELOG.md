@@ -16,13 +16,13 @@ Charge plan (new)
 - *Charge plan* tab: one-off (day, time, goal) and every week (days, time, goal), with a price chart and the planned quarters.
 - `sensor.hesc_charge_plan` works out the energy needed and picks the cheapest known quarters before the deadline.
 - New Node-RED node *Charge plan* (Engine tab) starts and stops the charger: in planned quarters, as a safety net when time runs short, and optionally below a set price (*take cheap chances*).
-- Charger-independent: `input_select.hesc_grid_charge_method` = *Start/stop switch* (`input_text.hesc_charger_start_stop_entity`) or *Mode value* (`input_text.hesc_charger_grid_mode_value`).
-- Afterwards, or when the charger stops by itself (EV full, charge limit), the charger goes back to how it was (switch off / previous mode) and is left alone for the rest of the plan. A charge HESC did not start is never taken over.
+- Charger-independent: fill in a start/stop switch (`input_text.hesc_charger_start_stop_entity`) **or** a "charge now" mode value (`input_text.hesc_charger_grid_mode_value`); the day-ahead price sensor is a setting too (`input_text.hesc_price_sensor`). All on Settings → step 3 → *Charge plan*.
+- Afterwards, or when the charger stops by itself (EV full, charge limit), the charger goes back to how it was before charging started (previous switch state / previous mode) and is left alone for the rest of the plan. A charge HESC did not start is never taken over.
 - Restart safety: `input_boolean.hesc_plan_owns_charging`. Status: `input_text.hesc_plan_status`.
 
 Dashboard
 - Main: master-control text describes the release request; *HPVC released PV* tile while HPVC confirms a release.
-- Charge plan: new block *Charging from the grid* (plan status, grid charging method and its field).
+- Settings: new block *Charge plan* in step 3 (start/stop switch or mode value, price sensor).
 
 Wish list: expected prices beyond the known day-ahead prices (from own price history).
 

@@ -27,7 +27,7 @@
 
 | Plan status | Check |
 |---|---|
-| `Grid charging not set up` | Settings → *Charging from the grid*: choose a method and fill in the switch or mode value |
+| `Grid charging not set up (Settings → Charge plan)` | Settings → step 3 → *Charge plan*: fill in the start/stop switch or the "charge now" mode value |
 | `No active plan` | Switch the one-off or weekly plan on |
 | `Waiting for the next planned quarter` | Normal. The planned quarters are shown green in the price chart |
 | `EV already charging, left alone` | The car was already charging (for example on sun). HESC does not take it over |

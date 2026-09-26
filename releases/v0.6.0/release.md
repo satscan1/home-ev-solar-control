@@ -27,6 +27,6 @@ Charge to a goal by a set time, one-off or every week, in the cheapest known qua
 2. Replace `home assistant/hesc_config.yaml`, check the configuration and restart (or reload input_boolean / input_text / input_select / template).
 3. Re-import `node-red/hesc_flow.json` (Replace) and deploy with *Modified flows*.
 4. Replace the dashboard.
-5. For the charge plan: Settings → *Charging from the grid* → choose the method and your charger's start/stop switch or mode value. Nothing is charged from the grid until you switch a plan (or *take cheap chances*) on.
+5. For the charge plan: Settings → step 3 → *Charge plan* → fill in your charger's start/stop switch **or** its "charge now" mode value, and your day-ahead price sensor. Nothing is charged from the grid until you switch a plan (or *take cheap chances*) on.
 
 Wish list: expected prices beyond the known day-ahead prices (from own price history).

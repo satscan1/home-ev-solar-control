@@ -1294,55 +1294,6 @@ views:
       grid_options:
         columns: 9
         rows: 2
-  - type: grid
-    cards:
-    - type: heading
-      heading: Charging from the grid
-      icon: mdi:transmission-tower
-    - type: tile
-      entity: input_text.hesc_plan_status
-      name: Plan status
-      icon: mdi:calendar-check
-      grid_options:
-        columns: 12
-    - type: tile
-      entity: input_select.hesc_grid_charge_method
-      name: How to start charging
-      features:
-      - type: select-options
-      grid_options:
-        columns: 6
-        rows: 2
-    - type: entities
-      entities:
-      - entity: input_text.hesc_charger_start_stop_entity
-        name: Charger start/stop switch (on = charge)
-      visibility:
-      - condition: state
-        entity: input_select.hesc_grid_charge_method
-        state: Start/stop switch
-      grid_options:
-        columns: 6
-    - type: entities
-      entities:
-      - entity: input_text.hesc_charger_grid_mode_value
-        name: Mode value that means 'charge now'
-      visibility:
-      - condition: state
-        entity: input_select.hesc_grid_charge_method
-        state: Mode value
-      grid_options:
-        columns: 6
-    - type: entities
-      entities:
-      - entity: input_text.hesc_price_sensor
-        name: Day-ahead price sensor (raw_today / raw_tomorrow)
-      grid_options:
-        columns: 12
-    - type: markdown
-      content: <small>In a planned quarter HESC starts the charger (switch on, or the 'charge now' mode). Afterwards, or when the charger stops by itself, it goes back to how it was (switch off, or the previous mode). HESC never takes over a charge it did not start.</small>
-      grid_options:
-        columns: 12
 - type: sections
   title: Settings
   path: settings
@@ -1639,3 +1590,34 @@ views:
           name: Minimum sessions before advice
         - entity: input_text.hesc_advice_updated
           name: Advice updated
+    - type: tile
+      entity: input_boolean.hesc_show_plan_settings
+      name: Charge plan
+      icon: mdi:calendar-clock
+      hide_state: true
+      vertical: false
+      features_position: inline
+      features:
+      - type: toggle
+      grid_options:
+        columns: 12
+    - type: conditional
+      conditions:
+      - entity: input_boolean.hesc_show_plan_settings
+        state: 'on'
+      card:
+        type: entities
+        entities:
+        - entity: input_text.hesc_charger_start_stop_entity
+          name: Charger start/stop switch (on = charge)
+        - entity: input_text.hesc_charger_grid_mode_value
+          name: …or mode value that means 'charge now'
+        - entity: input_text.hesc_price_sensor
+          name: Day-ahead price sensor (raw_today / raw_tomorrow)
+    - type: conditional
+      conditions:
+      - entity: input_boolean.hesc_show_plan_settings
+        state: 'on'
+      card:
+        type: markdown
+        content: <small>Fill in <b>one</b> of the first two. A start/stop switch is switched on in a planned quarter; otherwise the charger's mode is set to the 'charge now' value. Afterwards, or when the charger stops by itself, it always goes back to how it was before charging started. HESC never takes over a charge it did not start.</small>
