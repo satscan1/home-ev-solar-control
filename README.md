@@ -8,7 +8,7 @@
 
 <p align="center"><img src="screenshots/banner.png" alt="HEVS – Home Energy & Vehicle System" width="100%"></p>
 
-# Home EV Solar Control
+# Home EV Solar Control 
 
 **Home EV Solar Control (HESC)** works alongside [Home PV Control (HPVC)](https://github.com/BioPC/home-pv-control). It keeps EV charging on solar working while HPVC limits your PV output.
 
