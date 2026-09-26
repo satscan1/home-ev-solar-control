@@ -1,5 +1,42 @@
 # Changelog
 
+## v0.6.0 — 2026-09-26
+
+**Requires Home PV Control v1.5.1 or newer.**
+
+Release through HPVC's request/confirm interface
+- HESC no longer switches HPVC off. It turns `input_boolean.hpvc_external_release_request` on and waits for `binary_sensor.hpvc_external_release_active` before it counts a release and starts waiting for the charger.
+- New state *Release requested, waiting for HPVC*. No confirmation within 5 minutes → the request is withdrawn and logged as *HPVC busy (status)*; the normal cooldown follows. No forced release.
+- HPVC keeps all its own priorities (safety, restore, negative price, Night Restore, HBC transitions). HESC's own HPVC status gate and all-in price guard are no longer used.
+- A request left on after a restart is withdrawn as soon as HESC is idle.
+- The old method (switch HPVC off, set inverters to full) stays available as a fallback, **off** by default: `input_boolean.hesc_release_legacy`.
+- No release when the EV is already full (optional battery-level sensor).
+
+Charge plan (new)
+- *Charge plan* tab: one-off (day, time, goal) and every week (days, time, goal), with a price chart and the planned quarters.
+- `sensor.hesc_charge_plan` works out the energy needed and picks the cheapest known quarters before the deadline.
+- New Node-RED node *Charge plan* (Engine tab) starts and stops the charger: in planned quarters, as a safety net when time runs short, and optionally below a set price (*take cheap chances*).
+- Charger-independent: `input_select.hesc_grid_charge_method` = *Start/stop switch* (`input_text.hesc_charger_start_stop_entity`) or *Mode value* (`input_text.hesc_charger_grid_mode_value`).
+- Afterwards, or when the charger stops by itself (EV full, charge limit), the charger goes back to how it was (switch off / previous mode) and is left alone for the rest of the plan. A charge HESC did not start is never taken over.
+- Restart safety: `input_boolean.hesc_plan_owns_charging`. Status: `input_text.hesc_plan_status`.
+
+Dashboard
+- Main: master-control text describes the release request; *HPVC released PV* tile while HPVC confirms a release.
+- Charge plan: new block *Charging from the grid* (plan status, grid charging method and its field).
+
+Wish list: expected prices beyond the known day-ahead prices (from own price history).
+
+## v0.5.2 — 2026-09-25
+
+- Optional EV battery level: `input_text.hesc_ev_soc_sensor` and `input_number.hesc_ev_full_soc` (default 100%).
+- The battery level is stored at the start and end of every session. A release that ends at *full* is logged as **EV full** and does not count as failed.
+- Advisor: *EV full* releases are left out of *releases without charging*. The report shows *(EV x→y%)*.
+
+## v0.5.1 — 2026-09-25
+
+- HPVC status gate (for HPVC v1.5.0): release only in a normal HPVC state (not at negative price, Night Restore, HBC Charge Priority, faults or auto-resume; all-in price above zero).
+- After switching HPVC off, HESC set the HPVC inverters to full itself and kept them there. (Since v0.6.0 this is the legacy fallback.)
+
 ## v0.5.0 — 2026-09-24
 
 **Settings and onboarding**

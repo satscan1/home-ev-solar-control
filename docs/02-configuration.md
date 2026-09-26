@@ -43,6 +43,7 @@ Shown with **Show optional fields** (`input_boolean.hesc_show_optional`).
 | `hesc_ev_disconnected_values` | Only when *EV connected* is a status sensor: the values that mean "no car", comma separated |
 | `hesc_charger_solar_switch_entity` | Chargers that need an extra switch to be `on` for solar mode (go-e, Wattpilot) |
 | `hesc_ev_green_energy_sensor` | The charger's solar energy counter, for "kWh from solar" in the report |
+| `hesc_ev_soc_sensor` + `input_number.hesc_ev_full_soc` | The EV's battery level (%) and the level that counts as full (default 100%). Used for *EV full* and the charge plan |
 
 **Local weather station**: switch *Use local weather station* on to show the irradiance sensor and its start/hold thresholds. Without it HESC works on the forecast alone.
 
@@ -58,6 +59,26 @@ Three separate blocks, each with its own switch. The defaults work for most inst
 
 More on the defaults: *Shipped defaults* in the [README](../README.md#shipped-defaults). Manual or scheduled starts are left out of the advice automatically, see [How it works](03-how-it-works.md#manual-and-scheduled-starts).
 
+## Charge plan
+
+On the **Charge plan** tab.
+
+| Setting | Meaning |
+|---|---|
+| One-off: day, time, goal, active | Charge to the goal by that day and time, once |
+| Every week: days, time, goal, active | Charge to the goal on the selected days at that time |
+| Take cheap chances + price | Also charge whenever the price is at or below this price (€/kWh) |
+| Usable battery capacity | kWh, to work out the energy needed |
+| Grid charging power | kW your charger delivers from the grid, to work out the number of quarters |
+
+**Charging from the grid**
+
+| Field | Meaning |
+|---|---|
+| `input_select.hesc_grid_charge_method` | *Off*, *Start/stop switch* or *Mode value* |
+| `input_text.hesc_charger_start_stop_entity` | Start/stop switch: `on` = charge, `off` = pause (back to solar mode). E.g. Wallbox *Pause/resume* |
+| `input_text.hesc_charger_grid_mode_value` | Mode value: the value of the mode entity (step 1) that means "charge now", e.g. Zappi `Fast`, evcc `now` |
+
 ## Switches
 
 | Switch | Meaning |
@@ -65,4 +86,6 @@ More on the defaults: *Shipped defaults* in the [README](../README.md#shipped-de
 | HESC enabled | Master switch. Off = no evaluation; if HESC owned HPVC, HPVC is restored |
 | Shadow mode | Evaluate and log only; never switches HPVC |
 | Use local weather station | Shows the irradiance settings and also requires the irradiance thresholds. Off = forecast only |
-| HESC switched HPVC off | Ownership flag, set by HESC only. Do not change it manually |
+| HESC release via HPVC off (legacy fallback) | Off = ask HPVC for a release (needs HPVC 1.5.1). On = the old v0.5.1 method. Keep off |
+| HESC switched HPVC off | Legacy ownership flag, set by HESC only. Do not change it manually |
+| HESC charge plan owns charging | Set while the charge plan started the charger. Do not change it manually |
