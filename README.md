@@ -87,7 +87,7 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 - A solar power forecast in watts (e.g. [Solcast PV Forecast](https://github.com/BJReplay/ha-solcast-solar) `power_now` / `power_in_30_minutes`, or any other forecast sensor in W)
 - Optional: a local weather station with an irradiance sensor (W/m²). HESC works without one
 - Optional: the EV's battery level (any `%` sensor), for *EV full* detection and the charge plan
-- Optional: day-ahead prices (Nord Pool integration) for the charge plan
+- Optional: day-ahead prices for the charge plan: a sensor with `raw_today` / `raw_tomorrow` (e.g. the Nord Pool integration), selected in Settings
 - Home Battery Control is **not** needed
 - For the dashboard graphs: [apexcharts-card](https://github.com/RomRider/apexcharts-card) (HACS), the same card HPVC uses
 - Optional: [button-card](https://github.com/custom-cards/button-card) (HACS) for the *Expected solar charging* bar. Without it the bar simply stays hidden

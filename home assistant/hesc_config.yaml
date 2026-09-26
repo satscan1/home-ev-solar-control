@@ -1,16 +1,59 @@
 # =============================================================================
 # Home EV Solar Control (HESC) — Home Assistant package
-# Version: v0.5.0 (2026-09-24)
+# Version: v0.6.0 (2026-09-26)
 # Project tag: [WALLBOX] [PV]
 #
 # Works alongside Home PV Control (HPVC):
 # when the EV waits in solar/Eco charging mode and enough solar power is
-# forecast, HESC temporarily switches HPVC off so the charger can start,
-# and switches HPVC back on afterwards. Node-RED flow: hesc_flow.json.
-# Shadow mode (default ON) evaluates only and never switches HPVC.
+# forecast, HESC asks HPVC (v1.5.1+) for a temporary PV release so the charger
+# can start on sun. Optional charge plan: charge to a goal by a set time in the
+# cheapest known quarters. Node-RED flow: hesc_flow.json.
+# Shadow mode (default ON) evaluates only: no release requests, no charger writes.
 # =============================================================================
 
 input_boolean:
+  # v0.6.0 charge plan: set while HESC itself started grid charging (restart safety)
+  hesc_plan_owns_charging:
+    name: "HESC charge plan owns charging"
+    icon: mdi:ev-station
+  # v0.6.0: fallback to the old release method (switch HPVC off + set inverters to full). Default off = use the HPVC external release request.
+  hesc_release_legacy:
+    name: HESC release via HPVC off (legacy fallback)
+    icon: mdi:backup-restore
+  hesc_rep_enabled:
+    name: "HESC repeating plan"
+    icon: mdi:calendar-sync
+  hesc_rep_mon:
+    name: "HESC repeating plan Monday"
+    icon: mdi:calendar-week
+  hesc_rep_tue:
+    name: "HESC repeating plan Tuesday"
+    icon: mdi:calendar-week
+  hesc_rep_wed:
+    name: "HESC repeating plan Wednesday"
+    icon: mdi:calendar-week
+  hesc_rep_thu:
+    name: "HESC repeating plan Thursday"
+    icon: mdi:calendar-week
+  hesc_rep_fri:
+    name: "HESC repeating plan Friday"
+    icon: mdi:calendar-week
+  hesc_rep_sat:
+    name: "HESC repeating plan Saturday"
+    icon: mdi:calendar-week
+  hesc_rep_sun:
+    name: "HESC repeating plan Sunday"
+    icon: mdi:calendar-week
+  hesc_plan_opportunity:
+    name: "HESC charge plan: take cheap chances"
+    icon: mdi:lightning-bolt-circle
+  # --- Charge plan (v0.6) ---
+  hesc_plan_enabled:
+    name: "HESC charge plan"
+    icon: mdi:calendar-check
+  hesc_plan_allow_grid:
+    name: "HESC charge plan may use cheap grid power"
+    icon: mdi:transmission-tower
   hesc_enabled:
     name: "HESC enabled"
     icon: mdi:ev-station
@@ -50,6 +93,20 @@ input_boolean:
     icon: mdi:lightbulb-on-outline
 
 input_text:
+  # v0.6.0 charge plan: charger start/stop entity (switch on = charge) or the mode value that means "charge now"
+  hesc_charger_start_stop_entity:
+    name: "HESC charger start/stop entity"
+    max: 255
+  hesc_charger_grid_mode_value:
+    name: "HESC charger 'charge now' mode value"
+    max: 100
+  hesc_plan_status:
+    name: "HESC charge plan status"
+    max: 255
+  # v0.6.0 charge plan: day-ahead price sensor with raw_today / raw_tomorrow (e.g. Nord Pool)
+  hesc_price_sensor:
+    name: "HESC day-ahead price sensor"
+    max: 255
   # --- source selection ---
   hesc_forecast_now_sensor:
     name: "HESC forecast power now (sensor)"
@@ -77,6 +134,9 @@ input_text:
     max: 255
   hesc_ev_green_energy_sensor:
     name: "HESC EV solar energy sensor (optional)"
+    max: 255
+  hesc_ev_soc_sensor:
+    name: "HESC EV battery level sensor (optional)"
     max: 255
   hesc_charger_mode_entity:
     name: "HESC charger mode entity"
@@ -126,6 +186,39 @@ input_text:
     max: 64
 
 input_number:
+  hesc_plan_opportunity_price:
+    name: "HESC charge plan opportunity price"
+    min: -0.5
+    max: 0.5
+    step: 0.01
+    unit_of_measurement: "€/kWh"
+    icon: mdi:cash-fast
+    mode: box
+  # --- Charge plan (v0.6) ---
+  hesc_plan_target_soc:
+    name: "HESC charge plan target battery level"
+    min: 20
+    max: 100
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:battery-arrow-up
+    mode: slider
+  hesc_ev_battery_kwh:
+    name: "HESC EV usable battery capacity"
+    min: 10
+    max: 150
+    step: 0.5
+    unit_of_measurement: "kWh"
+    icon: mdi:car-battery
+    mode: box
+  hesc_plan_charge_kw:
+    name: "HESC charge plan grid charging power"
+    min: 1.4
+    max: 22
+    step: 0.1
+    unit_of_measurement: "kW"
+    icon: mdi:ev-station
+    mode: box
   hesc_p_start:
     name: "HESC forecast power to start"
     min: 500
@@ -227,6 +320,14 @@ input_number:
     max: 50
     step: 1
     icon: mdi:counter
+    mode: box
+  hesc_ev_full_soc:
+    name: "HESC EV full at battery level"
+    min: 50
+    max: 100
+    step: 1
+    unit_of_measurement: "%"
+    icon: mdi:battery-check
     mode: box
   hesc_ev_active_w:
     name: "HESC EV charging threshold"
@@ -395,6 +496,78 @@ template:
             {{ {'type': type, 'known': true, 'values': p['values'], 'not_connected': p.nc, 'tested': p.tested, 'note': p.note,
                 'mode': modes, 'connected': conn[:5], 'power': power[:5], 'switch': sw[:5]} }}
             {%- endif -%}
+  # --- Charge plan (v0.6): calculates the plan; the Node-RED "Charge plan" node acts on it ---
+  - triggers:
+      - trigger: time_pattern
+        minutes: "/1"
+      - trigger: state
+        entity_id:
+          - input_select.hesc_plan_day
+          - input_select.hesc_plan_time
+          - input_select.hesc_plan_goal
+          - input_boolean.hesc_plan_enabled
+          - input_number.hesc_ev_battery_kwh
+          - input_number.hesc_plan_charge_kw
+          - input_boolean.hesc_rep_enabled
+          - input_select.hesc_rep_time
+          - input_select.hesc_rep_goal
+          - input_boolean.hesc_rep_mon
+          - input_boolean.hesc_rep_tue
+          - input_boolean.hesc_rep_wed
+          - input_boolean.hesc_rep_thu
+          - input_boolean.hesc_rep_fri
+          - input_boolean.hesc_rep_sat
+          - input_boolean.hesc_rep_sun
+    sensor:
+      - name: "HESC charge plan"
+        unique_id: hesc_charge_plan_preview
+        device_class: timestamp
+        icon: mdi:calendar-clock
+        state: >
+          {%- set wds = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] -%}
+          {%- set day = states('input_select.hesc_plan_day') -%}
+          {%- set base = today_at(states('input_select.hesc_plan_time')) -%}
+          {%- if day == 'Today' -%}{%- set off = 0 -%}{%- elif day == 'Tomorrow' -%}{%- set off = 1 -%}{%- elif day in wds -%}{%- set off = (wds.index(day) - now().weekday()) % 7 -%}{%- if off == 0 and base <= now() -%}{%- set off = 7 -%}{%- endif -%}{%- else -%}{%- set off = 1 -%}{%- endif -%}
+          {%- set one_dl = base + timedelta(days=off) -%}
+          {%- set rb = today_at(states('input_select.hesc_rep_time')) -%}
+          {%- set rp = namespace(dl=none) -%}
+          {%- for i in range(0, 8) -%}{%- set d = rb + timedelta(days=i) -%}{%- if rp.dl is none and d > now() and is_state('input_boolean.hesc_rep_' ~ (wds[d.weekday()] | lower), 'on') -%}{%- set rp.dl = d -%}{%- endif -%}{%- endfor -%}
+          {%- set one_on = is_state('input_boolean.hesc_plan_enabled', 'on') -%}
+          {%- set rep_on = is_state('input_boolean.hesc_rep_enabled', 'on') and rp.dl is not none -%}
+          {%- if rep_on and (not one_on or rp.dl < one_dl) -%}{%- set dl = rp.dl -%}{%- set src = 'repeating' -%}{%- set goal_sel = states('input_select.hesc_rep_goal') -%}{%- else -%}{%- set dl = one_dl -%}{%- set src = 'one-off' -%}{%- set goal_sel = states('input_select.hesc_plan_goal') -%}{%- endif -%}
+          {{ dl.isoformat() }}
+        attributes:
+          plan: >
+            {%- set wds = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] -%}
+            {%- set day = states('input_select.hesc_plan_day') -%}
+            {%- set base = today_at(states('input_select.hesc_plan_time')) -%}
+            {%- if day == 'Today' -%}{%- set off = 0 -%}{%- elif day == 'Tomorrow' -%}{%- set off = 1 -%}{%- elif day in wds -%}{%- set off = (wds.index(day) - now().weekday()) % 7 -%}{%- if off == 0 and base <= now() -%}{%- set off = 7 -%}{%- endif -%}{%- else -%}{%- set off = 1 -%}{%- endif -%}
+            {%- set one_dl = base + timedelta(days=off) -%}
+            {%- set rb = today_at(states('input_select.hesc_rep_time')) -%}
+            {%- set rp = namespace(dl=none) -%}
+            {%- for i in range(0, 8) -%}{%- set d = rb + timedelta(days=i) -%}{%- if rp.dl is none and d > now() and is_state('input_boolean.hesc_rep_' ~ (wds[d.weekday()] | lower), 'on') -%}{%- set rp.dl = d -%}{%- endif -%}{%- endfor -%}
+            {%- set one_on = is_state('input_boolean.hesc_plan_enabled', 'on') -%}
+            {%- set rep_on = is_state('input_boolean.hesc_rep_enabled', 'on') and rp.dl is not none -%}
+            {%- if rep_on and (not one_on or rp.dl < one_dl) -%}{%- set dl = rp.dl -%}{%- set src = 'repeating' -%}{%- set goal_sel = states('input_select.hesc_rep_goal') -%}{%- else -%}{%- set dl = one_dl -%}{%- set src = 'one-off' -%}{%- set goal_sel = states('input_select.hesc_plan_goal') -%}{%- endif -%}
+            {%- set soc_e = states('input_text.hesc_ev_soc_sensor') | trim -%}
+            {%- set soc = states(soc_e) | float(-1) if soc_e not in ['', 'unknown', 'unavailable'] else -1 -%}
+            {%- set goal = goal_sel | replace('%', '') | float(80) -%}
+            {%- set cap = states('input_number.hesc_ev_battery_kwh') | float(0) -%}
+            {%- set kw = states('input_number.hesc_plan_charge_kw') | float(11) -%}
+            {%- set need_kwh = ([goal - soc, 0] | max) / 100 * cap if (soc >= 0 and cap > 10) else 0 -%}
+            {%- set n = ((need_kwh / (kw * 0.25)) | round(0, 'ceil')) | int if kw > 0 else 0 -%}
+            {%- set a = state_attr(states('input_text.hesc_price_sensor'), 'raw_today') or [] -%}
+            {%- set b = state_attr(states('input_text.hesc_price_sensor'), 'raw_tomorrow') or [] -%}
+            {%- set pr = namespace(items=[], last=none) -%}
+            {%- for p in a + b -%}{%- set pr.last = p.end -%}{%- if as_datetime(p.end) > now() and as_datetime(p.end) <= dl -%}{%- set pr.items = pr.items + [p] -%}{%- endif -%}{%- endfor -%}
+            {%- set pick = (pr.items | sort(attribute='value'))[:n] | sort(attribute='start') -%}
+            {%- set pl = namespace(items=[]) -%}{%- for p in pick -%}{%- set pl.items = pl.items + [as_datetime(p.start).isoformat()] -%}{%- endfor -%}
+            {%- set avg = ((pick | map(attribute='value') | sum) / (pick | count) * 100) | round(1) if pick | count > 0 else none -%}
+            {%- set hrs = need_kwh / kw if kw > 0 else 0 -%}
+            {{ {'soc': soc | round(1) if soc >= 0 else none, 'goal': goal | int, 'need_kwh': need_kwh | round(1), 'quarters': n,
+                'charge_time': '%d:%02d' | format((hrs | int), ((hrs * 60) | int) % 60), 'kw': kw, 'avg_price_ct': avg,
+                'planned': pl.items, 'prices_complete': (pr.last is not none and as_datetime(pr.last) >= dl),
+                'prices_until': as_datetime(pr.last).isoformat() if pr.last is not none else none, 'deadline': dl.isoformat(), 'source': src, 'active': one_on or rep_on, 'deadline_text': dl.strftime('%a %d-%m %H:%M') } | tojson }}
 
 input_button:
   hesc_generate_report:
@@ -404,9 +577,43 @@ input_button:
     name: "HESC search charger entities again"
     icon: mdi:magnify
 
+# --- Charge plan (v0.6) ---
+input_datetime:
+  hesc_plan_deadline:
+    name: "HESC charge plan ready by"
+    has_date: true
+    has_time: true
+    icon: mdi:calendar-clock
+
 # Charger type: fills the brand-specific values and suggests the charger entities.
 # The data per charger lives in one place: sensor.hesc_charger_profile (template section).
 input_select:
+  # v0.6.0 charge plan: how the charger is made to charge from the grid in a planned quarter
+  hesc_grid_charge_method:
+    name: "HESC grid charging method"
+    options: ["Off", "Start/stop switch", "Mode value"]
+    icon: mdi:ev-plug-type2
+  # --- Charge plan (v0.6) ---
+  hesc_plan_day:
+    name: "HESC charge plan day"
+    options: ["Today", "Tomorrow", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    icon: mdi:calendar
+  hesc_plan_time:
+    name: "HESC charge plan time"
+    options: ["00:00", "00:30", "01:00", "01:30", "02:00", "02:30", "03:00", "03:30", "04:00", "04:30", "05:00", "05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00", "22:30", "23:00", "23:30"]
+    icon: mdi:clock-outline
+  hesc_plan_goal:
+    name: "HESC charge plan goal"
+    options: ["50%", "60%", "70%", "80%", "90%", "100%"]
+    icon: mdi:battery-charging-high
+  hesc_rep_time:
+    name: "HESC repeating plan time"
+    options: ["00:00", "00:30", "01:00", "01:30", "02:00", "02:30", "03:00", "03:30", "04:00", "04:30", "05:00", "05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00", "22:30", "23:00", "23:30"]
+    icon: mdi:clock-outline
+  hesc_rep_goal:
+    name: "HESC repeating plan goal"
+    options: ["50%", "60%", "70%", "80%", "90%", "100%"]
+    icon: mdi:battery-charging-high
   hesc_charger_type:
     name: "HESC charger type"
     icon: mdi:ev-plug-type2
@@ -602,5 +809,8 @@ automation:
       - action: input_number.set_value
         target: { entity_id: input_number.hesc_advice_min_runs }
         data: { value: 8 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_ev_full_soc }
+        data: { value: 100 }
       - action: input_boolean.turn_on
         target: { entity_id: input_boolean.hesc_defaults_applied }

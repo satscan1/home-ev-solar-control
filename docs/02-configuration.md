@@ -77,6 +77,7 @@ On the **Charge plan** tab.
 |---|---|
 | `input_select.hesc_grid_charge_method` | *Off*, *Start/stop switch* or *Mode value* |
 | `input_text.hesc_charger_start_stop_entity` | Start/stop switch: `on` = charge, `off` = pause (back to solar mode). E.g. Wallbox *Pause/resume* |
+| `input_text.hesc_price_sensor` | Your day-ahead price sensor with `raw_today` / `raw_tomorrow` attributes (e.g. Nord Pool). Also replace it in the dashboard's price chart |
 | `input_text.hesc_charger_grid_mode_value` | Mode value: the value of the mode entity (step 1) that means "charge now", e.g. Zappi `Fast`, evcc `now` |
 
 ## Switches
