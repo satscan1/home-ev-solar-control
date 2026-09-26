@@ -113,6 +113,8 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 
 ## How HESC works
 
+<p align="center"><img src="screenshots/hevs_hpvc.png" alt="HEVS and HPVC working together" width="100%"></p>
+
 Every 30 seconds HESC reads a bounded set of entities from the Node-RED Home Assistant state cache (no API reads, no copy of the full state table) and runs a small state machine:
 
 1. **Idle.** It waits until the EV is connected, not charging, not full and in solar/Eco mode, HPVC is actively limiting, the cautious forecast (now and +30 min) is above the start threshold, the irradiance confirms (optional), and there is no cooldown or attempt limit. All of this must hold for the stability time.
@@ -248,23 +250,23 @@ The Node-RED flow has four tabs: **Inputs** (30-second trigger and startup safet
 
 ## Screenshots
 
-Taken from a live installation (v0.6.0) after several days of running. All images live in [`screenshots/`](screenshots/), so they are easy to replace.
+Taken from a live installation (v0.6.0) after several days of running. The Settings screenshot shows a fresh install: only the required fields, PV and grid taken over from HPVC. All images live in [`screenshots/`](screenshots/), so they are easy to replace.
 
 ### Main
 
-<img src="screenshots/dashboard_main.jpg" width="80%">
+<img src="screenshots/dashboard_main.jpg" width="100%">
 
 ### Charge plan
 
-<img src="screenshots/charge_plan.jpg" width="80%">
+<img src="screenshots/charge_plan.jpg" width="100%">
 
 ### Settings
 
-<img src="screenshots/dashboard_settings.jpg" width="80%">
+<img src="screenshots/dashboard_settings.jpg" width="100%">
 
 ### Report
 
-<img src="screenshots/hesc_report.jpg" width="80%">
+<img src="screenshots/hesc_report.jpg" width="100%">
 
 ## Wish list
 
