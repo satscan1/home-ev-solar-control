@@ -8,14 +8,17 @@ The Inputs tab triggers the Engine every 30 seconds. The Engine reads about 20 e
 
 | State | Enters when | Leaves when |
 |---|---|---|
-| Idle | default | all start conditions hold for the stability time → Release |
-| Release — waiting for EV | HPVC switched off (or would be, in shadow mode) | EV charges → Charging · no start within the wait time → Restore |
-| Release — EV charging | EV above the charging threshold | EV stopped, solar below hold for longer than the allowed dip, EV disconnected / charger not in solar mode, sunset, maximum duration → Restore |
+| Idle | default | all start conditions hold for the stability time → Release requested |
+| Release requested — waiting for HPVC | `input_boolean.hpvc_external_release_request` switched on (or would be, in shadow mode) | HPVC confirms (`binary_sensor.hpvc_external_release_active` on) → Waiting for EV · no confirmation within 5 min → *HPVC busy*, request off · EV disconnected, sunset, inputs missing → request off |
+| Release — waiting for EV | HPVC confirmed; the release is counted from here | EV charges → Charging · no start within the wait time → Release ended |
+| Release — EV charging | EV above the charging threshold | EV stopped, solar below hold for longer than the allowed dip, EV disconnected / charger not in solar mode, sunset, maximum duration → Release ended |
+
+**Release ended:** the request is switched off, HPVC resumes normal control, the cooldown starts. HESC never switches HPVC itself (unless the legacy fallback is on, see below).
 
 Start conditions:
 
-- the EV is connected, not charging, and in solar mode;
-- HPVC is enabled and limiting;
+- the EV is connected, not charging, not full (when a battery-level sensor is set) and in solar mode;
+- HPVC is limiting and offers the release interface (v1.5.1 or newer);
 - the lower of forecast-now and forecast-+30 min is at least the start threshold;
 - irradiance is at least its start threshold (optional);
 - there is no cooldown;
@@ -25,8 +28,9 @@ Start conditions:
 ## Outputs
 
 - **Status:** `hesc_state`, `hesc_reason`, `hesc_last_action` and `hesc_insight_1..3`, written only on change.
-- **HPVC:** `input_boolean.turn_off` / `turn_on` on the configured HPVC switch, never in shadow mode.
-- **Ownership:** `input_boolean.hesc_owns_hpvc_off`.
+- **Release request:** `input_boolean.hpvc_external_release_request` on/off, never in shadow mode. A request found on while HESC is idle (for example after a restart) is switched off.
+- **Charger (charge plan only):** the start/stop switch or the mode entity you selected, never in shadow mode.
+- **Ownership:** `input_boolean.hesc_plan_owns_charging` (charge plan) and, legacy only, `input_boolean.hesc_owns_hpvc_off`.
 - **History:** one JSON line per event, session or 15-minute interval in `hesc-data/history.jsonl` (about 50 lines per sunny day).
 
 ## History records
@@ -41,6 +45,40 @@ Start conditions:
 ### Manual and scheduled starts
 
 Many chargers keep reporting their solar mode (for example Wallbox *Eco*) when you press start yourself or when a schedule starts charging. To keep the advice and the accuracy figures clean, HESC checks every solar session at its start: if the forecast (the estimate chosen in Settings) **and** the actual PV are both below the hold threshold, the session was started by hand or by a schedule. It is still logged (`forced_start: true`) and shown in the report as *Manual/scheduled (not counted)*, but it is left out of the advice, the accuracy figures and the daily solar totals. This only uses forecast and PV, so it works the same for every charger.
+
+### Handshake with HPVC
+
+HPVC v1.5.1 treats the request as a question, not a command. It waits behind its own safety and restore handling, negative-price protection, Night Restore and HBC transition states, respects its normal cooldown and write confirmation, sets the configured inverters to full and only then turns *active* on. So:
+
+- HESC never assumes PV is free right after switching the request on;
+- every HESC timer that is about the charger starts **after** *active*;
+- the only timer before *active* is the 5-minute limit after which HESC gives up for now (*HPVC busy*).
+
+### Legacy fallback
+
+`input_boolean.hesc_release_legacy` (off by default) brings back the v0.5.1 method: switch HPVC off, set its Number-entity inverters to full and keep them there, with HESC's own HPVC status gate and all-in price guard. Keep it off with HPVC v1.5.1 or newer.
+
+## Charge plan
+
+The plan itself is a Home Assistant template (`sensor.hesc_charge_plan`, attribute `plan`): active plan (one-off or weekly, the earliest wins), goal, deadline, energy needed (battery level × usable capacity), number of quarters at the grid charging power, and the cheapest known quarters before the deadline (`planned`). It is recalculated every minute and whenever a plan setting changes.
+
+The *Charge plan* node in the Engine tab runs every 30 seconds and decides:
+
+| Reason on the dashboard | Charger |
+|---|---|
+| Planned quarter | started from the grid |
+| Safety net: only just enough time left | started (remaining time ≤ charging time + 15 min) |
+| Cheap chance (x ct ≤ y ct) | started, only when *take cheap chances* is on |
+| Waiting for the next planned quarter / No active plan | not started; if HESC started it, back to how it was |
+| Goal reached (x%) | back to how it was |
+| Finished, charger stopped by itself | the charger drew no power for the *charger stopped* time after the *wait for charger* time; back to how it was, and left alone until the deadline |
+| EV already charging, left alone | a charge HESC did not start (for example on sun) is never taken over |
+
+Back to how it was: with *Start/stop switch* the switch goes off; with *Mode value* the mode that was active before HESC started is selected again (or the first solar value). After a restart, `input_boolean.hesc_plan_owns_charging` tells HESC that it had started the charger, so it is put back.
+
+Every start and stop is written to the history (`type: charge_plan`).
+
+Not yet: expected prices beyond the known day-ahead prices. Until then only known quarters are planned; the safety net makes sure the deadline is still met.
 
 ## Advisor
 

@@ -1,5 +1,7 @@
 # Installation
 
+> **Before you start:** install or upgrade [Home PV Control](https://github.com/BioPC/home-pv-control) to **v1.5.1 or newer**. HESC uses its external PV release interface.
+
 ## 1. Home Assistant package
 
 1. Make sure packages are enabled in `configuration.yaml`:
@@ -48,7 +50,7 @@ Open the **Settings** view and enter your entities. See [02 Settings](02-configu
 
 ## 5. Evaluate before going live
 
-Keep shadow mode on for at least a week of charging days. Press **Generate report** and check:
+Keep shadow mode on for at least a week of charging days. The charge plan also respects shadow mode: it shows what it would do, but does not start the charger. Press **Generate report** and check:
 
 - whether the would-be releases happen at sensible moments;
 - how actual PV compares with the forecast during solar/Eco charging.

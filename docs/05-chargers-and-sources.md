@@ -14,6 +14,17 @@ HESC does not talk to a charger or a forecast service directly. It only reads Ho
 | Extra solar switch (optional) | `hesc_charger_solar_switch_entity` | `switch.*` | For chargers that need a mode **and** a PV-surplus switch (go-e, Wattpilot). Must be `on` |
 | Solar energy per session (optional) | `hesc_ev_green_energy_sensor` | `sensor.*` in kWh | Only used for the solar share in the report |
 
+### Charging from the grid (charge plan)
+
+Only needed for the charge plan. Chargers do this in one of two ways; pick the one that matches yours in Settings → *Charging from the grid*.
+
+| Method | Use when | Examples (check your own entities) |
+|---|---|---|
+| Start/stop switch | the charger has a switch that pauses/resumes charging | Wallbox *Pause/resume* (`switch.<name>_pause_resume`), some Easee and Ohme setups |
+| Mode value | "charge now" is a value of the same mode entity you use for solar mode | Zappi `Fast`, evcc `now`, go-e / Wattpilot non-Eco mode, Peblar / Alfen / SMA non-solar mode |
+
+Only the Wallbox *Pause/resume* switch has been built and checked against a real installation. For other chargers, test in shadow mode first and check that the charger returns to its solar mode afterwards.
+
 ### EV charging threshold
 
 `input_number.hesc_ev_active_w` (default 400 W) decides when the EV counts as *charging*. Set it above the standby draw of your charger and below the lowest charging power it uses. Most chargers start at 6 A: about 1.4 kW single-phase or 4.1 kW three-phase.
