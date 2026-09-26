@@ -118,7 +118,7 @@ views:
     cards:
     - type: markdown
       content: |-
-        ### 🎛️ EV Solar Master Control
+        ### 🎛️ EV Solar Master Control <small>· HESC v0.6.0</small>
         <small>Starts solar charging on forecast sun by asking HPVC for a temporary PV release (HPVC 1.5.1 or newer). Shadow mode: only evaluates, never asks.</small>
       grid_options:
         columns: 12
