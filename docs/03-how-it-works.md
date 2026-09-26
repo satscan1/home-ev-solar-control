@@ -60,7 +60,7 @@ HPVC v1.5.1 treats the request as a question, not a command. It waits behind its
 
 ## Charge plan
 
-The plan itself is a Home Assistant template (`sensor.hesc_charge_plan`, attribute `plan`): active plan (one-off or weekly, the earliest wins), goal, deadline, energy needed (battery level × usable capacity), number of quarters at the grid charging power, and the cheapest known quarters before the deadline (`planned`). It is recalculated every minute and whenever a plan setting changes.
+The plan itself is a Home Assistant template (`sensor.hesc_charge_plan`, attribute `plan`): active plan (one-off or weekly, the earliest wins), goal, deadline, energy needed (battery level × usable capacity), number of quarters at the grid charging power, and the cheapest known quarters before the deadline (`planned`), taken from the price sensor in `input_text.hesc_price_sensor`. It is recalculated every minute and whenever a plan setting changes.
 
 The *Charge plan* node in the Engine tab runs every 30 seconds and decides:
 
