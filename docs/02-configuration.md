@@ -53,7 +53,7 @@ Three separate blocks, each with its own switch. The defaults work for most inst
 
 | Block (switch) | Settings | Defaults |
 |---|---|---|
-| Thresholds (`hesc_show_thresholds`) | Forecast power to start / hold, EV counts as charging above | 2 500 W / 2 000 W, 400 W |
+| Thresholds (`hesc_show_thresholds`) | Forecast power to start / hold, EV counts as charging above | 1 500 W / 1 200 W, 400 W (EV charging) · irradiance 150 / 120 W/m² |
 | Timing (`hesc_show_timing`) | Stable before release, wait for charger, allowed dip, charger stopped before restore, maximum duration, cooldown, failed releases per day | 5, 10, 5, 5, 240, 30 min, 3 |
 | Advice (`hesc_show_advice`) | Advice based on last, minimum sessions before advice | 30 days, 8 sessions |
 | Charge plan (`hesc_show_plan_settings`) | Charger start/stop switch **or** "charge now" mode value, day-ahead price sensor | empty (no grid charging) |

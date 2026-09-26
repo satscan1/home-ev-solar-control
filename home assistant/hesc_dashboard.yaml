@@ -819,8 +819,8 @@ views:
             return Number.isFinite(v) ? v : fallback;
           };
 
-          const pStart = num('input_number.hesc_p_start', 2500);
-          const pHold = num('input_number.hesc_p_hold', 2000);
+          const pStart = num('input_number.hesc_p_start', 1500);
+          const pHold = num('input_number.hesc_p_hold', 1200);
 
           const attrSetting = String(
             (st('input_text.hesc_forecast_attribute') || {}).state || 'estimate10'
@@ -909,8 +909,8 @@ views:
           [[[
           const st = (id) => states[id];
           const num = (id, fb) => { const v = Number(st(id) && st(id).state); return Number.isFinite(v) ? v : fb; };
-          const pStart = num('input_number.hesc_p_start', 2500);
-          const pHold = num('input_number.hesc_p_hold', 2000);
+          const pStart = num('input_number.hesc_p_start', 1500);
+          const pHold = num('input_number.hesc_p_hold', 1200);
           const attr = String((st('input_text.hesc_forecast_attribute') || {}).state || 'estimate10');
           const key = { estimate: 'pv_estimate', estimate10: 'pv_estimate10', estimate90: 'pv_estimate90' }[attr] || 'pv_estimate10';
           const lat = hass.config.latitude, lon = hass.config.longitude;

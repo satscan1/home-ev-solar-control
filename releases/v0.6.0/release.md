@@ -21,6 +21,10 @@ HESC request on → HPVC checks its priorities → HPVC confirms (active)
 
 Charge to a goal by a set time, one-off or every week, in the cheapest known quarters, with a safety net and optional *take cheap chances*. Grid charging works through a start/stop switch or a "charge now" mode value, so it is not tied to one charger. When the charger stops by itself, it is put back to how it was and left alone for the rest of the plan.
 
+## New defaults
+
+Forecast power to start / hold **1 500 / 1 200 W** (was 2 500 / 2 000), irradiance to start / hold **150 / 120 W/m²** (was 400 / 300). Based on 8 real solar starts on the test installation. Existing installations keep their values; change them under Settings → Advanced → Thresholds if you like.
+
 ## Upgrade from v0.5.x
 
 1. Upgrade HPVC to v1.5.1 first.
