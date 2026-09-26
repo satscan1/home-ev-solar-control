@@ -1,4 +1,4 @@
-# Home EV Solar Control (HESC) v0.6 — dashboard
+# Home EV Solar Control (HESC) v1.0.0 — dashboard
 # Layout follows Home PV Control (badges, master-control toggles, live inputs, control states, apexcharts graphs).
 # Requires: apexcharts-card (HACS). Optional: button-card (HACS) for the "Expected solar charging" bar;
 # without it that bar stays hidden (checked via update.button_card_update). Optional: card-mod (tighter Live Inputs padding).
@@ -118,7 +118,7 @@ views:
     cards:
     - type: markdown
       content: |-
-        ### 🎛️ EV Solar Master Control <small>· HESC v0.6.0</small>
+        ### 🎛️ EV Solar Master Control <small>· HESC v1.0.0</small>
         <small>Starts solar charging on forecast sun by asking HPVC for a temporary PV release (HPVC 1.5.1 or newer). Shadow mode: only evaluates, never asks.</small>
       grid_options:
         columns: 12

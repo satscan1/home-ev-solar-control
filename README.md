@@ -1,9 +1,9 @@
 <p align="center">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v0.6.0-blue" alt="Release v0.6.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v1.0.0-blue" alt="Release v1.0.0"></a>
   <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-ready-41BDF5" alt="Home Assistant ready"></a>
   <a href="https://nodered.org/"><img src="https://img.shields.io/badge/Node--RED-flow-8F0000" alt="Node-RED flow"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later"></a>
-  <img src="https://img.shields.io/badge/status-shadow%20mode%20%2F%20early%20preview-orange" alt="Early preview">
+  <img src="https://img.shields.io/badge/status-first%20release-brightgreen" alt="First release">
 </p>
 
 <p align="center"><img src="screenshots/banner.png" alt="HEVS – Home Energy & Vehicle System" width="100%"></p>
@@ -16,12 +16,12 @@ Solar/Eco charging modes on many wallboxes only start when the house is exportin
 
 HESC resolves this. When the EV is connected and waiting in solar/Eco mode, HPVC is actively limiting, and the **solar power forecast** (optionally confirmed by a **local irradiance sensor**) says enough sun is coming, HESC **asks HPVC for a temporary PV release**. HPVC decides when that is safe, sets the inverters to full and confirms. The charger can then start on sun. As soon as the sun drops, the EV stops or the charger does not respond, HESC withdraws the request and HPVC resumes normal control.
 
-Since v0.6 HESC can also **charge to a goal by a set time** (charge plan): it picks the cheapest quarters of the known day-ahead prices and starts the charger from the grid in exactly those quarters. It only charges from the grid when you switch a plan on.
+HESC can also **charge to a goal by a set time** (charge plan): it picks the cheapest quarters of the known day-ahead prices and starts the charger from the grid in exactly those quarters. It only charges from the grid when you switch a plan on.
 
 > [!IMPORTANT]
-> v0.6 is an early preview. It ships in **shadow mode**: it evaluates and logs every decision but never asks HPVC for a release and never starts the charger. Only switch shadow mode off after you have reviewed the report for your own installation.
+> v1.0.0 is the first public release. A new install starts in **shadow mode**: HESC evaluates and logs every decision but never asks HPVC for a release and never starts the charger. Switch shadow mode off after you have checked the report for your own installation.
 >
-> v0.6 needs **Home PV Control v1.5.1 or newer** (external PV release interface).
+> HESC needs **Home PV Control v1.5.1 or newer** (external PV release interface).
 
 ## Contents
 
@@ -208,7 +208,7 @@ When the charger stops by itself (EV full, the car's own charge limit), HESC put
 
 ## Tested with
 
-HESC was developed and tested with a **Wallbox Pulsar Plus** (official Wallbox integration, solar charging mode *Eco*), **Solcast PV Forecast**, an **Ecowitt** weather station and **HPVC**. v0.6.0 uses the external PV release interface of **HPVC v1.5.1** (26-09-2026). The charge plan's grid charging was built for the Wallbox *Pause/resume* switch; other chargers are untested. Other chargers should work when they expose the entities listed in [Chargers and sources](docs/05-chargers-and-sources.md); please test them in shadow mode first.
+HESC was developed and tested with a **Wallbox Pulsar Plus** (official Wallbox integration, solar charging mode *Eco*), **Solcast PV Forecast**, an **Ecowitt** weather station and **HPVC**. HESC uses the external PV release interface of **HPVC v1.5.1**. The charge plan's grid charging was built for the Wallbox *Pause/resume* switch; other chargers are untested. Other chargers should work when they expose the entities listed in [Chargers and sources](docs/05-chargers-and-sources.md); please test them in shadow mode first.
 
 ## Architecture and persistence
 
@@ -238,19 +238,11 @@ The Node-RED flow has four tabs: **Inputs** (30-second trigger and startup safet
 - [Chargers and sources](docs/05-chargers-and-sources.md)
 - [Documentation index](docs/README.md)
 - [Changelog](CHANGELOG.md)
-- [v0.6.0 release notes](releases/v0.6.0/release.md)
-- [v0.5.2 release notes](releases/v0.5.2/release.md)
-- [v0.5.1 release notes](releases/v0.5.1/release.md)
-- [v0.5.0 release notes](releases/v0.5.0/release.md)
-- [v0.4.1 release notes](releases/v0.4.1/release.md)
-- [v0.4.0 release notes](releases/v0.4.0/release.md)
-- [v0.3.0 release notes](releases/v0.3.0/release.md)
-- [v0.2.0 release notes](releases/v0.2.0/release.md)
-- [v0.1.0 release notes](releases/v0.1.0/release.md)
+- [v1.0.0 release notes](releases/v1.0.0/release.md)
 
 ## Screenshots
 
-Taken from a live installation (v0.6.0) after several days of running. The Settings screenshot shows a fresh install: only the required fields, PV and grid taken over from HPVC. All images live in [`screenshots/`](screenshots/), so they are easy to replace.
+Taken from a live installation (v1.0.0) after several days of running. The Settings screenshot shows a fresh install: only the required fields, PV and grid taken over from HPVC. All images live in [`screenshots/`](screenshots/), so they are easy to replace.
 
 ### Main
 
@@ -288,7 +280,7 @@ home assistant/
   hesc_dashboard.yaml   # Separate Home Assistant dashboard
 
 node-red/
-  hesc_flow.json        # Importable Node-RED flow with four v0.6 tabs
+  hesc_flow.json        # Importable Node-RED flow with four tabs
 
 examples/
   wallbox-pulsar-plus-solcast.reference.yaml
@@ -304,11 +296,7 @@ docs/
   README.md
 
 releases/
-  v0.1.0/
-  v0.2.0/
-  v0.3.0/
-  v0.4.0/
-  v0.4.1/
+  v1.0.0/
 ```
 
 ## Credits

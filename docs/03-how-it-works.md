@@ -56,7 +56,7 @@ HPVC v1.5.1 treats the request as a question, not a command. It waits behind its
 
 ### Legacy fallback
 
-`input_boolean.hesc_release_legacy` (off by default) brings back the v0.5.1 method: switch HPVC off, set its Number-entity inverters to full and keep them there, with HESC's own HPVC status gate and all-in price guard. Keep it off with HPVC v1.5.1 or newer.
+`input_boolean.hesc_release_legacy` (off by default) brings back the old method: switch HPVC off, set its Number-entity inverters to full and keep them there, with HESC's own HPVC status gate and all-in price guard. Keep it off with HPVC v1.5.1 or newer.
 
 ## Charge plan
 

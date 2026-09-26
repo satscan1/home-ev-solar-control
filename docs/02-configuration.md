@@ -89,6 +89,6 @@ Afterwards, or when the charger stops by itself, it always goes back to how it w
 | HESC enabled | Master switch. Off = no evaluation; if HESC owned HPVC, HPVC is restored |
 | Shadow mode | Evaluate and log only; never switches HPVC |
 | Use local weather station | Shows the irradiance settings and also requires the irradiance thresholds. Off = forecast only |
-| HESC release via HPVC off (legacy fallback) | Off = ask HPVC for a release (needs HPVC 1.5.1). On = the old v0.5.1 method. Keep off |
+| HESC release via HPVC off (legacy fallback) | Off = ask HPVC for a release (needs HPVC 1.5.1). On = the old method (switch HPVC off and set its inverters to full). Keep off |
 | HESC switched HPVC off | Legacy ownership flag, set by HESC only. Do not change it manually |
 | HESC charge plan owns charging | Set while the charge plan started the charger. Do not change it manually |
