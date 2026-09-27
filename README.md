@@ -50,6 +50,7 @@ HESC can also **charge to a goal by a set time** (charge plan): it picks the che
 
 ## Quick install
 
+0. No Node-RED yet (for example without HPVC)? Install the **Node-RED add-on** first, see [step 0 of the guide](docs/01-installation.md#0-what-you-need-first)
 1. Enable Home Assistant packages: `homeassistant: packages: !include_dir_named packages`
 2. Copy `home assistant/hesc_config.yaml` to `/config/packages/hesc_config.yaml`
 3. Restart Home Assistant (first install creates the helpers and applies the defaults once)
@@ -86,7 +87,7 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 ## Requirements
 
 - Home Assistant with package support
-- Node-RED with `node-red-contrib-home-assistant-websocket` (same version as HPVC recommends)
+- Node-RED with `node-red-contrib-home-assistant-websocket`. The Node-RED add-on already includes it; if you use HPVC or HBC you already have it. Fresh install: see [docs/01-installation.md](docs/01-installation.md#0-what-you-need-first)
 - Optional: [Home PV Control](https://github.com/BioPC/home-pv-control) **v1.5.1 or newer** for the PV release (HESC uses `input_boolean.hpvc_external_release_request`, `binary_sensor.hpvc_external_release_active` and `binary_sensor.hpvc_pv_limited`)
 - A charger with a solar/Eco charging mode exposed in Home Assistant (connected sensor, charging power sensor and a mode entity). See [Chargers and sources](docs/05-chargers-and-sources.md)
 - A solar power forecast in watts (e.g. [Solcast PV Forecast](https://github.com/BJReplay/ha-solcast-solar) `power_now` / `power_in_30_minutes`, or any other forecast sensor in W)

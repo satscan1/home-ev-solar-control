@@ -13,6 +13,7 @@ Standalone mode
 Other
 - Grid charging power for the charge plan now steps in 0.5 kW instead of 0.1 kW.
 - New document: [A day in practice](docs/06-a-day-in-practice.md), a real day with a home battery, HPVC and HESC.
+- Installation guide: steps for a fresh install without HPVC (Node-RED add-on, server node, what you need first).
 
 Upgrade from v1.0.0: replace `hesc_config.yaml` and the dashboard, re-import the flow (or replace the *Evaluate HESC* node), restart Home Assistant or reload helpers, template entities and automations.
 
