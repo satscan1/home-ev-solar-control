@@ -79,9 +79,7 @@ Later, at 16:33, the house was exporting 1.46 kW in total. That sounds like plen
 
 ## 7 · 17:00–19:45 — The sun disappears
 
-After 17:00 solar production fell below about 2.5 kW. The Wallbox made a few more attempts to start (16:38, 17:14 and 17:38), but each time the falling sun or a cloud reduced the surplus on one of the phases and Eco stopped again. After about 17:45 the car simply waited. The cautious forecast also dropped below HESC's 1.2 kW hold threshold at around 17:30.
-
-From about 18:15 the home batteries started covering the house again. After sunset HESC reported *Night*.
+After 17:00 solar production fell further. The Wallbox made a few more attempts to start, but each time the falling sun or a cloud reduced the surplus on one of the phases and Eco stopped again. From about 18:15 the home batteries started covering the house again. After sunset HESC reported *Night*.
 
 The EV finished the day at 86%. It had started the morning at 66%.
 
