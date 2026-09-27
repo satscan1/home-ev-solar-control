@@ -97,17 +97,7 @@ For me, the most interesting part was not that the system charged the car. It wa
 
 The home batteries get their priority. The EV gets whatever useful surplus is left. The Wallbox remains in control of its own Eco behaviour. HPVC remains in control of the solar inverters. And HESC sits between those worlds, watching what is happening and asking HPVC for a release only when that can make sense.
 
-On this day, HESC asked several times while the batteries were still charging. HPVC said no. And that was the correct outcome. Later, when the batteries were full, the EV simply started by itself because there was enough surplus. No release was needed at all.
-
-That is probably the most important thing I learned from running it for a full day:
-
-**HESC does not need to control everything to make the whole system work better.**
-
-It only needs to know when to ask, when to wait, and when to leave the other systems alone.
-
-The same applies to the charge plan. It can spot a €0.00 quarter two days before the deadline, use it when appropriate, and then get out of the way again.
-
-And because HESC records the forecast, actual production, charging sessions and release requests, you can look back afterwards and see why the system behaved the way it did.
+On this day, HESC asked several times while the batteries were still charging. HPVC said no. And that was the correct outcome. Later, when the batteries were full, the EV simply started by itself because there was enough surplus.
 
 That is what this first real-world day was really about. Not making the EV, batteries and PV compete for control. Just giving each of them their own job.
 
