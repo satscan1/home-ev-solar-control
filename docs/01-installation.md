@@ -5,7 +5,7 @@ HESC runs **with or without** [Home PV Control (HPVC)](https://github.com/BioPC/
 - **With HPVC:** install or upgrade HPVC to **v1.5.1 or newer** first. HESC uses its external PV release interface. Node-RED is already there, so you can skip step 0.
 - **Without HPVC (standalone):** start at step 0 if you do not have Node-RED yet. After installation you switch on *No HPVC (standalone)* in Settings (a new install without HPVC does this by itself).
 
-## 0. What you need first
+## 0. What you need first 
 
 - **HACS**, for the dashboard cards in step 3.
 - **A solar power forecast** in watts. The easiest is the [Solcast PV Forecast](https://github.com/BJReplay/ha-solcast-solar) integration (via HACS), which gives `power_now` and `power_in_30_minutes`.
