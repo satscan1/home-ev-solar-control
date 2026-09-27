@@ -29,11 +29,7 @@ That distinction turned out to be quite important during this day.
 
 ## 1 · 06:00–11:00 — The batteries get the first share
 
-The home batteries started the morning at around 20%. From about 08:30 there was enough solar power to charge them, so HBC took the available surplus. By 10:30 they were already around 45% on average.
-
-There was no reason for HPVC to limit the solar at this point, because the electricity price was still above zero. And HESC had nothing to do with the EV yet: the Wallbox saw no usable surplus because the batteries were taking it. That is exactly what should happen.
-
-Meanwhile, HESC was quietly doing its other job: every 15 minutes it recorded what Solcast expected and what the panels actually produced. The cautious forecast was deliberately conservative. At 10:15, for example, it predicted about 1.0 kW while the panels were actually producing 2.8 kW.
+The home batteries started the morning at around 20%. From about 08:30 there was enough solar power to charge them, so HBC took the available surplus. By 10:30 they were already around 45% on average. Meanwhile, HESC was quietly doing its other job: every 15 minutes it recorded what Solcast expected and what the panels actually produced.
 
 ## 2 · 11:07 — The EV gets its chance
 
