@@ -4,7 +4,11 @@
 
 The Inputs tab triggers the Engine every 30 seconds. The Engine reads about 20 entities from the Home Assistant state cache of Node-RED (`global.homeassistant.homeAssistant.states`). It does not call the API and does not copy the full state table.
 
-## State machine
+## Standalone mode
+
+With *No HPVC (standalone)* switched on (`input_boolean.hesc_standalone`), HESC skips the release completely: the HPVC inputs are not required and the state machine below stays in **Idle** with the reason *Standalone (no HPVC): the charger starts on solar by itself*. Following sessions, the 15-minute accuracy records, the charge plan, the advice and the report work as described on this page. Switching standalone on during a running release ends that release cleanly.
+
+## State machine (with HPVC)
 
 | State | Enters when | Leaves when |
 |---|---|---|

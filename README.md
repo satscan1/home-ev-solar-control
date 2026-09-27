@@ -10,26 +10,27 @@
 
 # Home EV Solar Control 
 
-**Home EV Solar Control (HESC)** is a smart EV charging companion for Home Assistant. It follows solar charging, compares it with the solar forecast, gives setting advice from your own history and can charge to a goal by a set time in the cheapest hours.
+**Home EV Solar Control (HESC)** is a smart companion for your EV charger in Home Assistant. It helps you charge your car on sunshine, and, when the car has to be full by a certain time, in the cheapest hours.
 
-It runs **on its own (standalone)** or together with [Home PV Control (HPVC)](https://github.com/BioPC/home-pv-control). With HPVC it also keeps EV charging on solar working while HPVC limits your PV output.
+What HESC does for you:
 
-**See it in practice:** [a day with changing conditions](docs/06-a-day-in-practice.md), a real day with a home battery, HPVC and HESC working side by side.
+- **Follows every solar charging session** and compares it with the solar forecast, so you see how much of your car's energy came from the sun.
+- **Charge plan:** *"100% by Tuesday 10:00"* or *"80% on weekdays at 07:30"*. HESC picks the cheapest hours before that moment.
+- **Advice in plain language**, based on your own history, for example the best start threshold for your house.
+- **A support report** with everything it measured and decided.
+- **Together with [Home PV Control (HPVC)](https://github.com/BioPC/home-pv-control):** when HPVC turns your panels down, HESC can ask HPVC to let the sun through for the car.
 
-**Why HPVC and a wallbox can block each other.** Solar/Eco charging modes on many wallboxes only start when the house is exporting enough power. HPVC does the opposite: it curtails the inverters so that export stays near zero, for example at negative export prices. Both do their job, but together they block each other. The wallbox waits for surplus that never comes.
+HPVC is optional: HESC runs **on its own (standalone)** or **together with HPVC**. See [Two ways to run HESC](#two-ways-to-run-hesc).
 
-HESC resolves this. When the EV is connected and waiting in solar/Eco mode, HPVC is actively limiting, and the **solar power forecast** (optionally confirmed by a **local irradiance sensor**) says enough sun is coming, HESC **asks HPVC for a temporary PV release**. HPVC decides when that is safe, sets the inverters to full and confirms. The charger can then start on sun. As soon as the sun drops, the EV stops or the charger does not respond, HESC withdraws the request and HPVC resumes normal control.
-
-HESC can also **charge to a goal by a set time** (charge plan): it picks the cheapest quarters of the known day-ahead prices and starts the charger from the grid in exactly those quarters. It only charges from the grid when you switch a plan on.
+**See it in practice:** [a day at home with HESC](docs/06-a-day-in-practice.md), one real day with home batteries, solar panels, a car and changing weather.
 
 > [!IMPORTANT]
-> A new install starts in **shadow mode**: HESC evaluates and logs every decision but never asks HPVC for a release and never starts the charger. Switch shadow mode off after you have checked the report for your own installation.
->
-> **HPVC is optional since v1.1.0.** Without HPVC, switch on *No HPVC (standalone)* in Settings (a new install without HPVC does this by itself) and pick your own PV and grid sensors. With HPVC, HESC needs **Home PV Control v1.5.1 or newer** (external PV release interface).
+> A new install starts in **shadow mode**: HESC evaluates and logs every decision, but never starts the charger and never asks HPVC for anything. Switch shadow mode off after you have checked the report for your own installation.
 
 ## Contents
 
 - [Quick install](#quick-install)
+- [Two ways to run HESC](#two-ways-to-run-hesc)
 - [Main features](#main-features)
 - [Requirements](#requirements)
 - [Shipped defaults](#shipped-defaults)
@@ -61,19 +62,32 @@ HESC can also **charge to a goal by a set time** (charge plan): it picks the che
 
 Full guide: [docs/01-installation.md](docs/01-installation.md)
 
+## Two ways to run HESC
+
+| | Standalone | With HPVC |
+|---|---|---|
+| You need | Home Assistant, Node-RED, your charger, a solar forecast | the same, plus [Home PV Control](https://github.com/BioPC/home-pv-control) **v1.5.1 or newer** |
+| Setting | *No HPVC (standalone)* **on** (a new install without HPVC does this by itself) | *No HPVC (standalone)* **off** |
+| PV and grid power | you pick your own sensors | taken over from HPVC |
+| Follow solar sessions, forecast vs actual, advice, report | ✅ | ✅ |
+| Charge plan (cheapest hours) | ✅ | ✅ |
+| Ask HPVC to let the sun through for the car | – (nothing holds the panels back) | ✅ |
+
+**Why the release is needed with HPVC.** The solar/Eco mode of many wallboxes only starts when the house sends enough power back to the grid. HPVC does the opposite: when exporting does not pay, it turns the panels down so that export stays near zero. Both do their job, but together the wallbox waits for sunshine that never comes. HESC solves this: when the car is waiting in Eco mode, HPVC is holding the panels back and the forecast says enough sun is coming, HESC **asks HPVC for a temporary release**. HPVC decides when that is safe, turns the panels up and confirms. When the sun drops or the car stops, HESC withdraws the request and HPVC takes over again.
+
 ## Main features
 
 | Feature | |
 |---|:-:|
 | Runs standalone (no HPVC needed) or together with HPVC | ✅ |
-| Unblocks wallbox Eco/solar charging while HPVC curtails PV (with HPVC) | ✅ |
+| With HPVC: unblocks wallbox Eco/solar charging while HPVC limits PV | ✅ |
 | Solar **power** forecast as primary source (Solcast `estimate10`, or any W sensor) | ✅ |
 | Works with any charger that exposes connected, power and solar-mode entities (binary or status sensor, W or kW, one or more mode values, optional extra solar switch) | ✅ |
 | Mapping table for common chargers: Wallbox, Alfen, Peblar, Zappi, go-e, Wattpilot, SMA, evcc, Ohme, Easee | ✅ |
 | Local weather station (irradiance) fully optional | ✅ |
 | Hysteresis (start/hold thresholds), stability timer, cooldown, daily attempt limit | ✅ |
 | Shadow mode: full evaluation without writes | ✅ |
-| Uses HPVC's release request/confirm interface (HPVC ≥ 1.5.1): HPVC keeps all its own priorities | ✅ |
+| With HPVC: uses HPVC's release request/confirm interface (HPVC ≥ 1.5.1), so HPVC keeps all its own priorities | ✅ |
 | Charge plan: charge to a goal by a set time (one-off or weekly) in the cheapest known quarters, with a safety net and optional *take cheap chances* | ✅ |
 | Charger-independent grid charging: a start/stop switch **or** a "charge now" mode value; afterwards the charger goes back to how it was | ✅ |
 | No release when the EV is already full (optional battery-level sensor) | ✅ |
@@ -81,7 +95,7 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 | Source reliability: forecast and irradiance vs actual PV every 15 minutes | ✅ |
 | On-demand HTML support report | ✅ |
 | Plain-language setting advice from your own history, only after a minimum number of sessions, following the seasons | ✅ |
-| Separate Home Assistant dashboard in the HPVC layout: status badges, master-control toggles, live inputs, control-state timeline and a forecast vs actual graph | ✅ |
+| Separate Home Assistant dashboard (same layout as HPVC): status badges, master-control toggles, live inputs, control-state timeline and a forecast vs actual graph | ✅ |
 | No InfluxDB required (file-based history) | ✅ |
 
 ## Requirements
@@ -102,7 +116,7 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 
 | Setting | Default | Meaning |
 |---|---|---|
-| Forecast power to start | 1 500 W | cautious forecast (now and +30 min) must reach this before a release |
+| Forecast power to start | 1 500 W | cautious forecast (now and +30 min) must reach this before HESC asks HPVC for a release |
 | Forecast power to hold | 1 200 W | keep the release while above this (hysteresis, 80% of start) |
 | Irradiance to start / hold | 150 / 120 W/m² | only when irradiance confirmation is enabled; start/hold divided by ~10 W PV per W/m² |
 | Conditions stable before release | 5 min | ignore short sun peaks |
@@ -115,13 +129,19 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 | EV charging threshold | 400 W | above this the EV counts as charging |
 
 > [!NOTE]
-> The start threshold is a **production** forecast, while the wallbox looks at **surplus** (production minus house load minus battery charging). The defaults come from the test installation: every real solar/Eco start (8 starts over 3 days, September) happened at a cautious forecast of 1 500 W or more, with actual PV 3.2–5.8 kW. The Solcast cautious estimate is often well below the actual PV. Tune the thresholds with the report and the advice of your own installation.
+> The start threshold is a **production** forecast, while the wallbox looks at **surplus** (production minus house load minus battery charging). The defaults come from the test installation: every real solar/Eco start (8 starts over 3 days, September) happened at a cautious forecast of 1 500 W or more, with actual PV 3.2–5.8 kW. The Solcast cautious estimate is often well below the actual PV. A full day of measurements on 27 September 2026 confirmed this: in the 26 quarters with a cautious forecast above 1 500 W, actual PV was below 1 500 W only once. Tune the thresholds with the report and the advice of your own installation.
 
 ## How HESC works
 
 <p align="center"><img src="screenshots/hevs_hpvc.png" alt="HEVS and HPVC working together" width="100%"></p>
 
-Every 30 seconds HESC reads a bounded set of entities from the Node-RED Home Assistant state cache (no API reads, no copy of the full state table) and runs a small state machine:
+Every 30 seconds HESC reads a bounded set of entities from the Node-RED Home Assistant state cache (no API reads, no copy of the full state table).
+
+**In both modes** HESC follows the charger: it logs every solar/Eco session with forecast and actual PV, stores forecast, actual PV and irradiance every 15 minutes, runs the charge plan and builds the advice and the report.
+
+**Standalone:** that is all. Nothing holds the panels back, so the charger starts on sun by itself and there is nothing to release. The status then reads *Standalone (no HPVC): the charger starts on solar by itself*.
+
+**With HPVC** HESC also runs a small state machine for the release:
 
 1. **Idle.** It waits until the EV is connected, not charging, not full and in solar/Eco mode, HPVC is actively limiting, the cautious forecast (now and +30 min) is above the start threshold, the irradiance confirms (optional), and there is no cooldown or attempt limit. All of this must hold for the stability time.
 2. **Release requested: waiting for HPVC.** HESC switches `input_boolean.hpvc_external_release_request` on. HPVC first finishes its own higher-priority states (safety, restore, negative price, Night Restore, HBC transitions), then sets its inverters to full and turns `binary_sensor.hpvc_external_release_active` on. No confirmation within 5 minutes → HESC withdraws the request and logs *HPVC busy*.
@@ -138,11 +158,11 @@ HESC request on → HPVC checks its priorities → HPVC confirms (active)
 
 ## Safety and recovery
 
-- HESC never switches HPVC off. It only asks for a release; HPVC decides whether and when, and keeps its own safety, negative-price, Night Restore and battery priorities.
+- With HPVC: HESC never switches HPVC off. It only asks for a release; HPVC decides whether and when, and keeps its own safety, negative-price, Night Restore and battery priorities.
 - A release request left on after a restart is withdrawn by HESC as soon as it is idle.
 - Missing or unavailable inputs, sunset, the maximum duration and switching HESC off always end the release.
 - The charge plan only undoes what it started itself, and never takes over a charge it did not start (for example on sun).
-- A fallback to the old method (switch HPVC off and set its inverters to full) is still present but **off**: `input_boolean.hesc_release_legacy`. It will be removed once the request interface has proven itself.
+- With HPVC: a fallback to the old method (switch HPVC off and set its inverters to full) is still present but **off**: `input_boolean.hesc_release_legacy`. It will be removed once the request interface has proven itself.
 - Status helpers are written only when their value changes, to keep Home Assistant writes low.
 
 ## Accuracy, insights and reports
@@ -214,7 +234,7 @@ When the charger stops by itself (EV full, the car's own charge limit), HESC put
 
 ## Tested with
 
-HESC was developed and tested with a **Wallbox Pulsar Plus** (official Wallbox integration, solar charging mode *Eco*), **Solcast PV Forecast**, an **Ecowitt** weather station and **HPVC**. HESC uses the external PV release interface of **HPVC v1.5.1**. The charge plan's grid charging was built for the Wallbox *Pause/resume* switch; other chargers are untested. Other chargers should work when they expose the entities listed in [Chargers and sources](docs/05-chargers-and-sources.md); please test them in shadow mode first.
+HESC was developed and tested with a **Wallbox Pulsar Plus** (official Wallbox integration, solar charging mode *Eco*), **Solcast PV Forecast**, an **Ecowitt** weather station and **HPVC**. HESC uses the external PV release interface of **HPVC v1.5.1**. The charge plan's grid charging was built for the Wallbox *Pause/resume* switch; other chargers are untested. Standalone mode runs on the same installation with HPVC switched off. Other chargers should work when they expose the entities listed in [Chargers and sources](docs/05-chargers-and-sources.md); please test them in shadow mode first.
 
 ## Architecture and persistence
 
@@ -224,7 +244,7 @@ flowchart LR
   I["Irradiance (optional)"] --> E
   P[PV / grid power] --> E
   V[EV connected / power / mode] --> E
-  H[HPVC limiting / release active] --> E
+  H["HPVC limiting / release active (optional)"] --> E
   CP[Charge plan + day-ahead prices] --> E
   E[HESC Engine] -->|only outside shadow mode| S[input_boolean.hpvc_external_release_request]
   E -->|charge plan, only outside shadow mode| C[Charger start/stop or mode]
@@ -250,7 +270,7 @@ The Node-RED flow has four tabs: **Inputs** (30-second trigger and startup safet
 
 ## Screenshots
 
-Taken from a live installation (v1.0.0) after several days of running. The Settings screenshot shows a fresh install: only the required fields, PV and grid taken over from HPVC. All images live in [`screenshots/`](screenshots/), so they are easy to replace.
+Taken from a live installation with HPVC (v1.0.0) after several days of running. The Settings screenshot shows a fresh install with HPVC: only the required fields, PV and grid taken over from HPVC. In standalone, step 2 shows your own PV and grid sensors instead. All images live in [`screenshots/`](screenshots/), so they are easy to replace.
 
 ### Main
 
@@ -272,7 +292,7 @@ Taken from a live installation (v1.0.0) after several days of running. The Setti
 
 - **Expected prices beyond the known day-ahead prices** (from your own price history), so a plan further ahead can already be firm. Until then the plan uses the known prices plus the safety net.
 - The charger type table also fills in the grid charging method per brand.
-- Show in the report when HPVC paused a running release (for example because a negative price started).
+- With HPVC: show in the report when HPVC paused a running release (for example because a negative price started).
 - Remove the legacy release method once the HPVC request interface has proven itself.
 
 ## Support
@@ -311,7 +331,7 @@ releases/
 
 ## Credits
 
-HESC is designed to work alongside [Home PV Control](https://github.com/BioPC/home-pv-control) and [Home Battery Control](https://github.com/gitcodebob/marstek-venus-rs485-node-red).
+HESC runs on its own, and is designed to work alongside [Home PV Control](https://github.com/BioPC/home-pv-control) and [Home Battery Control](https://github.com/gitcodebob/marstek-venus-rs485-node-red).
 
 - **Layout and conventions:** the dashboard, the support report, the Node-RED tab structure (Inputs, Engine, Outputs, Reports), the first-install defaults and this repository layout are modelled on **Home PV Control** by [BioPC](https://github.com/BioPC) and **Home Battery Control** by [gitcodebob](https://github.com/gitcodebob). Thanks to both authors for the example they set.
 - **HPVC release interface:** added by BioPC in HPVC v1.5.1 after the discussion in [home-pv-control#6](https://github.com/BioPC/home-pv-control/issues/6).
@@ -323,4 +343,4 @@ GPL-3.0-or-later. See [LICENSE](LICENSE).
 
 ## Disclaimer
 
-You are responsible for your own configuration. HESC asks another controller (HPVC) to release PV and, with a charge plan, starts and stops your charger. Check its behaviour in shadow mode on your own installation before enabling it. This software comes without any warranty. The authors are not liable for energy costs, export penalties, equipment behaviour or any other consequence of its use.
+You are responsible for your own configuration. With a charge plan HESC starts and stops your charger, and with HPVC it asks another controller to release PV. Check its behaviour in shadow mode on your own installation before enabling it. This software comes without any warranty. The authors are not liable for energy costs, export penalties, equipment behaviour or any other consequence of its use.
