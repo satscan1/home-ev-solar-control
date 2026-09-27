@@ -270,7 +270,7 @@ The Node-RED flow has four tabs: **Inputs** (30-second trigger and startup safet
 
 ## Screenshots
 
-Taken from a live installation with HPVC (v1.0.0) after several days of running. The Settings screenshot shows a fresh install with HPVC: only the required fields, PV and grid taken over from HPVC. In standalone, step 2 shows your own PV and grid sensors instead. All images live in [`screenshots/`](screenshots/), so they are easy to replace.
+Taken from the live test installation. The Settings screenshots show both ways: standalone and with HPVC. All images live in [`screenshots/`](screenshots/), so they are easy to replace.
 
 ### Main
 
@@ -281,6 +281,12 @@ Taken from a live installation with HPVC (v1.0.0) after several days of running.
 <img src="screenshots/charge_plan.jpg" width="100%">
 
 ### Settings
+
+Standalone (no HPVC): you pick your own PV and grid sensors in step 2.
+
+<img src="screenshots/dashboard_settings_standalone.jpg" width="100%">
+
+With HPVC: PV and grid are taken over from HPVC.
 
 <img src="screenshots/dashboard_settings.jpg" width="100%">
 
