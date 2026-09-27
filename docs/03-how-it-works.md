@@ -8,7 +8,7 @@ The Inputs tab triggers the Engine every 30 seconds. The Engine reads about 20 e
 
 With *No HPVC (standalone)* switched on (`input_boolean.hesc_standalone`), HESC skips the release completely: the HPVC inputs are not required and the state machine below stays in **Idle** with the reason *Standalone (no HPVC): the charger starts on solar by itself*. Following sessions, the 15-minute accuracy records, the charge plan, the advice and the report work as described on this page. Switching standalone on during a running release ends that release cleanly.
 
-## State machine (with HPVC)
+## State machine (with HPVC) 
 
 | State | Enters when | Leaves when |
 |---|---|---|
