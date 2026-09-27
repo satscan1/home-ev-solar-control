@@ -1,118 +1,95 @@
 # A day in practice
 
-What does HESC actually do on a normal day? Rather than explaining it with a list of features, I thought it would be more useful to show what happened during one real day.
+What does HESC actually do? Instead of giving you a list of features, I'd rather show you. So come along for one ordinary Sunday at my home: 27 September 2026.
 
-So this is Sunday, 27 September 2026, at the installation where HESC is being developed and tested. It was a pretty good test day. There were clouds coming and going, the washing machine joined in, the two home batteries wanted their share of the solar power, the electricity price dropped to zero around noon, and the EV was plugged in all day.
-
-In other words: not a laboratory test. Just a normal day at home.
+Nothing special was planned. Clouds came and went, the washing machine ran, the home batteries wanted their share of the sun, and around noon electricity was free for a while. The car was plugged in all day. Just a normal day at home, and that makes it a good test.
 
 <p align="center"><img src="../screenshots/suite_hbc_hpvc_hevs.png" alt="HBC, HPVC and HEVS" width="100%"></p>
 <p align="center"><sub>My setup: HBC + HPVC + HEVS. Icons are illustrations for this page, not the official logos of the other projects.</sub></p>
 
-## The setup
+## Who lives in this house
 
-This is my own setup. **HBC and HPVC are not required**: HESC also runs on its own, see [the same day without HPVC](#and-what-happens-without-hpvc) at the end.
+This is my own setup. You don't need all of it: **HESC also works on its own**, without HBC or HPVC. More about that [at the end](#and-without-hpvc).
 
-The installation has two Marstek Venus home batteries (5.12 kWh each), controlled by [Home Battery Control (HBC)](https://github.com/gitcodebob/marstek-venus-rs485-node-red) by gitcodebob, and solar panels on eight dimmable micro-inverters controlled by [Home PV Control (HPVC)](https://github.com/BioPC/home-pv-control) by BioPC.  The charger is a Wallbox Pulsar Plus running in Eco mode. HESC sits alongside them, with its shipped default settings.
+- **Two home batteries**, run by [Home Battery Control (HBC)](https://github.com/gitcodebob/marstek-venus-rs485-node-red) by gitcodebob. HBC decides when the batteries charge and when they power the house.
+- **Solar panels**, watched by [Home PV Control (HPVC)](https://github.com/BioPC/home-pv-control) by BioPC. When sending electricity back to the grid earns nothing, HPVC turns the panels down a little.
+- **A car charger** (a Wallbox) in Eco mode. It only charges when there is enough spare sunshine, and it decides for itself when to start and when to pause.
+- **HESC** keeps an eye on all of this. It checks the solar forecast, writes down what really happens, can charge the car at the cheapest moments before a deadline, and, when HPVC is holding the panels back, can politely ask HPVC to let some sun through for the car.
 
-The important thing is that they each have their own job:
-
-- **HBC** decides when the home batteries charge or discharge.
-- **HPVC** decides how much the solar inverters are allowed to produce when exporting electricity is not worthwhile.
-- **The Wallbox** decides when it can actually start, pause or stop charging in Eco mode. It looks at the surplus on each phase and has its own delays and minimum charging power.
-- **HESC** does not take over any of that. It watches what is happening, keeps track of the forecast and the actual production, manages the charge plan and, when HPVC is limiting the solar, can ask HPVC for a temporary PV release. HPVC still makes the final decision.
-
-That distinction turned out to be quite important during this day.
+The golden rule: everyone does their own job. HESC asks. It never takes over.
 
 ## The day at a glance
 
 <p align="center"><img src="../screenshots/day_20260927_main.png" alt="HESC main dashboard during the afternoon" width="100%"></p>
-<p align="center"><sub>HESC main dashboard on this day at 14:59: EV charging on sun, HPVC limiting, forecast vs actual over the day.</sub></p>
+<p align="center"><sub>The HESC dashboard at 14:59 that day: the car charging on sunshine, the forecast and the real production side by side.</sub></p>
 
-## 1 · 06:00–11:00 — The batteries get the first share
+## Morning: the batteries eat first (06:00 – 11:00)
 
-The home batteries started the morning at around 20%. From about 08:30 there was enough solar power to charge them, so HBC took the available surplus. By 10:30 they were already around 45% on average. Meanwhile, HESC was quietly doing its other job: every 15 minutes it recorded what Solcast expected and what the panels actually produced.
+The home batteries woke up at about 20%. From half past eight the sun was strong enough, and HBC sent everything spare into the batteries. By half past ten they were almost half full.
 
-## 2 · 11:07 — The EV gets its chance
+The car had to wait, and that's fine: the batteries come first. HESC used the quiet morning to note, every quarter of an hour, what the forecast promised and what the panels actually delivered.
 
-For the test, battery charging was paused for fifteen minutes. The effect was immediate: the solar surplus increased and the Wallbox started charging.
+## 11:07 · The car gets a turn
 
-Then reality happened. The washing machine started heating and a cloud passed over. The Wallbox cannot charge below roughly 4.1 kW, because it charges on three phases at 6 A minimum.
+As a test, I paused battery charging for a quarter of an hour. Straight away there was sun to spare, and the charger started.
 
-## 3 · 11:26 — A free quarter appears
+Then everyday life stepped in. The washing machine began heating water and a cloud drifted past. This charger needs at least about 4 kW to charge, so it paused, tried again, and paused again. That is the charger being careful, not HESC.
 
-There was also a charge plan running, with the goal of 100% by Tuesday at 10:00. The plan looks at the known electricity prices and selects the cheapest quarters that can help reach the target.
+## 11:26 · Free electricity
 
-When the price was €0.00, that was one of the cheapest known quarters before the deadline, so the charge plan took the opportunity.
+I had also set a charge plan: car full by Tuesday at 10:00. The plan looks at the electricity prices and picks the cheapest moments. At 11:26 electricity cost nothing, so the plan grabbed that quarter of an hour, two days early. Afterwards it left the charger exactly as it had found it.
 
-An important detail: the charge plan does not take over a charging session it did not start, and it puts the charger back in the mode it found it in. In this case, that was Eco.
+## Noon: HESC asks, HPVC decides (11:54 – 13:19)
 
-## 4 · 11:54–13:19 — This is where HESC and HPVC have to work together
+Around noon the price dropped to zero. Sending power to the grid now earned nothing, so HPVC held the panels back. The batteries were charging again and got priority.
 
-Around noon the electricity price dropped to zero. HPVC therefore started limiting the dimmable solar inverters, so the house would not export electricity at a loss. HBC took the available surplus and HPVC reported that the batteries had priority.
+The car was still waiting. This is exactly the moment HESC was made for: plenty of sun expected, but the panels held back. So HESC asked HPVC: *may the car have some sun?* And then it waited.
 
-The EV was still plugged in and waiting in Eco mode. This is the situation HESC was designed for. The forecast was high enough to expect useful solar power, but HPVC was limiting the panels.
+HPVC said no: the batteries were not full yet. HESC took back its question, waited half an hour and asked again. Same answer. And that is how it should be. HESC asks, HPVC decides, and the batteries go first.
 
-So HESC asked HPVC for a temporary PV release. And then it waited.
+## 13:36 · Batteries full, the car starts by itself
 
-HPVC did not release the solar, because the batteries were still charging.
+At 13:36 the first battery was full and the second almost. The sun came out strongly. Now there was plenty to spare, and the charger started all by itself. No question to HPVC was needed. The car charged for about an hour and a half, from 70% to 79%.
 
-This is an important part of the design. HESC does not switch HPVC off. It does not force a release. It simply asks. HPVC decides. While the batteries still have priority, the EV waits.
+## Afternoon: clouds (15:00 – 17:00)
 
-## 5 · 13:36 — The batteries are full, and everything changes
+After three o'clock the clouds took over. The charger paused, started, paused and started again. HESC didn't interfere. It simply followed along and wrote it all down.
 
-At 13:36 the first battery reached 100%. The second had stopped charging at about 92%. The sun was also strong again: about 4.7 kW of production, with a cautious forecast of 4.3 kW.
+At 15:36 HPVC got stuck: it kept part of the panels turned down while the house was buying power from the grid for the car. I switched HPVC off for the rest of the day and reported it to its maker ([issue #7](https://github.com/BioPC/home-pv-control/issues/7)). HESC noticed and simply carried on: with nothing being held back, there was nothing to ask for.
 
-Suddenly there was enough surplus on all three phases, and the Wallbox started charging on Eco by itself. No PV release was necessary. HESC simply saw the charging session and recorded it.
+One more surprise at 16:33. The house had 1.5 kW to spare, yet the charger didn't start. A charger like this one spreads its power over three wires (phases), and one of them had too little spare power. The total was enough, that one wire was not. Again: the charger's own rule, not HESC.
 
-The EV then charged at roughly 4.2 kW for about an hour and a half, taking the car from 70% to 79%. The second battery was topped up later in the afternoon and reached 100% around 17:00.
+## Evening (17:00 – 19:45)
 
-## 6 · 15:00–17:00 — Clouds are a much better test than sunshine
+As the sun went down, the charger made a few last short attempts and then waited. From about a quarter past six the batteries took over and powered the house. After sunset HESC simply said: *Night*.
 
-After 15:00 the clouds became more important and solar production dropped. Eco paused, resumed and stopped again and later started again.
+The car ended the day at 86%. In the morning it was at 66%.
 
-This is where the difference between HESC and the charger becomes very visible. HESC does not try to keep the charger running. The Wallbox decides for itself whether there is enough surplus on every phase. HESC just follows what actually happens.
+## The day in numbers
 
-At 15:36 there was another interesting event. With the price still at zero, HPVC kept three inverters at about 5 W while the house was *importing* 1.8 kW for the EV. One inverter had not confirmed its last command, and HPVC waited for it before changing anything else. I switched HPVC off manually for the rest of the day and reported it to the HPVC author in [home-pv-control#7](https://github.com/BioPC/home-pv-control/issues/7).
+- **Sun:** about 28 kWh. The cautious forecast had expected about 19 kWh. It errs on the safe side, on purpose.
+- **Car:** about 14 kWh in eight charging sessions, about two thirds straight from the sun. The rest came from the grid whenever a cloud passed while the car was charging.
+- **Car battery:** from 66% to 86%.
+- **Home batteries:** from about 20% to full.
 
-HESC handled that exactly as it should. It reported that HPVC was no longer limiting the PV, so there was nothing to release, and it simply continued following the charger.
+## What I learned
 
-Later, at 16:33, the house was exporting 1.46 kW in total. That sounds like plenty for an EV charger. But the three phases were at 223 W, 635 W and 590 W. One phase was below the Wallbox's minimum, so the car did not start. Again, that was not HESC making a decision. It was the charger's own three-phase Eco logic.
+For me, the most interesting part was not that the car got charged. It was that all the parts did their own job without getting in each other's way.
 
-## 7 · 17:00–19:45 — The sun disappears
+The home batteries get priority. The car gets whatever useful sunshine is left. The charger stays in charge of its own Eco mode. HPVC stays in charge of the panels. And HESC sits in between, watching what happens and asking HPVC for sun only when that makes sense.
 
-After 17:00 solar production fell further. The Wallbox made a few more attempts to start, but each time the falling sun or a cloud reduced the surplus on one of the phases and Eco stopped again. From about 18:15 the home batteries started covering the house again. After sunset HESC reported *Night*.
+On this day, HESC asked several times while the batteries were still charging. HPVC said no, and that was the right answer. Later, when the batteries were full, the car simply started by itself.
 
-The EV finished the day at 86%. It had started the morning at 66%.
+That is what this first real day was about. Not making the car, the batteries and the panels fight for control. Just giving each of them their own job.
 
-## The numbers
+## And without HPVC?
 
-The whole day produced 27.8 kWh of solar energy. The cautious forecast for the day was 19.0 kWh.
+HESC also works without HPVC. Switch on **No HPVC (standalone)** in the settings. Nothing holds the panels back, so there is simply nothing to ask for.
 
-The EV charged 14.3 kWh across eight sessions. Of that, 9.3 kWh (about 65%) came from solar. The rest came from the grid in the moments when a cloud passed while the Wallbox was still charging at its minimum of about 4.1 kW, before it paused.
+The batteries still get the sun first, the charger still decides for itself, the charge plan still finds the cheapest moments, and HESC still keeps track of forecast and reality. HPVC adds one extra trick: when it holds the panels back, HESC can ask it to let the sun through for the car.
 
-The EV battery went from 66% to 86%. The home batteries went from roughly 20% at dawn to 100%, the first reaching full charge. The forecast held up well.
-
-## So what did this day actually show?
-
-For me, the most interesting part was not that the system charged the car. It was that the different parts could do their own jobs without fighting each other.
-
-The home batteries get their priority. The EV gets whatever useful surplus is left. The Wallbox remains in control of its own Eco behaviour. HPVC remains in control of the solar inverters. And HESC sits between those worlds, watching what is happening and asking HPVC for a release only when that can make sense.
-
-On this day, HESC asked several times while the batteries were still charging. HPVC said no. And that was the correct outcome. Later, when the batteries were full, the EV simply started by itself because there was enough surplus.
-
-That is what this first real-world day was really about. Not making the EV, batteries and PV compete for control. Just giving each of them their own job.
-
-## And what happens without HPVC?
-
-HESC also works without HPVC. Switch on **No HPVC (standalone)** in the settings. In that case there is simply nothing to release.
-
-The batteries still get their surplus first, the Wallbox still controls its own Eco mode, the charge plan still works, and HESC still records the forecast and actual production.
-
-HPVC adds one extra capability: when it is actively limiting the PV, HESC can ask it to temporarily release that PV, so the EV can use the available solar energy instead. That makes HESC useful on its own, but even more interesting as a companion to HPVC.
-
-This was one real day, on one installation, with one Wallbox. There will undoubtedly be more edge cases to find. But after letting HESC run through a complete day of real household activity, the basic idea is proving itself in practice.
+This was one day, in one house, with one charger. There will be more surprises to find. But after a full day of real household life, the idea works.
 
 Thanks to **gitcodebob** (HBC) and **BioPC** (HPVC) for their projects. HESC is built to work alongside them.
 
-<sub>Where the numbers come from: solar, EV and battery power and battery state of charge from Home Assistant history (15-minute averages); forecast, actual PV, sessions and requests from HESC's own history file (`hesc-data/history.jsonl`); EV state of charge read from the car integration during the day.</sub>
+<sub>Where the numbers come from: solar, car and battery power and battery levels from Home Assistant history (15-minute averages); forecast, real production, charging sessions and requests from HESC's own history file (`hesc-data/history.jsonl`); the car's battery level from the car integration during the day.</sub>
