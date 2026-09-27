@@ -7,7 +7,7 @@
     "info": "Home EV Solar Control — triggers. Evaluation every 30 s from the HA state cache (bounded set of entities, no API reads)."
   },
   {
-    "id": "930206db5491a35a",
+    "id": "930206db5491a35a", 
     "type": "tab",
     "label": "HESC Engine v1.0",
     "disabled": false,
