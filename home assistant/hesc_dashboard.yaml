@@ -4,7 +4,7 @@
 # without it that bar stays hidden (checked via update.button_card_update). Optional: card-mod (tighter Live Inputs padding).
 # Until the essentials are filled in, Main shows a welcome card with a setup checklist (binary_sensor.hesc_configuration_valid).
 # Charge plan tab: the price chart uses sensor.nordpool_kwh_nl_eur_3_10_021 — replace it with your own day-ahead
-# price sensor (same one as in Settings → Charging from the grid → Day-ahead price sensor).
+# price sensor (same one as in Settings → Charging from the grid → Day-ahead price sensor). 
 # Add as a separate dashboard: Settings → Dashboards → Add → New from scratch → ⋮ → Raw configuration editor → paste.
 title: Home EV Solar Control
 views:
