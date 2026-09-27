@@ -2,7 +2,7 @@
 
 | Reason shown | Check |
 |---|---|
-| `Waiting for inputs: …` | The listed source is empty, misspelled or unavailable (see Settings and the report's *Live inputs*) |
+| `Waiting for inputs: …` | The listed source is empty, misspelled or unavailable (see Settings and the report's *Live inputs*) | 
 | `HPVC is not limiting PV — nothing to release` | Normal: HPVC is not curtailing, so the charger can already use surplus |
 | `Waiting for HPVC to confirm the release (x/5 min, HPVC: …)` | Normal for a short while: HPVC finishes its own higher-priority state, cooldown or write confirmation first |
 | `Release ended: HPVC busy (…), no release confirmation within 5 min` | HPVC stayed in a higher-priority state (for example negative price, Night Restore, HBC transition). HESC tries again after the cooldown. Check `input_text.hpvc_status` and `hpvc_reason` |
