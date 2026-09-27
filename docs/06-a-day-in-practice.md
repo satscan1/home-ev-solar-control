@@ -33,11 +33,9 @@ The home batteries started the morning at around 20%. From about 08:30 there was
 
 ## 2 · 11:07 — The EV gets its chance
 
-For the test, battery charging was paused for fifteen minutes. The effect was immediate: the solar surplus increased and the Wallbox started charging in Eco mode at about 4.2 kW. HESC recorded the session: 20 minutes, 1.3 kWh charged, of which 0.9 kWh came from solar. The panels were producing 142% of the cautious forecast.
+For the test, battery charging was paused for fifteen minutes. The effect was immediate: the solar surplus increased and the Wallbox started charging.
 
-Then reality happened. The washing machine started heating and a cloud passed over. The Wallbox cannot charge below roughly 4.1 kW, because it charges on three phases at 6 A minimum. So it paused and resumed several times between 11:16 and 11:44.
-
-That was not HESC controlling the charger. That was the Wallbox doing exactly what it is supposed to do. HESC simply followed and recorded what happened.
+Then reality happened. The washing machine started heating and a cloud passed over. The Wallbox cannot charge below roughly 4.1 kW, because it charges on three phases at 6 A minimum.
 
 ## 3 · 11:26 — A free quarter appears
 
