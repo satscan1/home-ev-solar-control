@@ -1,6 +1,6 @@
 # HESC documentation
 
-| Document | Contents |
+| Document | Contents | 
 |---|---|
 | [01 Installation](01-installation.md) | Package, Node-RED flow, dashboard, first start |
 | [02 Settings](02-configuration.md) | Source selection, thresholds, timing, switches |
