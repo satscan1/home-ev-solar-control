@@ -89,9 +89,7 @@ The whole day produced 27.8 kWh of solar energy. The cautious forecast for the d
 
 The EV charged 14.3 kWh across eight sessions. Of that, 9.3 kWh (about 65%) came from solar. The rest came from the grid in the moments when a cloud passed while the Wallbox was still charging at its minimum of about 4.1 kW, before it paused.
 
-The EV battery went from 66% to 86%. The home batteries went from roughly 20% at dawn to 100%, the first reaching full charge around 13:30 and the second around 17:00.
-
-The forecast held up well. In 34 of the 43 daylight quarters the panels produced at least as much as the cautious forecast, typically about 1.8 times as much. In the 26 quarters where the cautious forecast was above HESC's start threshold of 1.5 kW, actual production was below 1.5 kW only once (10:45, a passing cloud). And between 11:15 and 15:45 HPVC was limiting the panels, so the real potential was even higher. The shipped thresholds were a safe start signal. On this day, what kept the EV waiting was not the threshold, but the battery priority.
+The EV battery went from 66% to 86%. The home batteries went from roughly 20% at dawn to 100%, the first reaching full charge. The forecast held up well.
 
 ## So what did this day actually show?
 
