@@ -67,7 +67,7 @@ The EV then charged at roughly 4.2 kW for about an hour and a half, taking the c
 
 ## 6 · 15:00–17:00 — Clouds are a much better test than sunshine
 
-After 15:00 the clouds became more important and solar production dropped to around 2 kW. Eco paused at 15:03, resumed at 15:08, stopped again at 15:20, and later started again.
+After 15:00 the clouds became more important and solar production dropped. Eco paused, resumed and stopped again and later started again.
 
 This is where the difference between HESC and the charger becomes very visible. HESC does not try to keep the charger running. The Wallbox decides for itself whether there is enough surplus on every phase. HESC just follows what actually happens.
 
