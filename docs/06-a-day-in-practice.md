@@ -1,4 +1,4 @@
-# A day in practice
+# A day in practice 
 
 What does HESC actually do? Instead of giving you a list of features, I'd rather show you. So come along for one ordinary Sunday at my home: 27 September 2026.
 
