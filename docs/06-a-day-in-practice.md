@@ -82,9 +82,9 @@ This is the safety design at work: **HPVC decides**, HESC only asks. HESC never 
 
 At 13:36 the first battery was at 100% and the second one stopped charging at 92%. The sun came back strongly (4.7 kW, cautious forecast 4.3 kW). The surplus was now large enough on all three phases, and the Wallbox **started on Eco by itself**. No release was needed; HESC saw it and logged *EV is charging*.
 
-The EV charged at about 4.2 kW for an hour and a half, from 70% to 79%.
+The EV charged at about 4.2 kW for an hour and a half, from 70% to 79%. The second battery was topped up later in the afternoon and reached 100% around 17:00.
 
-### 6 · Afternoon: clouds, Eco pauses, the battery tops up (15:00 onwards)
+### 6 · Afternoon: clouds, Eco pauses, the battery tops up (15:00 – 17:00)
 
 After 15:00 clouds and a lower sun brought production down to about 2 kW. Eco paused at 15:03, resumed at 15:08, stopped at 15:20 and started again later. The second battery took the surplus again. HESC went back to watching the forecast.
 
@@ -92,12 +92,27 @@ After 15:00 clouds and a lower sun brought production down to about 2 kW. Eco pa
 
 **Enough surplus, still no start (16:24).** At 16:33 the house exported 1.46 kW in total, but per phase that was 223 W, 635 W and 590 W. One phase was below the charger's minimum, so Eco did not start. The total was enough; the phase was not. Again: the charger's own rule, not HESC.
 
-<!-- EVENING: filled in after sunset -->
+### 7 · Evening: the sun fades, the batteries take over the house (17:00 – 19:45)
+
+From 17:00 production dropped below 2.5 kW. Eco tried three more times (16:38, 17:14 and 17:38) and paused again after a few minutes each time, when the surplus on one of the phases fell away. After 17:45 the charger simply waited. The cautious forecast dropped below the hold threshold of 1 200 W around 17:30.
+
+From about 18:15 the home batteries started to cover the house, as intended. After sunset HESC reported *Night*. The EV ended the day at 86%, twenty points more than in the morning.
+
+### The day in numbers
+
+| | |
+|---|---|
+| Solar production | 27.8 kWh |
+| Cautious forecast for the whole day | 19.0 kWh |
+| EV charged | 14.3 kWh in 8 sessions, of which 9.3 kWh (65%) from the sun |
+| EV battery | 66% → 86% |
+| Home batteries | about 20% at dawn → 100% (first at 13:30, second around 17:00) |
 
 ## What this day shows
 
 - **The order of priority is clear and nobody fights.** The home battery first (HBC, confirmed by HPVC), then the EV. HESC asks, HPVC decides.
-- **The cautious forecast is a safe start signal.** It was below the real production almost all day, sometimes by more than 2 kW. On this day the start threshold was not what kept the EV waiting: the battery priority was.
+- **The cautious forecast is a safe start signal.** In 34 of the 43 daylight quarters the panels produced at least as much as the cautious forecast, typically 1.8 times as much. In the 26 quarters where the cautious forecast was above the start threshold of 1.5 kW, the panels made less than 1.5 kW only once (10:45, a passing cloud). And between 11:15 and 15:45 HPVC was limiting the panels, so the real potential was even higher. On this day the start threshold was not what kept the EV waiting: the battery priority was.
+- **A cloudy day costs some grid power.** Eco cannot charge below about 4.1 kW. When a cloud passes, the rest comes from the grid until the charger pauses. That is why 65% of the EV energy came from the sun, not 100%.
 - **The charger has its own control, and HESC leaves it alone.** Eco looks at the surplus per phase, not at the total: at 16:33 there was 1.46 kW surplus in total, but one phase had only 223 W, so it did not start. A washing machine or a cloud is enough for a pause. HESC does not change this behaviour; it only makes sure HPVC does not take the surplus away while the EV could use it.
 - **A zero price is an opportunity for the charge plan.** The plan picks the cheapest known quarters, so a free quarter can be used days before the deadline. With *take cheap chances* on, it also uses every quarter below your own price limit.
 - **HESC keeps a record of everything.** Sessions, forecast vs actual per quarter, every request and its outcome. That is what the report and the setting advice are built on.
@@ -121,6 +136,6 @@ In short: standalone HESC is a smart companion for solar charging and for chargi
 
 ## Where the numbers come from
 
-- Solar, EV and battery power and battery state of charge: Home Assistant history (15-minute values).
+- Solar, EV and battery power and battery state of charge: Home Assistant history (15-minute averages).
 - Forecast, actual PV, irradiance, sessions and requests: HESC's own history file (`hesc-data/history.jsonl`).
 - EV state of charge: read from the car integration during the day.
