@@ -11,7 +11,9 @@ In other words: not a laboratory test. Just a normal day at home.
 
 ## The setup
 
-The installation has two Marstek Venus home batteries (5.12 kWh each), controlled by [Home Battery Control (HBC)](https://github.com/gitcodebob/marstek-venus-rs485-node-red), and solar panels on eight dimmable micro-inverters controlled by [Home PV Control (HPVC)](https://github.com/BioPC/home-pv-control), plus two inverters that cannot be dimmed. The charger is a Wallbox Pulsar Plus running in Eco mode. HESC sits alongside them, with its shipped default settings.
+This is my own setup. **HBC and HPVC are not required**: HESC also runs on its own, see [the same day without HPVC](#and-what-happens-without-hpvc) at the end.
+
+The installation has two Marstek Venus home batteries (5.12 kWh each), controlled by [Home Battery Control (HBC)](https://github.com/gitcodebob/marstek-venus-rs485-node-red) by gitcodebob, and solar panels on eight dimmable micro-inverters controlled by [Home PV Control (HPVC)](https://github.com/BioPC/home-pv-control) by BioPC, plus two inverters that cannot be dimmed. The charger is a Wallbox Pulsar Plus running in Eco mode. HESC sits alongside them, with its shipped default settings.
 
 The important thing is that they each have their own job:
 
@@ -110,5 +112,7 @@ The batteries still get their surplus first, the Wallbox still controls its own 
 HPVC adds one extra capability: when it is actively limiting the PV, HESC can ask it to temporarily release that PV, so the EV can use the available solar energy instead. That makes HESC useful on its own, but even more interesting as a companion to HPVC.
 
 This was one real day, on one installation, with one Wallbox. There will undoubtedly be more edge cases to find. But after letting HESC run through a complete day of real household activity, the basic idea is proving itself in practice.
+
+Thanks to **gitcodebob** (HBC) and **BioPC** (HPVC) for their projects. HESC is built to work alongside them.
 
 <sub>Where the numbers come from: solar, EV and battery power and battery state of charge from Home Assistant history (15-minute averages); forecast, actual PV, sessions and requests from HESC's own history file (`hesc-data/history.jsonl`); EV state of charge read from the car integration during the day.</sub>
