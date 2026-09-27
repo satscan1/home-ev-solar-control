@@ -1,27 +1,31 @@
 <p align="center">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v1.0.0-blue" alt="Release v1.0.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v1.1.0-blue" alt="Release v1.1.0"></a>
   <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-ready-41BDF5" alt="Home Assistant ready"></a>
   <a href="https://nodered.org/"><img src="https://img.shields.io/badge/Node--RED-flow-8F0000" alt="Node-RED flow"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later"></a>
-  <img src="https://img.shields.io/badge/status-first%20release-brightgreen" alt="First release">
+  <img src="https://img.shields.io/badge/HPVC-optional-brightgreen" alt="HPVC optional">
 </p>
 
 <p align="center"><img src="screenshots/banner.png" alt="HEVS – Home Energy & Vehicle System" width="100%"></p>
 
 # Home EV Solar Control 
 
-**Home EV Solar Control (HESC)** works alongside [Home PV Control (HPVC)](https://github.com/BioPC/home-pv-control). It keeps EV charging on solar working while HPVC limits your PV output.
+**Home EV Solar Control (HESC)** is a smart EV charging companion for Home Assistant. It follows solar charging, compares it with the solar forecast, gives setting advice from your own history and can charge to a goal by a set time in the cheapest hours.
 
-Solar/Eco charging modes on many wallboxes only start when the house is exporting enough power. HPVC does the opposite: it curtails the inverters so that export stays near zero, for example at negative export prices. Both do their job, but together they block each other. The wallbox waits for surplus that never comes.
+It runs **on its own (standalone)** or together with [Home PV Control (HPVC)](https://github.com/BioPC/home-pv-control). With HPVC it also keeps EV charging on solar working while HPVC limits your PV output.
+
+**See it in practice:** [a day with changing conditions](docs/06-a-day-in-practice.md), a real day with a home battery, HPVC and HESC working side by side.
+
+**Why HPVC and a wallbox can block each other.** Solar/Eco charging modes on many wallboxes only start when the house is exporting enough power. HPVC does the opposite: it curtails the inverters so that export stays near zero, for example at negative export prices. Both do their job, but together they block each other. The wallbox waits for surplus that never comes.
 
 HESC resolves this. When the EV is connected and waiting in solar/Eco mode, HPVC is actively limiting, and the **solar power forecast** (optionally confirmed by a **local irradiance sensor**) says enough sun is coming, HESC **asks HPVC for a temporary PV release**. HPVC decides when that is safe, sets the inverters to full and confirms. The charger can then start on sun. As soon as the sun drops, the EV stops or the charger does not respond, HESC withdraws the request and HPVC resumes normal control.
 
 HESC can also **charge to a goal by a set time** (charge plan): it picks the cheapest quarters of the known day-ahead prices and starts the charger from the grid in exactly those quarters. It only charges from the grid when you switch a plan on.
 
 > [!IMPORTANT]
-> v1.0.0 is the first public release. A new install starts in **shadow mode**: HESC evaluates and logs every decision but never asks HPVC for a release and never starts the charger. Switch shadow mode off after you have checked the report for your own installation.
+> A new install starts in **shadow mode**: HESC evaluates and logs every decision but never asks HPVC for a release and never starts the charger. Switch shadow mode off after you have checked the report for your own installation.
 >
-> HESC needs **Home PV Control v1.5.1 or newer** (external PV release interface).
+> **HPVC is optional since v1.1.0.** Without HPVC, switch on *No HPVC (standalone)* in Settings (a new install without HPVC does this by itself) and pick your own PV and grid sensors. With HPVC, HESC needs **Home PV Control v1.5.1 or newer** (external PV release interface).
 
 ## Contents
 
@@ -51,7 +55,7 @@ HESC can also **charge to a goal by a set time** (charge plan): it picks the che
 3. Restart Home Assistant (first install creates the helpers and applies the defaults once)
 4. Import `node-red/hesc_flow.json` into Node-RED, select your Home Assistant server on the action and trigger nodes, and deploy
 5. Add `home assistant/hesc_dashboard.yaml` as a separate dashboard
-6. Open **Settings** and fill in step 1, *Your charger* (see [examples](examples/)). PV and grid are taken over from HPVC and the forecast from Solcast; until step 1 is complete the dashboard shows a setup checklist
+6. Open **Settings** and fill in step 1, *Your charger* (see [examples](examples/)). With HPVC, PV and grid are taken over from HPVC; without HPVC, switch on *No HPVC (standalone)* and pick your PV and grid sensors in step 2. The forecast comes from Solcast. Until the required fields are complete the dashboard shows a setup checklist
 7. Leave **shadow mode** on and check the report after a few charging days
 
 Full guide: [docs/01-installation.md](docs/01-installation.md)
@@ -60,7 +64,8 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 
 | Feature | |
 |---|:-:|
-| Unblocks wallbox Eco/solar charging while HPVC curtails PV | ✅ |
+| Runs standalone (no HPVC needed) or together with HPVC | ✅ |
+| Unblocks wallbox Eco/solar charging while HPVC curtails PV (with HPVC) | ✅ |
 | Solar **power** forecast as primary source (Solcast `estimate10`, or any W sensor) | ✅ |
 | Works with any charger that exposes connected, power and solar-mode entities (binary or status sensor, W or kW, one or more mode values, optional extra solar switch) | ✅ |
 | Mapping table for common chargers: Wallbox, Alfen, Peblar, Zappi, go-e, Wattpilot, SMA, evcc, Ohme, Easee | ✅ |
@@ -82,7 +87,7 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 
 - Home Assistant with package support
 - Node-RED with `node-red-contrib-home-assistant-websocket` (same version as HPVC recommends)
-- [Home PV Control](https://github.com/BioPC/home-pv-control) **v1.5.1 or newer**, installed and working (HESC uses `input_boolean.hpvc_external_release_request`, `binary_sensor.hpvc_external_release_active` and `binary_sensor.hpvc_pv_limited`)
+- Optional: [Home PV Control](https://github.com/BioPC/home-pv-control) **v1.5.1 or newer** for the PV release (HESC uses `input_boolean.hpvc_external_release_request`, `binary_sensor.hpvc_external_release_active` and `binary_sensor.hpvc_pv_limited`)
 - A charger with a solar/Eco charging mode exposed in Home Assistant (connected sensor, charging power sensor and a mode entity). See [Chargers and sources](docs/05-chargers-and-sources.md)
 - A solar power forecast in watts (e.g. [Solcast PV Forecast](https://github.com/BJReplay/ha-solcast-solar) `power_now` / `power_in_30_minutes`, or any other forecast sensor in W)
 - Optional: a local weather station with an irradiance sensor (W/m²). HESC works without one
@@ -151,7 +156,7 @@ Every 15 minutes in daylight HESC stores the forecast, the actual PV power and, 
 
 ### Dashboard
 
-The dashboard follows the Home PV Control layout: status badges at the top, **EV Solar Master Control** with horizontal toggles, **Live Inputs**, **Control States** with a 12-hour timeline, and a **Solar forecast vs actual · EV** graph (actual PV, median and cautious forecast, EV charging power and the start threshold). The Settings tab works in three steps: *1 · Your charger* (the only required fields, with a live check), *2 · Taken over automatically* (PV and grid from HPVC, Solcast forecast, HPVC entities) and *3 · Advanced* (thresholds, timing and advice, each behind its own switch). See [Settings](docs/02-configuration.md).
+The dashboard follows the Home PV Control layout: status badges at the top, **EV Solar Master Control** with horizontal toggles, **Live Inputs**, **Control States** with a 12-hour timeline, and a **Solar forecast vs actual · EV** graph (actual PV, median and cautious forecast, EV charging power and the start threshold). The Settings tab works in three steps: *1 · Your charger* (the only required fields, with a live check), *2 · Taken over automatically* (PV and grid from HPVC, Solcast forecast, HPVC entities; in standalone: *2 · Sources* with your own PV and grid sensors) and *3 · Advanced* (thresholds, timing and advice, each behind its own switch). See [Settings](docs/02-configuration.md).
 
 The graph and timeline use eight `hesc_diag_*` helper entities from the package. They mirror whatever sources you selected, so the dashboard works unchanged on every installation. The power helpers update once per minute to keep database writes low. If your recorder uses an include list, add them to it.
 
@@ -236,8 +241,10 @@ The Node-RED flow has four tabs: **Inputs** (30-second trigger and startup safet
 - [How it works](docs/03-how-it-works.md)
 - [Troubleshooting](docs/04-troubleshooting.md)
 - [Chargers and sources](docs/05-chargers-and-sources.md)
+- [A day in practice](docs/06-a-day-in-practice.md)
 - [Documentation index](docs/README.md)
 - [Changelog](CHANGELOG.md)
+- [v1.1.0 release notes](releases/v1.1.0/release.md)
 - [v1.0.0 release notes](releases/v1.0.0/release.md)
 
 ## Screenshots
@@ -293,10 +300,12 @@ docs/
   03-how-it-works.md
   04-troubleshooting.md
   05-chargers-and-sources.md
+  06-a-day-in-practice.md
   README.md
 
 releases/
   v1.0.0/
+  v1.1.0/
 ```
 
 ## Credits

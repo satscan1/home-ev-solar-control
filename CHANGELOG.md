@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.1.0 — 2026-09-27
+
+**HPVC is now optional.**
+
+Standalone mode
+- New switch *No HPVC (standalone)* (`input_boolean.hesc_standalone`). On: HESC runs without Home PV Control. The HPVC fields are hidden and no longer required, the release step is skipped, and you pick your own PV and grid sensors. Following solar charging, forecast vs actual, the report, the advice and the charge plan keep working.
+- A new install without HPVC switches standalone on by itself. Existing installs keep it off, so nothing changes for HPVC users.
+- Switching standalone on during a running release ends that release cleanly.
+- Settings, step 2 adapts: *Sources* in standalone, *Taken over automatically* with HPVC. The edit switch is called *Change forecast* in standalone and *Change forecast & HPVC* with HPVC.
+
+Other
+- Grid charging power for the charge plan now steps in 0.5 kW instead of 0.1 kW.
+- New document: [A day in practice](docs/06-a-day-in-practice.md), a real day with a home battery, HPVC and HESC.
+
+Upgrade from v1.0.0: replace `hesc_config.yaml` and the dashboard, re-import the flow (or replace the *Evaluate HESC* node), restart Home Assistant or reload helpers, template entities and automations.
+
 ## v1.0.0 — 2026-09-26
 
 First public release. The earlier pre-releases (v0.1–v0.6) were test versions on one installation; their notes are no longer part of this repository.

@@ -1,4 +1,4 @@
-# Home EV Solar Control (HESC) v1.0.0 — dashboard
+# Home EV Solar Control (HESC) v1.1.0 — dashboard
 # Layout follows Home PV Control (badges, master-control toggles, live inputs, control states, apexcharts graphs).
 # Requires: apexcharts-card (HACS). Optional: button-card (HACS) for the "Expected solar charging" bar;
 # without it that bar stays hidden (checked via update.button_card_update). Optional: card-mod (tighter Live Inputs padding).
@@ -118,7 +118,7 @@ views:
     cards:
     - type: markdown
       content: |-
-        ### 🎛️ EV Solar Master Control <small>· HESC v1.0.0</small>
+        ### 🎛️ EV Solar Master Control <small>· HESC v1.1.0</small>
         <small>Starts solar charging on forecast sun by asking HPVC for a temporary PV release (HPVC 1.5.1 or newer). Shadow mode: only evaluates, never asks.</small>
       grid_options:
         columns: 12
@@ -1386,14 +1386,15 @@ views:
     cards:
     - type: markdown
       content: |-
-        ### 🔗 2 · Taken over automatically
-        PV and grid power come from Home PV Control. The solar forecast (Solcast, cautious estimate) and the HPVC switch are filled in on install. Only change these if you really have to.
+        {% if is_state('input_boolean.hesc_standalone', 'on') %}### 🔗 2 · Sources
+        Running **without HPVC**. Pick your own PV and grid power sensors below. The solar forecast (Solcast, cautious estimate) is filled in on install. Without HPVC nothing is curtailed, so there is no release step: the charger starts on solar by itself, HEVS follows it and gives advice.{% else %}### 🔗 2 · Taken over automatically
+        PV and grid power come from Home PV Control. The solar forecast (Solcast, cautious estimate) and the HPVC switch are filled in on install. Only change these if you really have to.{% endif %}
       grid_options:
         columns: 12
     - type: tile
-      entity: input_boolean.hesc_use_hpvc_sources
-      name: PV & grid from HPVC
-      icon: mdi:link-variant
+      entity: input_boolean.hesc_standalone
+      name: No HPVC (standalone)
+      icon: mdi:link-variant-off
       hide_state: true
       vertical: false
       features_position: inline
@@ -1403,8 +1404,30 @@ views:
         columns: 12
     - type: conditional
       conditions:
-      - entity: input_boolean.hesc_use_hpvc_sources
+      - entity: input_boolean.hesc_standalone
         state: 'off'
+      card:
+        type: tile
+        entity: input_boolean.hesc_use_hpvc_sources
+        name: PV & grid from HPVC
+        icon: mdi:link-variant
+        hide_state: true
+        vertical: false
+        features_position: inline
+        features:
+        - type: toggle
+        grid_options:
+          columns: 12
+      grid_options:
+        columns: 12
+    - type: conditional
+      conditions:
+      - condition: or
+        conditions:
+        - entity: input_boolean.hesc_use_hpvc_sources
+          state: 'off'
+        - entity: input_boolean.hesc_standalone
+          state: 'on'
       card:
         type: entities
         entities:
@@ -1412,15 +1435,40 @@ views:
           name: Actual PV power
         - entity: input_text.hesc_grid_power_sensor
           name: Grid power (negative = export)
-    - type: tile
-      entity: input_boolean.hesc_edit_sources
-      name: Change forecast & HPVC
-      icon: mdi:pencil-outline
-      hide_state: true
-      vertical: false
-      features_position: inline
-      features:
-      - type: toggle
+    - type: conditional
+      conditions:
+      - entity: input_boolean.hesc_standalone
+        state: 'off'
+      card:
+        type: tile
+        entity: input_boolean.hesc_edit_sources
+        name: Change forecast & HPVC
+        icon: mdi:pencil-outline
+        hide_state: true
+        vertical: false
+        features_position: inline
+        features:
+        - type: toggle
+        grid_options:
+          columns: 12
+      grid_options:
+        columns: 12
+    - type: conditional
+      conditions:
+      - entity: input_boolean.hesc_standalone
+        state: 'on'
+      card:
+        type: tile
+        entity: input_boolean.hesc_edit_sources
+        name: Change forecast
+        icon: mdi:pencil-outline
+        hide_state: true
+        vertical: false
+        features_position: inline
+        features:
+        - type: toggle
+        grid_options:
+          columns: 12
       grid_options:
         columns: 12
     - type: conditional
@@ -1436,6 +1484,16 @@ views:
           name: Forecast power +30 min
         - entity: input_text.hesc_forecast_attribute
           name: Forecast attribute (empty = state)
+    - type: conditional
+      conditions:
+      - entity: input_boolean.hesc_edit_sources
+        state: 'on'
+      - entity: input_boolean.hesc_standalone
+        state: 'off'
+      card:
+        type: entities
+        title: HPVC
+        entities:
         - entity: input_text.hesc_hpvc_enabled_entity
           name: HPVC enable switch
         - entity: input_text.hesc_hpvc_limited_entity
