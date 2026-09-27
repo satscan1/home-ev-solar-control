@@ -1,7 +1,7 @@
 # =============================================================================
 # Home EV Solar Control (HESC) — Home Assistant package 
 # Version: v1.1.0 (2026-09-27)
-# Project tag: [WALLBOX] [PV]
+# Project tag: [WALLBOX] [PV] 
 #
 # Works alongside Home PV Control (HPVC):
 # when the EV waits in solar/Eco charging mode and enough solar power is
