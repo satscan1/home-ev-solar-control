@@ -1,4 +1,4 @@
-# HESC v1.0.0 — first release
+# HESC v1.0.0 — first release 
 
 **Home EV Solar Control (HESC)** is a companion for [Home PV Control (HPVC)](https://github.com/BioPC/home-pv-control). It keeps EV charging on solar working while HPVC limits your PV output, and it can charge your EV to a goal by a set time in the cheapest hours.
 
