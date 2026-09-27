@@ -1,6 +1,6 @@
 # Settings
 
-The **Settings** tab is split into three steps. A new user only fills in step 1; everything else is taken over from Home PV Control (HPVC) or has a working default.
+The **Settings** tab is split into three steps. A new user only fills in step 1; everything else is taken over from Home PV Control (HPVC) or has a working default. Without HPVC, switch on **No HPVC (standalone)** in step 2 and also pick your PV and grid sensors there.
 
 Until step 1 is complete, the **Main** tab shows only a welcome card with a setup checklist (same idea as HPVC's onboarding). The rest of the dashboard appears as soon as `binary_sensor.hesc_configuration_valid` turns on. The checklist is repeated at the bottom of step 1, with the live value of every source, so you can see straight away whether an entity works.
 
@@ -33,6 +33,7 @@ Only change these if you really have to.
 
 - Switch **PV & grid from HPVC** (`input_boolean.hesc_use_hpvc_sources`) off to pick other PV or grid sensors; the two fields then appear.
 - Switch **Change forecast & HPVC** (`input_boolean.hesc_edit_sources`) on to edit the forecast and HPVC entities.
+- Switch **No HPVC (standalone)** (`input_boolean.hesc_standalone`) on when you do not use Home PV Control. The HPVC fields disappear and are no longer required, the PV and grid fields are shown so you can pick your own sensors, and HESC skips the release step: without HPVC nothing is curtailed, so the charger starts on solar by itself. A new install without HPVC switches this on by itself. In standalone the edit switch is called **Change forecast**.
 
 ## Optional
 

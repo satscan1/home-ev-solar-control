@@ -7,3 +7,4 @@
 | [03 How it works](03-how-it-works.md) | State machine, safety, history and report |
 | [04 Troubleshooting](04-troubleshooting.md) | Common situations and what to check |
 | [05 Chargers and sources](05-chargers-and-sources.md) | What HESC needs from your charger, forecast and (optional) weather station; tested setup; source reliability |
+| [06 A day in practice](06-a-day-in-practice.md) | One real day with a home battery (HBC), HPVC and HESC: what each part did and why |

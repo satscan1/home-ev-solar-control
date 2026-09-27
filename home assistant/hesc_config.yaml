@@ -1,6 +1,6 @@
 # =============================================================================
 # Home EV Solar Control (HESC) — Home Assistant package
-# Version: v1.0.0 (2026-09-26)
+# Version: v1.1.0 (2026-09-27)
 # Project tag: [WALLBOX] [PV]
 #
 # Works alongside Home PV Control (HPVC):
@@ -12,6 +12,11 @@
 # =============================================================================
 
 input_boolean:
+  # Standalone: run HEVS without Home PV Control (HPVC). Off = HPVC installed (release via HPVC).
+  # On = no HPVC: HPVC fields not needed, no release step; the charger starts on solar by itself.
+  hesc_standalone:
+    name: "HESC run without HPVC (standalone)"
+    icon: mdi:link-variant-off
   # Charge plan: set while HESC itself started grid charging (restart safety)
   # Settings: show the charge plan block (step 3)
   hesc_show_plan_settings:
@@ -220,7 +225,7 @@ input_number:
     name: "HESC charge plan grid charging power"
     min: 1.4
     max: 22
-    step: 0.1
+    step: 0.5
     unit_of_measurement: "kW"
     icon: mdi:ev-station
     mode: box
@@ -437,7 +442,9 @@ template:
         icon: mdi:clipboard-check-outline
         state: >
           {% set ok = namespace(v=true) %}
-          {% for f in ['hesc_ev_connected_sensor', 'hesc_ev_power_sensor', 'hesc_charger_mode_entity', 'hesc_pv_power_sensor', 'hesc_forecast_now_sensor', 'hesc_hpvc_enabled_entity', 'hesc_hpvc_limited_entity'] %}
+          {% set fields = ['hesc_ev_connected_sensor', 'hesc_ev_power_sensor', 'hesc_charger_mode_entity', 'hesc_pv_power_sensor', 'hesc_forecast_now_sensor'] %}
+          {% if not is_state('input_boolean.hesc_standalone', 'on') %}{% set fields = fields + ['hesc_hpvc_enabled_entity', 'hesc_hpvc_limited_entity'] %}{% endif %}
+          {% for f in fields %}
             {% set e = states('input_text.' ~ f) | trim %}
             {% if e in ['', 'unknown', 'unavailable'] or (states(e) == 'unknown' and state_attr(e, 'friendly_name') is none) %}{% set ok.v = false %}{% endif %}
           {% endfor %}
@@ -812,5 +819,10 @@ automation:
       - action: input_number.set_value
         target: { entity_id: input_number.hesc_ev_full_soc }
         data: { value: 100 }
+      # No HPVC found on a new install: start in standalone mode
+      - if: "{{ states('input_boolean.hpvc_enabled') in ['unknown', 'unavailable'] and state_attr('input_boolean.hpvc_enabled', 'friendly_name') is none }}"
+        then:
+          - action: input_boolean.turn_on
+            target: { entity_id: input_boolean.hesc_standalone }
       - action: input_boolean.turn_on
         target: { entity_id: input_boolean.hesc_defaults_applied }
