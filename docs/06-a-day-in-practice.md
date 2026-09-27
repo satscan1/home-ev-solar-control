@@ -47,15 +47,13 @@ An important detail: the charge plan does not take over a charging session it di
 
 ## 4 · 11:54–13:19 — This is where HESC and HPVC have to work together
 
-Around noon the electricity price dropped to zero. HPVC therefore started limiting the dimmable solar inverters, so the house would not export electricity at a loss. At the same time, battery charging was enabled again. HBC took the available surplus and HPVC reported that the batteries had priority.
+Around noon the electricity price dropped to zero. HPVC therefore started limiting the dimmable solar inverters, so the house would not export electricity at a loss. HBC took the available surplus and HPVC reported that the batteries had priority.
 
 The EV was still plugged in and waiting in Eco mode. This is the situation HESC was designed for. The forecast was high enough to expect useful solar power, but HPVC was limiting the panels.
 
 So HESC asked HPVC for a temporary PV release. And then it waited.
 
-HPVC did not release the solar, because the batteries were still charging. After five minutes without confirmation, HESC withdrew the request and went into its cooldown period.
-
-It tried again later. And again. Each time, the result was the same: HPVC kept the battery priority.
+HPVC did not release the solar, because the batteries were still charging.
 
 This is an important part of the design. HESC does not switch HPVC off. It does not force a release. It simply asks. HPVC decides. While the batteries still have priority, the EV waits.
 
