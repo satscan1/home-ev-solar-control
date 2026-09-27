@@ -1,4 +1,4 @@
-# Chargers and sources
+# Chargers and sources 
 
 HESC does not talk to a charger or a forecast service directly. It only reads Home Assistant entities that you select in **Settings**. Any charger and any forecast that expose the entities below can be used.
 
