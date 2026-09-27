@@ -6,9 +6,6 @@ So this is Sunday, 27 September 2026, at the installation where HESC is being de
 
 In other words: not a laboratory test. Just a normal day at home.
 
-<p align="center"><img src="../screenshots/day_20260927_main.png" alt="HESC main dashboard during the afternoon" width="100%"></p>
-<p align="center"><sub>HESC main dashboard on this day at 14:59: EV charging on sun, HPVC limiting, forecast vs actual over the day.</sub></p>
-
 <p align="center"><img src="../screenshots/suite_hbc_hpvc_hevs.png" alt="HBC, HPVC and HEVS" width="100%"></p>
 <p align="center"><sub>My setup: HBC + HPVC + HEVS. Icons are illustrations for this page, not the official logos of the other projects.</sub></p>
 
@@ -24,6 +21,11 @@ The important thing is that they each have their own job:
 - **HESC** does not take over any of that. It watches what is happening, keeps track of the forecast and the actual production, manages the charge plan and, when HPVC is limiting the solar, can ask HPVC for a temporary PV release. HPVC still makes the final decision.
 
 That distinction turned out to be quite important during this day.
+
+## The day at a glance
+
+<p align="center"><img src="../screenshots/day_20260927_main.png" alt="HESC main dashboard during the afternoon" width="100%"></p>
+<p align="center"><sub>HESC main dashboard on this day at 14:59: EV charging on sun, HPVC limiting, forecast vs actual over the day.</sub></p>
 
 ## 1 · 06:00–11:00 — The batteries get the first share
 
