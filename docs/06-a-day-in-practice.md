@@ -13,7 +13,7 @@ In other words: not a laboratory test. Just a normal day at home.
 
 This is my own setup. **HBC and HPVC are not required**: HESC also runs on its own, see [the same day without HPVC](#and-what-happens-without-hpvc) at the end.
 
-The installation has two Marstek Venus home batteries (5.12 kWh each), controlled by [Home Battery Control (HBC)](https://github.com/gitcodebob/marstek-venus-rs485-node-red) by gitcodebob, and solar panels on eight dimmable micro-inverters controlled by [Home PV Control (HPVC)](https://github.com/BioPC/home-pv-control) by BioPC, plus two inverters that cannot be dimmed. The charger is a Wallbox Pulsar Plus running in Eco mode. HESC sits alongside them, with its shipped default settings.
+The installation has two Marstek Venus home batteries (5.12 kWh each), controlled by [Home Battery Control (HBC)](https://github.com/gitcodebob/marstek-venus-rs485-node-red) by gitcodebob, and solar panels on eight dimmable micro-inverters controlled by [Home PV Control (HPVC)](https://github.com/BioPC/home-pv-control) by BioPC.  The charger is a Wallbox Pulsar Plus running in Eco mode. HESC sits alongside them, with its shipped default settings.
 
 The important thing is that they each have their own job:
 
