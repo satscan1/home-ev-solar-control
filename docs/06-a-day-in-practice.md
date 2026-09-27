@@ -41,7 +41,7 @@ Then reality happened. The washing machine started heating and a cloud passed ov
 
 There was also a charge plan running, with the goal of 100% by Tuesday at 10:00. The plan looks at the known electricity prices and selects the cheapest quarters that can help reach the target.
 
-At 11:26 the price was €0.00. That was one of the cheapest known quarters before the deadline, so the charge plan took the opportunity and HESC started the charger for that quarter. At 11:54 the charger had stopped by itself, and HESC marked the planned quarter as completed.
+At 11:26 the price was €0.00. That was one of the cheapest known quarters before the deadline, so the charge plan took the opportunity.
 
 An important detail: the charge plan does not take over a charging session it did not start, and it puts the charger back in the mode it found it in. In this case, that was Eco.
 
