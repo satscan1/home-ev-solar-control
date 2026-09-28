@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.1.0 — 2026-09-27
+## v1.1.0 — 2026-09-27 
 
 **HPVC is now optional.**
 
