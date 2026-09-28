@@ -2,7 +2,7 @@
 
 **Home EV Solar Control (HESC)** now also runs **without Home PV Control**. It follows solar charging, compares it with the solar forecast, gives setting advice from your own history and can charge your EV to a goal by a set time in the cheapest hours. With HPVC it also asks HPVC for a temporary PV release, exactly as in v1.0.0.
 
-## Standalone mode
+## Standalone mode 
 
 - New switch **No HPVC (standalone)** in Settings, step 2.
 - On: the HPVC fields are hidden and no longer required, and the release step is skipped. Without HPVC nothing is curtailed, so the charger starts on solar by itself. HESC follows every session, compares forecast and actual PV, writes the report and gives advice. The charge plan works as before (it uses its own price sensor).
