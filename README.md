@@ -12,7 +12,7 @@
 
 **Home EV Solar Control (HESC)** is a smart companion for your EV charger in Home Assistant. It helps you charge your car on sunshine, and, when the car has to be full by a certain time, in the cheapest hours.
 
-What HESC does for you: 
+What HESC does for you:  
 
 - **Follows every solar charging session** and compares it with the solar forecast, so you see how much of your car's energy came from the sun.
 - **Charge plan:** *"100% by Tuesday 10:00"* or *"80% on weekdays at 07:30"*. HESC picks the cheapest hours before that moment.
