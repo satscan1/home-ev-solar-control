@@ -1,6 +1,6 @@
 # A day in practice 
 
-What does HESC actually do? Instead of giving you a list of features, I'd rather show you. So come along for one ordinary Sunday at my home: 27 September 2026.
+What does HESC actually do? Instead of giving you a list of features, I'd rather show you. So come along for one ordinary Sunday at my home: on September 2026.
 
 Nothing special was planned. Clouds came and went, the washing machine ran, the home batteries wanted their share of the sun, and around noon electricity was free for a while. The car was plugged in all day. Just a normal day at home, and that makes it a good test.
 
