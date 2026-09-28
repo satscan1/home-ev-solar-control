@@ -64,7 +64,9 @@ HPVC v1.5.1 treats the request as a question, not a command. It waits behind its
 
 ## Charge plan
 
-The plan itself is a Home Assistant template (`sensor.hesc_charge_plan`, attribute `plan`): active plan (one-off or weekly, the earliest wins), goal, deadline, energy needed (battery level × usable capacity), number of quarters at the grid charging power, and the cheapest known quarters before the deadline (`planned`), taken from the price sensor in `input_text.hesc_price_sensor`. It is recalculated every minute and whenever a plan setting changes.
+The plan itself is a Home Assistant template (`sensor.hesc_charge_plan`, attribute `plan`): active plan (one-off or weekly, the earliest wins), goal, deadline, energy needed (battery level × usable capacity), the part expected from the sun (`solar_kwh`), the rest from the grid (`grid_kwh`), the number of quarters that takes at the grid charging power, and the cheapest known quarters before the deadline (`planned`), taken from the price sensor in `input_text.hesc_price_sensor`. It is recalculated every minute and whenever a plan setting changes.
+
+**Sun in the plan.** For every half hour between now and the deadline the plan reads the cautious solar forecast (`pv_estimate10`, kW) from the two solar forecast sensors (today and tomorrow). A half hour counts with the same rule as the *Expected solar charging* bar: at or above the start threshold the charger can start, after that at or above the hold threshold it keeps charging. Such a half hour adds (forecast − 0.4 kW for the house) × 0.5 h, at most the grid charging power. Example: 2.0 kW forecast gives (2.0 − 0.4) × 0.5 = 0.8 kWh. What the sun cannot deliver is planned from the grid.
 
 The *Charge plan* node in the Engine tab runs every 30 seconds and decides:
 
@@ -72,15 +74,20 @@ The *Charge plan* node in the Engine tab runs every 30 seconds and decides:
 |---|---|
 | Planned quarter | started from the grid |
 | Safety net: only just enough time left | started (remaining time ≤ charging time + 15 min) |
+| Final check: below goal, charging to goal | started in the last *final check* minutes before the deadline (default 60) while the EV is below its goal, whatever the price |
 | Cheap chance (x ct ≤ y ct) | started, only when *take cheap chances* is on |
 | Waiting for the next planned quarter / No active plan | not started; if HESC started it, back to how it was |
 | Goal reached (x%) | back to how it was |
-| Finished, charger stopped by itself | the charger drew no power for the *charger stopped* time after the *wait for charger* time; back to how it was, and left alone until the deadline |
+| Finished, charger stopped by itself | the charger drew no power for the *charger stopped* time after the *wait for charger* time; back to how it was, and left alone for 30 minutes (then the plan continues; the final check ignores this pause) |
 | EV already charging, left alone | a charge HESC did not start (for example on sun) is never taken over |
 
 How it starts follows from what is filled in: a start/stop switch is switched on; otherwise the mode is set to the "charge now" value. Back to how it was: the switch returns to the state it had before HESC started (normally off), or the mode that was active before is selected again (or the first solar value). After a restart, `input_boolean.hesc_plan_owns_charging` tells HESC that it had started the charger, so it is put back.
 
 Every start and stop is written to the history (`type: charge_plan`).
+
+**Goal check.** At the deadline HESC compares the battery level with the goal. Below the goal: a notification inside Home Assistant (`persistent_notification`) and to the notify services in `input_text.hesc_notify_services`, and a `goal_missed` line in the history (otherwise `goal_check`).
+
+**Restarts.** While `sensor.hesc_charge_plan` is briefly missing (Home Assistant restart, template reload), the node keeps using the last valid plan for up to 10 minutes, so a running charge is not stopped.
 
 Not yet: expected prices beyond the known day-ahead prices. Until then only known quarters are planned; the safety net makes sure the deadline is still met.
 
@@ -90,7 +97,7 @@ The Reports tab also holds the **HESC Advisor**. It runs daily at 21:30, 90 seco
 
 | Advice | Based on | Minimum |
 |---|---|---|
-| Start / hold threshold | Solar sessions that kept charging for 20 min or more. Per session: non-EV use = PV + grid − EV (house and battery together) and expected surplus = cautious forecast − non-EV use. Advice = surplus that worked (25th percentile) + typical non-EV use (median), i.e. translated back to the gross forecast that `hesc_p_start` uses. Hold = 80% of start. Without a grid sensor: 25th percentile of the gross forecast, marked as such | minimum sessions |
+| Start / hold threshold | All solar sessions (short ones too) from the way you work now: standalone or with HPVC. A threshold is good when at least 60% of the sessions it lets start keep charging for 20 min or more. When fewer than half do at the current threshold, the advice is the lowest higher threshold that reaches 60% (with at least 3 sessions), plus the trade-off: short sessions avoided and good sessions lost. Hold = 80% of start | minimum sessions, on at least 7 different days |
 | Wait for the charger | start delay after real releases (9 of 10 within the advice, plus 2 min) | half the minimum |
 | Releases without charging | share of real releases that led to charging (< 50% → raise start threshold) | half the minimum |
 | Forecast quality | actual PV vs forecast in daylight intervals without curtailment | 3 × minimum hours |
