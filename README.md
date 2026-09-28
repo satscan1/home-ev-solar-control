@@ -296,6 +296,17 @@ With HPVC: PV and grid are taken over from HPVC.
 
 ## Wish list
 
+### Coming in the next release
+
+Already decided, and being tested at home right now:
+
+- **The price chart follows your own price sensor.** The chart on the Charge plan page will use the price sensor you picked in Settings. No more changing the sensor name in the dashboard by hand.
+- **"Prices not available" instead of an endless "Loading…".** When the price sensor is down, you see it straight away.
+- **A clearer charge plan card.** No leftover "Finished" from the previous plan above a new plan, and no "0,0 ct/kWh" while nothing is planned yet.
+- **The setup checklist in standalone** shows "Sources" and no longer mentions HPVC.
+
+### Later
+
 - **Expected prices beyond the known day-ahead prices** (from your own price history), so a plan further ahead can already be firm. Until then the plan uses the known prices plus the safety net.
 - The charger type table also fills in the grid charging method per brand.
 - With HPVC: show in the report when HPVC paused a running release (for example because a negative price started).
