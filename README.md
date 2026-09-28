@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v1.1.0-blue" alt="Release v1.1.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v1.2.0-blue" alt="Release v1.2.0"></a>
   <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-ready-41BDF5" alt="Home Assistant ready"></a>
   <a href="https://nodered.org/"><img src="https://img.shields.io/badge/Node--RED-flow-8F0000" alt="Node-RED flow"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later"></a>
@@ -127,6 +127,12 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 | Cooldown after release | 30 min | prevents flapping |
 | Failed releases per day | 3 | |
 | EV charging threshold | 400 W | above this the EV counts as charging |
+| EV counts as full at | 80% | set 100% for LFP batteries |
+| Charge plan: grid charging power | 11 kW | |
+| Charge plan: usable battery capacity | 60 kWh | set this to your own EV |
+| Charge plan: cheap when below | 0.05 €/kWh | only with *take cheap chances* on |
+| Charge plan: final check | 60 min | before the ready-by time; 0 = off |
+| Charge plan: solar forecast today / tomorrow | Solcast *forecast today / tomorrow* | per half hour, cautious estimate |
 
 > [!NOTE]
 > The start threshold is a **production** forecast, while the wallbox looks at **surplus** (production minus house load minus battery charging). The defaults come from the test installation: every real solar/Eco start (8 starts over 3 days, September) happened at a cautious forecast of 1 500 W or more, with actual PV 3.2–5.8 kW. The Solcast cautious estimate is often well below the actual PV. A full day of measurements on 27 September 2026 confirmed this: in the 26 quarters with a cautious forecast above 1 500 W, actual PV was below 1 500 W only once. Tune the thresholds with the report and the advice of your own installation.
@@ -187,11 +193,11 @@ The dashboard shows today's releases (ok/failed), solar sessions, forecast accur
 
 ### Advice
 
-Once a day (and with every report) HESC looks back over a recent period (default 30 days) and gives short advice in plain language: *this is what was measured, this is the advice*. For example: "Solar charging kept going reliably from about 1,550 W expected surplus. House and battery used about 550 W together at those moments. Advice: start threshold 2,100 W."
+Once a day (and with every report) HESC looks back over a recent period (default 30 days) and gives short advice in plain language: *this is what was measured, this is the advice*. For example: "20 solar sessions on 9 days (standalone). 9 of 18 kept charging for 20 minutes or more. At 1,900 W, 7 short sessions would not have started, but also 2 good ones."
 
-Two quantities are kept apart: the **surplus** (forecast minus what house and battery use, derived from PV, grid and EV power at the start of each session) explains *why*; the **start threshold** is what you actually set, because HESC compares it with the gross forecast. No battery sensor is needed. Without a grid power sensor the advice falls back to the gross forecast and says so.
+The start threshold advice looks at **all** solar sessions, the short ones too, and only at sessions from the way you work now (standalone or with HPVC). Sessions only start above your current threshold, so the advice can tell you to raise it when too many sessions stop early, and it shows what that would cost.
 
-- **No advice without enough data.** Each advice needs a minimum number of sessions (default 8). Until then it says *collecting data*.
+- **No advice without enough data.** Each advice needs a minimum number of sessions (default 8), and the threshold advice also needs sessions on at least 7 different days. Until then it says *collecting data*.
 - **Follows the seasons.** Only the recent period counts, so the advice moves with the season. When the threshold advice moves, the report says so for a week.
 - **Advice only.** HESC never changes a setting itself.
 - Covers: start/hold threshold, wait time for the charger (needs real releases, so shadow mode off), releases without charging, forecast quality and, if switched on, the weather-station thresholds.
@@ -215,11 +221,14 @@ The current advice is shown on the dashboard and at the top of the report.
 
 The **Charge plan** tab lets you say *"100% by Tuesday 10:00"* (one-off) or *"80% on weekdays at 07:30"* (every week). HESC then:
 
-1. works out how much energy is still needed (battery level, usable capacity, grid charging power) and how many quarters that takes;
-2. picks the **cheapest quarters** of the known day-ahead prices before the deadline, and re-plans whenever something changes;
-3. starts the charger from the grid in exactly those quarters and puts it back to how it was afterwards;
-4. **safety net:** when the remaining time is only just enough, it starts right away;
-5. optional **take cheap chances:** charges whenever the price is at or below a price you set.
+1. works out how much energy is still needed (battery level, usable capacity, grid charging power);
+2. counts on the **sun**: per half hour before the deadline it looks at the cautious solar forecast and expects the EV to charge on solar where the charger can start (same rule as the *Expected solar charging* bar), minus about 0.4 kW for the house;
+3. picks the **cheapest quarters** of the known day-ahead prices before the deadline for the rest, and re-plans whenever something changes;
+4. starts the charger from the grid in exactly those quarters (amber in the price chart) and puts it back to how it was afterwards;
+5. **safety net:** when the remaining time is only just enough, it starts right away;
+6. **final check:** one hour before the deadline (adjustable), if the EV is still below its goal, it charges to the goal whatever the price;
+7. **notification:** if the EV is not at its goal at the deadline, you get a message in Home Assistant and, if you set one, on your phone;
+8. optional **take cheap chances:** charges whenever the price is at or below a price you set.
 
 How the charger is started follows from what you fill in (Settings → step 3 → *Charge plan*), so it works for every charger:
 
@@ -230,7 +239,7 @@ How the charger is started follows from what you fill in (Settings → step 3 �
 
 Afterwards the charger always goes back to how it was before charging started.
 
-When the charger stops by itself (EV full, the car's own charge limit), HESC puts it back and leaves it alone for the rest of that plan. It never takes over a charge it did not start, for example a solar session. See [How it works](docs/03-how-it-works.md#charge-plan).
+When the charger stops by itself (EV full, the car's own charge limit), HESC puts it back and leaves it alone for 30 minutes before it follows the plan again. It never takes over a charge it did not start, for example a solar session. See [How it works](docs/03-how-it-works.md#charge-plan).
 
 ## Tested with
 
@@ -265,6 +274,7 @@ The Node-RED flow has four tabs: **Inputs** (30-second trigger and startup safet
 - [A day in practice](docs/06-a-day-in-practice.md)
 - [Documentation index](docs/README.md)
 - [Changelog](CHANGELOG.md)
+- [v1.2.0 release notes](releases/v1.2.0/release.md)
 - [v1.1.0 release notes](releases/v1.1.0/release.md)
 - [v1.0.0 release notes](releases/v1.0.0/release.md)
 
@@ -296,19 +306,8 @@ With HPVC: PV and grid are taken over from HPVC.
 
 ## Wish list
 
-### Coming in the next release
-
-Already decided, and being tested at home right now:
-
-- **The price chart follows your own price sensor.** The chart on the Charge plan page will use the price sensor you picked in Settings. No more changing the sensor name in the dashboard by hand.
-- **"Prices not available" instead of an endless "Loading…".** When the price sensor is down, you see it straight away.
-- **A clearer charge plan card.** No leftover "Finished" from the previous plan above a new plan, and no "0,0 ct/kWh" while nothing is planned yet.
-- **The setup checklist in standalone** shows "Sources" and no longer mentions HPVC.
-
-### Later
-
 - **Expected prices beyond the known day-ahead prices** (from your own price history), so a plan further ahead can already be firm. Until then the plan uses the known prices plus the safety net.
-- The charger type table also fills in the grid charging method per brand.
+- The charger type table also fills in the grid charging method for more brands (Wallbox is done).
 - With HPVC: show in the report when HPVC paused a running release (for example because a negative price started).
 - Remove the legacy release method once the HPVC request interface has proven itself.
 
@@ -344,6 +343,7 @@ docs/
 releases/
   v1.0.0/
   v1.1.0/
+  v1.2.0/
 ```
 
 ## Credits

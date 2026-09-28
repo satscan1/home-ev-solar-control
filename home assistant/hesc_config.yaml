@@ -1,13 +1,14 @@
 # =============================================================================
 # Home EV Solar Control (HESC) — Home Assistant package 
-# Version: v1.1.0 (2026-09-27)
+# Version: v1.2.0 (2026-09-28)
 # Project tag: [WALLBOX] [PV] 
 #
 # Works alongside Home PV Control (HPVC):
 # when the EV waits in solar/Eco charging mode and enough solar power is
 # forecast, HESC asks HPVC (v1.5.1+) for a temporary PV release so the charger
 # can start on sun. Optional charge plan: charge to a goal by a set time in the
-# cheapest known quarters. Node-RED flow: hesc_flow.json.
+# cheapest known quarters, counting on expected sun, with a final check and a
+# notification if the goal is not reached. Node-RED flow: hesc_flow.json.
 # Shadow mode (default ON) evaluates only: no release requests, no charger writes.
 # =============================================================================
 
@@ -78,6 +79,10 @@ input_boolean:
   hesc_defaults_applied:
     name: "HESC defaults applied"
     icon: mdi:check-decagram
+  # v1.2.0: set once, when the new v1.2.0 settings got their starting values (new install or upgrade)
+  hesc_defaults_v120_applied:
+    name: "HESC v1.2.0 defaults applied"
+    icon: mdi:check-decagram
   hesc_report_ready:
     name: "HESC report ready"
     icon: mdi:file-document-check-outline
@@ -116,6 +121,18 @@ input_text:
   # Charge plan: day-ahead price sensor with raw_today / raw_tomorrow (e.g. Nord Pool)
   hesc_price_sensor:
     name: "HESC day-ahead price sensor"
+    max: 255
+  # Charge plan: solar forecast per half hour (Solcast detailedForecast), one for today and one for tomorrow
+  hesc_solar_today_sensor:
+    name: "HESC solar forecast today (charge plan)"
+    max: 255
+  hesc_solar_tomorrow_sensor:
+    name: "HESC solar forecast tomorrow (charge plan)"
+    max: 255
+  # Home Assistant notify services for the charge plan goal check, comma separated (e.g. notify.mobile_app_phone).
+  # Empty = only a notification inside Home Assistant.
+  hesc_notify_services:
+    name: "HESC notify services"
     max: 255
   # --- source selection ---
   hesc_forecast_now_sensor:
@@ -228,6 +245,15 @@ input_number:
     step: 0.5
     unit_of_measurement: "kW"
     icon: mdi:ev-station
+    mode: box
+  # Charge plan: final check this many minutes before the ready-by time; below goal = charge to goal (0 = off)
+  hesc_plan_final_check_min:
+    name: "HESC charge plan final check before ready-by time"
+    min: 0
+    max: 180
+    step: 15
+    unit_of_measurement: "min"
+    icon: mdi:clock-check-outline
     mode: box
   hesc_p_start:
     name: "HESC forecast power to start"
@@ -450,6 +476,16 @@ template:
           {% endfor %}
           {{ ok.v and (states('input_text.hesc_charger_eco_value') | trim) not in ['', 'unknown', 'unavailable'] }}
 
+  # Day-ahead prices available from the price sensor chosen in Settings (charge plan tab: graph or 'Prices not available').
+  - binary_sensor:
+      - name: "HESC prices available"
+        unique_id: hesc_prices_available
+        icon: mdi:currency-eur
+        state: >
+          {%- set e = states('input_text.hesc_price_sensor') | trim -%}
+          {{ e not in ['', 'unknown', 'unavailable'] and states(e) not in ['unknown', 'unavailable']
+             and (state_attr(e, 'raw_today') or []) | count > 0 }}
+
   # Charger profile: ONE table with the data per charger (edit only here), plus a search for
   # matching entities. Recomputed only when the charger type changes, on start and on 'Search again'.
   - triggers:
@@ -471,9 +507,11 @@ template:
             {#- One table for all supported chargers. Add or correct a charger here only.
                 mode: regex for the entity that holds the solar mode (searched in all entities).
                 conn / power / switch: entity-id endings, searched on the same device as the mode entity.
+                startstop (optional): pattern for the start/stop switch used by the charge plan (grid charging),
+                searched on the same device; only filled in when exactly one match is found.
                 Based on the integrations' source code; only Wallbox has been tested in practice. -#}
             {%- set T = {
-              'Wallbox': {'values': 'eco_mode, full_solar', 'nc': 'Ready, Disconnected', 'mode': '^select\\..*_solar_charging$', 'conn': '_status_description$', 'power': '_charging_power$', 'switch': '', 'tested': true, 'note': 'Official Wallbox integration. Tested with a Pulsar Plus.'},
+              'Wallbox': {'values': 'eco_mode, full_solar', 'nc': 'Ready, Disconnected', 'mode': '^select\\..*_solar_charging$', 'conn': '_status_description$', 'power': '_charging_power$', 'switch': '', 'startstop': '^switch\\.', 'tested': true, 'note': 'Official Wallbox integration. Tested with a Pulsar Plus.'},
               'Alfen Eve': {'values': 'Green', 'nc': 'Available', 'mode': '^select\\..*_solar_charging_mode$', 'conn': '_status_code_socket_1$', 'power': '_active_power_total_socket_1$', 'switch': '', 'tested': false, 'note': 'Needs a meter on the Alfen load balancing.'},
               'Peblar': {'values': 'pure_solar', 'nc': 'no_ev_connected', 'mode': '^select\\..*_smart_charging$', 'conn': '_state$', 'power': '_power$', 'switch': '', 'tested': false, 'note': ''},
               'myenergi Zappi': {'values': 'Eco+', 'nc': 'EV Disconnected', 'mode': '^select\\.myenergi_.*_charge_mode$', 'conn': '_plug_status$', 'power': '', 'switch': '', 'tested': false, 'note': 'Charging power: pick the Zappi internal-load CT power sensor yourself.'},
@@ -505,8 +543,9 @@ template:
             {%- if conn | count == 0 and p.conn -%}{%- set conn = near | select('search', p.conn) | list -%}{%- endif -%}
             {%- if conn | count == 0 -%}{%- set conn = near | select('match', '^sensor\\.') | select('search', '(status|state|plug|car|connect)') | reject('search', '(power|energy|current|voltage)') | reject('is_state_attr', 'state_class', 'measurement') | list -%}{%- endif -%}
             {%- set sw = near | select('search', p.switch) | list if p.switch else [] -%}
+            {%- set ss = near | select('search', p.startstop) | list if p.get('startstop') else [] -%}
             {{ {'type': type, 'known': true, 'values': p['values'], 'not_connected': p.nc, 'tested': p.tested, 'note': p.note,
-                'mode': modes, 'connected': conn[:5], 'power': power[:5], 'switch': sw[:5]} }}
+                'mode': modes, 'connected': conn[:5], 'power': power[:5], 'switch': sw[:5], 'startstop': ss[:5]} }}
             {%- endif -%}
   # --- Charge plan: calculates the plan; the Node-RED "Charge plan" node acts on it ---
   - triggers:
@@ -567,7 +606,28 @@ template:
             {%- set cap = states('input_number.hesc_ev_battery_kwh') | float(0) -%}
             {%- set kw = states('input_number.hesc_plan_charge_kw') | float(11) -%}
             {%- set need_kwh = ([goal - soc, 0] | max) / 100 * cap if (soc >= 0 and cap > 10) else 0 -%}
-            {%- set n = ((need_kwh / (kw * 0.25)) | round(0, 'ceil')) | int if kw > 0 else 0 -%}
+            {#- v1.2.0: expected solar charging before the deadline, per half hour (Solcast detailedForecast, cautious
+                pv_estimate10 in kW). Same rule as the 'Expected solar charging' bar: >= start threshold starts,
+                then >= hold threshold keeps charging. Per half hour (forecast - 0.4 kW house) x 0.5 h, max. the
+                charging power. The rest comes from the grid in the cheapest quarters. -#}
+            {%- set pstart = states('input_number.hesc_p_start') | float(1500) -%}
+            {%- set phold = states('input_number.hesc_p_hold') | float(1200) -%}
+            {%- set sol = namespace(kwh=0, phase='') -%}
+            {%- for se in [states('input_text.hesc_solar_today_sensor') | trim, states('input_text.hesc_solar_tomorrow_sensor') | trim] -%}
+            {%- for r in (state_attr(se, 'detailedForecast') or []) if se not in ['', 'unknown', 'unavailable'] -%}
+            {%- set t = as_datetime(r.period_start) -%}{%- set e = t + timedelta(minutes=30) -%}
+            {%- set v = (r.pv_estimate10 | float(0)) * 1000 -%}
+            {%- if v >= pstart -%}{%- set sol.phase = 'go' -%}{%- elif v >= phold and sol.phase -%}{%- set sol.phase = 'hold' -%}{%- else -%}{%- set sol.phase = '' -%}{%- endif -%}
+            {%- if sol.phase and e > now() and t < dl -%}
+            {%- set s0 = t if t > now() else now() -%}{%- set e0 = e if e < dl else dl -%}
+            {%- set frac = [(e0 - s0).total_seconds() / 1800, 0] | max -%}
+            {%- set sol.kwh = sol.kwh + ([[v / 1000 - 0.4, 0] | max, kw] | min) * 0.5 * frac -%}
+            {%- endif -%}
+            {%- endfor -%}
+            {%- endfor -%}
+            {%- set solar_kwh = [sol.kwh, need_kwh] | min -%}
+            {%- set grid_kwh = [need_kwh - solar_kwh, 0] | max -%}
+            {%- set n = ((grid_kwh / (kw * 0.25)) | round(0, 'ceil')) | int if kw > 0 else 0 -%}
             {%- set a = state_attr(states('input_text.hesc_price_sensor'), 'raw_today') or [] -%}
             {%- set b = state_attr(states('input_text.hesc_price_sensor'), 'raw_tomorrow') or [] -%}
             {%- set pr = namespace(items=[], last=none) -%}
@@ -575,8 +635,8 @@ template:
             {%- set pick = (pr.items | sort(attribute='value'))[:n] | sort(attribute='start') -%}
             {%- set pl = namespace(items=[]) -%}{%- for p in pick -%}{%- set pl.items = pl.items + [as_datetime(p.start).isoformat()] -%}{%- endfor -%}
             {%- set avg = ((pick | map(attribute='value') | sum) / (pick | count) * 100) | round(1) if pick | count > 0 else none -%}
-            {%- set hrs = need_kwh / kw if kw > 0 else 0 -%}
-            {{ {'soc': soc | round(1) if soc >= 0 else none, 'goal': goal | int, 'need_kwh': need_kwh | round(1), 'quarters': n,
+            {%- set hrs = grid_kwh / kw if kw > 0 else 0 -%}
+            {{ {'soc': soc | round(1) if soc >= 0 else none, 'goal': goal | int, 'need_kwh': need_kwh | round(1), 'solar_kwh': solar_kwh | round(1), 'grid_kwh': grid_kwh | round(1), 'quarters': n,
                 'charge_time': '%d:%02d' | format((hrs | int), ((hrs * 60) | int) % 60), 'kw': kw, 'avg_price_ct': avg,
                 'planned': pl.items, 'prices_complete': (pr.last is not none and as_datetime(pr.last) >= dl),
                 'prices_until': as_datetime(pr.last).isoformat() if pr.last is not none else none, 'deadline': dl.isoformat(), 'source': src, 'active': one_on or rep_on, 'deadline_text': dl.strftime('%a %d-%m %H:%M') } | tojson }}
@@ -673,8 +733,9 @@ automation:
             - { field: hesc_ev_connected_sensor, key: connected }
             - { field: hesc_ev_power_sensor, key: power }
             - { field: hesc_charger_solar_switch_entity, key: switch }
+            - { field: hesc_charger_start_stop_entity, key: startstop }
           sequence:
-            - if: "{{ (states('input_text.' ~ repeat.item.field) | trim) in empty and (p[repeat.item.key] | count) == 1 }}"
+            - if: "{{ (states('input_text.' ~ repeat.item.field) | trim) in empty and (p.get(repeat.item.key) or []) | count == 1 }}"
               then:
                 - action: input_text.set_value
                   target: { entity_id: "input_text.{{ repeat.item.field }}" }
@@ -818,7 +879,16 @@ automation:
         data: { value: 8 }
       - action: input_number.set_value
         target: { entity_id: input_number.hesc_ev_full_soc }
-        data: { value: 100 }
+        data: { value: 80 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_plan_charge_kw }
+        data: { value: 11 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_ev_battery_kwh }
+        data: { value: 60 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_plan_opportunity_price }
+        data: { value: 0.05 }
       # No HPVC found on a new install: start in standalone mode
       - if: "{{ states('input_boolean.hpvc_enabled') in ['unknown', 'unavailable'] and state_attr('input_boolean.hpvc_enabled', 'friendly_name') is none }}"
         then:
@@ -826,3 +896,38 @@ automation:
             target: { entity_id: input_boolean.hesc_standalone }
       - action: input_boolean.turn_on
         target: { entity_id: input_boolean.hesc_defaults_applied }
+
+  # v1.2.0 settings get their starting values once: on a new install and when upgrading from v1.1.0 or older.
+  # Only empty text fields are filled; nothing you already chose is overwritten.
+  - id: hesc_apply_defaults_v120
+    alias: "HESC - Apply v1.2.0 defaults (once)"
+    mode: single
+    triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: state
+        entity_id: input_boolean.hesc_defaults_v120_applied
+        to: "off"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.hesc_defaults_v120_applied
+        state: "off"
+    actions:
+      - delay: "00:00:15"
+      - variables:
+          empty: "{{ ['', 'unknown', 'unavailable'] }}"
+      - if: "{{ (states('input_text.hesc_solar_today_sensor') | trim) in empty }}"
+        then:
+          - action: input_text.set_value
+            target: { entity_id: input_text.hesc_solar_today_sensor }
+            data: { value: "sensor.solcast_pv_forecast_forecast_today" }
+      - if: "{{ (states('input_text.hesc_solar_tomorrow_sensor') | trim) in empty }}"
+        then:
+          - action: input_text.set_value
+            target: { entity_id: input_text.hesc_solar_tomorrow_sensor }
+            data: { value: "sensor.solcast_pv_forecast_forecast_tomorrow" }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_plan_final_check_min }
+        data: { value: 60 }
+      - action: input_boolean.turn_on
+        target: { entity_id: input_boolean.hesc_defaults_v120_applied }

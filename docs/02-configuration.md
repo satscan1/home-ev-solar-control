@@ -44,7 +44,7 @@ Shown with **Show optional fields** (`input_boolean.hesc_show_optional`).
 | `hesc_ev_disconnected_values` | Only when *EV connected* is a status sensor: the values that mean "no car", comma separated |
 | `hesc_charger_solar_switch_entity` | Chargers that need an extra switch to be `on` for solar mode (go-e, Wattpilot) |
 | `hesc_ev_green_energy_sensor` | The charger's solar energy counter, for "kWh from solar" in the report |
-| `hesc_ev_soc_sensor` + `input_number.hesc_ev_full_soc` | The EV's battery level (%) and the level that counts as full (default 100%). Used for *EV full* and the charge plan |
+| `hesc_ev_soc_sensor` + `input_number.hesc_ev_full_soc` | The EV's battery level (%) and the level that counts as full (default 80%; set 100% for LFP batteries). Used for *EV full* and the charge plan |
 
 **Local weather station**: switch *Use local weather station* on to show the irradiance sensor and its start/hold thresholds. Without it HESC works on the forecast alone.
 
@@ -79,9 +79,12 @@ On the **Charge plan** tab.
 |---|---|
 | `input_text.hesc_charger_start_stop_entity` | A start/stop switch: switched on in a planned quarter. E.g. Wallbox *Pause/resume* |
 | `input_text.hesc_charger_grid_mode_value` | Or: the value of the mode entity (step 1) that means "charge now", e.g. Zappi `Fast`, evcc `now` |
-| `input_text.hesc_price_sensor` | Your day-ahead price sensor with `raw_today` / `raw_tomorrow` attributes (e.g. Nord Pool). Also replace it in the dashboard's price chart |
+| `input_text.hesc_price_sensor` | Your day-ahead price sensor with `raw_today` / `raw_tomorrow` attributes (e.g. Nord Pool). The price chart on the Charge plan tab follows it |
+| `input_text.hesc_solar_today_sensor` / `hesc_solar_tomorrow_sensor` | Solar forecast per half hour for today and tomorrow (attribute `detailedForecast`, e.g. Solcast *forecast today / tomorrow*). The plan counts on this sun before the deadline. Empty = no sun in the plan |
+| `input_number.hesc_plan_final_check_min` | Final check this many minutes before the ready-by time: below the goal = charge to the goal, whatever the price. Default 60, 0 = off |
+| `input_text.hesc_notify_services` | Notify services for a message when the EV is not at its goal at the ready-by time, comma separated, e.g. `notify.mobile_app_phone`. Empty = only a notification inside Home Assistant |
 
-Afterwards, or when the charger stops by itself, it always goes back to how it was before charging started (the switch to its previous state, or the previous mode). Nothing filled in = no grid charging.
+Afterwards, or when the charger stops by itself, it always goes back to how it was before charging started (the switch to its previous state, or the previous mode). Nothing filled in = no grid charging. With charger type *Wallbox*, HESC fills in the start/stop switch (*Pause/resume*) itself when it finds exactly one.
 
 ## Switches
 

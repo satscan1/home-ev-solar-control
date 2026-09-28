@@ -20,7 +20,7 @@ Only needed for the charge plan. Chargers do this in one of two ways; fill in th
 
 | Field | Use when | Examples (check your own entities) |
 |---|---|---|
-| Start/stop switch | the charger has a switch that pauses/resumes charging | Wallbox *Pause/resume* (`switch.<name>_pause_resume`), some Easee and Ohme setups |
+| Start/stop switch | the charger has a switch that pauses/resumes charging | Wallbox *Pause/resume* (`switch.<name>_pause_resume`; filled in automatically when you choose charger type *Wallbox*), some Easee and Ohme setups |
 | Mode value | "charge now" is a value of the same mode entity you use for solar mode | Zappi `Fast`, evcc `now`, go-e / Wattpilot non-Eco mode, Peblar / Alfen / SMA non-solar mode |
 
 Only the Wallbox *Pause/resume* switch has been built and checked against a real installation. For other chargers, test in shadow mode first and check that the charger returns to its solar mode afterwards.

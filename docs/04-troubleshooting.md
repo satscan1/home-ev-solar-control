@@ -29,7 +29,10 @@
 |---|---|
 | `Grid charging not set up (Settings → Charge plan)` | Settings → step 3 → *Charge plan*: fill in the start/stop switch or the "charge now" mode value |
 | `No active plan` | Switch the one-off or weekly plan on |
-| `Waiting for the next planned quarter` | Normal. The planned quarters are shown green in the price chart |
+| `Waiting for the next planned quarter` | Normal. The planned quarters are shown in amber in the price chart |
+| *Prices not available* on the Charge plan tab | The price sensor chosen in Settings (Advanced → Charging from the grid) has no `raw_today` prices right now, or none is chosen. Check or reload the price integration; the chart returns by itself |
+| `Final check: below goal, charging to goal` | Normal in the last hour before the ready-by time when the EV is still below its goal. HESC charges to the goal whatever the price |
+| Notification *EV not charged to goal* | At the ready-by time the EV was below its goal. The message shows the last HESC status; check the charger, the plan settings and the report |
 | `EV already charging, left alone` | The car was already charging (for example on sun). HESC does not take it over |
 | `Finished, charger stopped by itself` | The charger drew no power for a few minutes (car full or its own charge limit). HESC put it back and waits for the next plan |
 | Prices known only until tonight | Normal before the next day's prices are published (about 13:00). The plan firms up then; the safety net still meets the deadline |

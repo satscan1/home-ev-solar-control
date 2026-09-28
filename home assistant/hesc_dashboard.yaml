@@ -1,10 +1,9 @@
-# Home EV Solar Control (HESC) v1.1.0 — dashboard
+# Home EV Solar Control (HESC) v1.2.0 — dashboard
 # Layout follows Home PV Control (badges, master-control toggles, live inputs, control states, apexcharts graphs).
 # Requires: apexcharts-card (HACS). Optional: button-card (HACS) for the "Expected solar charging" bar;
 # without it that bar stays hidden (checked via update.button_card_update). Optional: card-mod (tighter Live Inputs padding).
 # Until the essentials are filled in, Main shows a welcome card with a setup checklist (binary_sensor.hesc_configuration_valid).
-# Charge plan tab: the price chart uses sensor.nordpool_kwh_nl_eur_3_10_021 — replace it with your own day-ahead
-# price sensor (same one as in Settings → Charging from the grid → Day-ahead price sensor). 
+# Charge plan tab: the price chart follows the day-ahead price sensor chosen in Settings (no editing needed here).
 # Add as a separate dashboard: Settings → Dashboards → Add → New from scratch → ⋮ → Raw configuration editor → paste.
 title: Home EV Solar Control
 views:
@@ -79,7 +78,8 @@ views:
       grid_options:
         columns: 12
       content: |-
-        <ha-alert title="Welcome to Home EV Solar Control" alert-type="info">First fill in the essentials on the <b>Settings</b> tab: only three things about your charger. Everything else is taken over from Home PV Control or has a good default. The dashboard appears as soon as HESC has what it needs.</ha-alert>
+        {%- set sa = is_state('input_boolean.hesc_standalone', 'on') -%}
+        <ha-alert title="Welcome to Home EV Solar Control" alert-type="info">First fill in the essentials on the <b>Settings</b> tab: only three things about your charger. {{ 'Also pick your PV and grid power sensors there; everything else has a good default.' if sa else 'Everything else is taken over from Home PV Control or has a good default.' }} The dashboard appears as soon as HESC has what it needs.</ha-alert>
 
         {%- macro exists(e) -%}{{ e not in ['', 'unknown', 'unavailable'] and (states(e) != 'unknown' or state_attr(e, 'friendly_name') is not none) }}{%- endmacro -%}
         {%- macro now(e) -%}{%- set u = state_attr(e, 'unit_of_measurement') -%}{{ states(e) }}{{ ' ' ~ u if u else '' }}{%- endmacro -%}
@@ -107,11 +107,11 @@ views:
         {{ ok if req[1] else no }} **Charging power**: {{ '<code>' ~ pow ~ '</code> · now ' ~ now(pow) if req[1] else 'pick the sensor with the charging power (W or kW)' }}{{ sug('power', req[1]) }}
         {{ ok if req[2] else no }} **Solar mode**: {{ '<code>' ~ mode ~ '</code> = <code>' ~ solar ~ '</code> · now ' ~ states(mode) ~ (' (solar mode)' if in_solar else '') if req[2] else 'pick the charger mode entity and the value that means solar charging' }}{{ sug('mode', req[2]) }}
 
-        **Taken over automatically**
+        **{{ 'Sources' if sa else 'Taken over automatically' }}**
         {{ ok if exists(pv) == 'True' else no }} **PV power**: <code>{{ pv or '–' }}</code>{{ ' (from HPVC)' if from_hpvc else '' }} · now {{ now(pv) }}
         {{ ok if exists(grid) == 'True' else '⚪' }} **Grid power**: <code>{{ grid or '–' }}</code>{{ ' (from HPVC)' if from_hpvc else '' }}{{ ' · now ' ~ now(grid) if exists(grid) == 'True' else ' · optional' }}
         {{ ok if exists(fc) == 'True' else no }} **Solar forecast**: <code>{{ fc or '–' }}</code>{{ ' (' ~ fa ~ ')' if fa else '' }} · now {{ state_attr(fc, fa) if fa else states(fc) }} W
-        {{ ok if exists(hen) == 'True' and exists(hlim) == 'True' else no }} **HPVC**: {{ 'found' if exists(hen) == 'True' and exists(hlim) == 'True' else 'not found — is Home PV Control installed?' }}
+        {%- if not sa %}{{ ok if exists(hen) == 'True' and exists(hlim) == 'True' else no }} **HPVC**: {{ 'found' if exists(hen) == 'True' and exists(hlim) == 'True' else 'not found — is Home PV Control installed?' }}{% endif %}
 
         [➡️ Open Settings](/home-ev-solar-control/settings)
   - type: grid
@@ -1193,17 +1193,19 @@ views:
       content: |-
         {%- set r = state_attr('sensor.hesc_charge_plan', 'plan') -%}{%- set p = r if r is mapping else (r | from_json if r else {}) -%}
         {%- set on = p.active | default(false) -%}
-        <ha-alert alert-type="info">{{ states('input_text.hesc_plan_status') }}</ha-alert>
+        {%- set q = p.quarters | default(0) -%}
+        {%- set st = states('input_text.hesc_plan_status') -%}
+        <ha-alert alert-type="info">{{ 'Planned: waiting for the first planned quarter' if (st.startswith('Finished') and q > 0) else st }}</ha-alert>
 
         <center><b>{{ 'ACTIVE PLAN' if on else 'PLAN (not active)' }}</b> · ready by <b>{{ p.deadline_text | default('–') }}</b>{{ ' (every week)' if p.source == 'repeating' else ' (one-off)' }}</center>
 
         | CHARGING TIME | ENERGY PRICE |
         |:--|--:|
-        | <font size="6" color="#4caf50"><b>{{ p.charge_time | default('–') }} h</b></font> @ {{ p.kw | default('–') }} kW | <font size="6" color="#4caf50"><b>{{ (p.avg_price_ct | string | replace('.', ',')) ~ ' ct/kWh' if p.avg_price_ct is not none else '–' }}</b></font> |
+        | <font size="6" color="#4caf50"><b>{{ p.charge_time | default('–') }} h</b></font> @ {{ p.kw | default('–') }} kW | <font size="6" color="#4caf50"><b>{{ (p.avg_price_ct | string | replace('.', ',')) ~ ' ct/kWh' if (p.avg_price_ct is not none and q > 0) else '–' }}</b></font> |
 
         | BATTERY NOW | GOAL | STILL NEEDED | STATUS |
         |:--|:--|:--|:--|
-        | <font size="4"><b>{{ (p.soc | round(0) | int ~ '%') if p.soc is not none else '?' }}</b></font> | <font size="4"><b>{{ p.goal | default('–') }}%</b></font> | <font size="4"><b>{{ p.need_kwh | default(0) }} kWh</b></font> · {{ p.quarters | default(0) }} × 15 min | <font size="4" color="#4caf50"><b>{{ '✅ already there' if (p.need_kwh is defined and p.need_kwh == 0 and p.soc is not none) else ('⏳ planned' if p.quarters | default(0) > 0 else '–') }}</b></font> |
+        | <font size="4"><b>{{ (p.soc | round(0) | int ~ '%') if p.soc is not none else '?' }}</b></font> | <font size="4"><b>{{ p.goal | default('–') }}%</b></font> | <font size="4"><b>{{ p.need_kwh | default(0) }} kWh</b></font>{{ ' (☀ ~' ~ p.solar_kwh ~ ' kWh sun)' if (p.solar_kwh | default(0)) > 0 else '' }} · {{ p.quarters | default(0) }} × 15 min grid | <font size="4" color="#4caf50"><b>{{ '✅ already there' if (p.need_kwh is defined and p.need_kwh == 0 and p.soc is not none) else ('⏳ planned' if p.quarters | default(0) > 0 else '–') }}</b></font> |
         {%- if p.prices_complete is defined and not p.prices_complete %}
 
         <small>ℹ️ Prices known until {{ as_timestamp(p.prices_until) | timestamp_custom('%a %H:%M') if p.prices_until else '–' }}. Final plan follows when all prices up to departure are known.</small>
@@ -1216,13 +1218,17 @@ views:
       span:
         start: hour
       header:
-        show: false
+        show: true
+        title: Day-ahead prices per quarter (€/kWh)
+        show_states: false
       apex_config:
         chart:
           height: 300
           stacked: true
         legend:
-          show: false
+          show: true
+          position: top
+          horizontalAlign: left
         plotOptions:
           bar:
             columnWidth: 80%
@@ -1232,22 +1238,36 @@ views:
       - decimals: 2
         min: 0
       series:
-      - entity: sensor.nordpool_kwh_nl_eur_3_10_021
-        name: Price
+      - entity: input_text.hesc_price_sensor
+        name: Price (€/kWh)
         type: column
         color: '#9e9e9e'
         float_precision: 3
-        data_generator: 'const r = hass.states[''sensor.hesc_charge_plan'']?.attributes?.plan; let pl = []; try { pl = (typeof r === ''string'' ? JSON.parse(r) : r).planned || []; } catch (e) {} const set = new Set(pl.map(x => new Date(x).getTime())); return [...(entity.attributes.raw_today||[]), ...(entity.attributes.raw_tomorrow||[])].filter(p => new Date(p.end) > new Date()).map(p => { const t = new Date(p.start).getTime(); return [t, set.has(t) ? 0 : p.value]; });'
-      - entity: sensor.nordpool_kwh_nl_eur_3_10_021
-        name: Planned
+        data_generator: 'const r = hass.states[''sensor.hesc_charge_plan'']?.attributes?.plan; let pl = []; try { pl = (typeof r === ''string'' ? JSON.parse(r) : r).planned || []; } catch (e) {} const set = new Set(pl.map(x => new Date(x).getTime())); const src = (hass.states[entity.state] || {}).attributes || {}; return [...(src.raw_today||[]), ...(src.raw_tomorrow||[])].filter(p => new Date(p.end) > new Date()).map(p => { const t = new Date(p.start).getTime(); return [t, set.has(t) ? 0 : p.value]; });'
+      - entity: input_text.hesc_price_sensor
+        name: Planned grid charging
         type: column
-        color: '#4caf50'
+        color: '#ffb300'
         float_precision: 3
-        data_generator: 'const r = hass.states[''sensor.hesc_charge_plan'']?.attributes?.plan; let pl = []; try { pl = (typeof r === ''string'' ? JSON.parse(r) : r).planned || []; } catch (e) {} const set = new Set(pl.map(x => new Date(x).getTime())); return [...(entity.attributes.raw_today||[]), ...(entity.attributes.raw_tomorrow||[])].filter(p => new Date(p.end) > new Date()).map(p => { const t = new Date(p.start).getTime(); return [t, set.has(t) ? p.value : 0]; });'
+        data_generator: 'const r = hass.states[''sensor.hesc_charge_plan'']?.attributes?.plan; let pl = []; try { pl = (typeof r === ''string'' ? JSON.parse(r) : r).planned || []; } catch (e) {} const set = new Set(pl.map(x => new Date(x).getTime())); const src = (hass.states[entity.state] || {}).attributes || {}; return [...(src.raw_today||[]), ...(src.raw_tomorrow||[])].filter(p => new Date(p.end) > new Date()).map(p => { const t = new Date(p.start).getTime(); return [t, set.has(t) ? p.value : 0]; });'
       grid_options:
         columns: 18
         rows: 6
       section_mode: true
+      update_interval: 5min
+      visibility:
+      - condition: state
+        entity: binary_sensor.hesc_prices_available
+        state: 'on'
+    - type: markdown
+      grid_options:
+        columns: 18
+        rows: 6
+      content: <ha-alert alert-type="warning" title="Prices not available">{%- set e = states('input_text.hesc_price_sensor') | trim -%}{{ 'No day-ahead price sensor chosen yet (Settings → Advanced → Charging from the grid).' if e in ['', 'unknown', 'unavailable'] else 'The price sensor <code>' ~ e ~ '</code> has no prices right now (it needs raw_today / raw_tomorrow). Check or reload the price integration; the graph returns by itself when prices are back.' }}</ha-alert>
+      visibility:
+      - condition: state
+        entity: binary_sensor.hesc_prices_available
+        state_not: 'on'
   - type: grid
     column_span: 3
     cards:
@@ -1672,6 +1692,14 @@ views:
           name: …or mode value that means 'charge now'
         - entity: input_text.hesc_price_sensor
           name: Day-ahead price sensor (raw_today / raw_tomorrow)
+        - entity: input_text.hesc_solar_today_sensor
+          name: Solar forecast today (per half hour, e.g. Solcast forecast today)
+        - entity: input_text.hesc_solar_tomorrow_sensor
+          name: Solar forecast tomorrow (e.g. Solcast forecast tomorrow)
+        - entity: input_number.hesc_plan_final_check_min
+          name: Final check before ready-by time (0 = off)
+        - entity: input_text.hesc_notify_services
+          name: Notify when the goal is not reached (e.g. notify.mobile_app_phone, comma separated)
     - type: conditional
       conditions:
       - entity: input_boolean.hesc_show_plan_settings
