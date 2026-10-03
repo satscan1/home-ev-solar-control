@@ -1,14 +1,16 @@
 # =============================================================================
 # Home EV Solar Control (HESC) — Home Assistant package 
-# Version: v1.2.0 (2026-09-28)
+# Version: v1.3.0 (2026-10-03)
 # Project tag: [WALLBOX] [PV] 
 #
 # Works alongside Home PV Control (HPVC):
 # when the EV waits in solar/Eco charging mode and enough solar power is
 # forecast, HESC asks HPVC (v1.5.1+) for a temporary PV release so the charger
 # can start on sun. Optional charge plan: charge to a goal by a set time in the
-# cheapest known quarters, counting on expected sun, with a final check and a
-# notification if the goal is not reached. Node-RED flow: hesc_flow.json.
+# cheapest quarters (known day-ahead prices first, then HESC's own price forecast),
+# counting on expected sun, with a final check and a notification if the goal is
+# not reached. Optional minimum charge and cheap chances (skipped when the sun will
+# do the job). Runs without HPVC too (standalone). Node-RED flow: hesc_flow.json.
 # Shadow mode (default ON) evaluates only: no release requests, no charger writes.
 # =============================================================================
 
@@ -99,6 +101,19 @@ input_boolean:
   hesc_show_thresholds:
     name: "HESC show thresholds"
     icon: mdi:tune-vertical
+  hesc_show_weather_settings:
+    name: "HESC show weather station settings"
+    icon: mdi:tune-vertical
+  # Minimum charge (optional): keep at least this battery level in the EV (Use + Settings on the Settings page)
+  hesc_min_charge_enabled:
+    name: "HESC minimum charge"
+    icon: mdi:battery-lock
+  hesc_show_min_charge_settings:
+    name: "HESC show minimum charge settings"
+    icon: mdi:tune-vertical
+  hesc_defaults_min_charge_applied:
+    name: "HESC minimum charge defaults applied"
+    icon: mdi:check-decagram
   hesc_show_timing:
     name: "HESC show timing"
     icon: mdi:timer-cog-outline
@@ -152,6 +167,13 @@ input_text:
     max: 255
   hesc_grid_power_sensor:
     name: "HESC grid power sensor"
+    max: 255
+  # Own PV/grid sensors, kept while "PV & grid from HPVC" is on and put back when it is switched off.
+  hesc_own_pv_power_sensor:
+    name: "HESC own PV power sensor (kept while HPVC sensors are used)"
+    max: 255
+  hesc_own_grid_power_sensor:
+    name: "HESC own grid power sensor (kept while HPVC sensors are used)"
     max: 255
   hesc_ev_connected_sensor:
     name: "HESC EV connected (binary sensor)"
@@ -245,6 +267,23 @@ input_number:
     step: 0.5
     unit_of_measurement: "kW"
     icon: mdi:ev-station
+    mode: box
+  # Minimum charge: lowest battery level and how many hours HESC has to reach it after plugging in
+  hesc_min_charge_soc:
+    name: "HESC minimum charge level"
+    min: 5
+    max: 80
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:battery-low
+    mode: slider
+  hesc_min_charge_hours:
+    name: "HESC minimum charge within"
+    min: 0.5
+    max: 12
+    step: 0.5
+    unit_of_measurement: "h"
+    icon: mdi:timer-sand
     mode: box
   # Charge plan: final check this many minutes before the ready-by time; below goal = charge to goal (0 = off)
   hesc_plan_final_check_min:
@@ -631,15 +670,22 @@ template:
             {%- set a = state_attr(states('input_text.hesc_price_sensor'), 'raw_today') or [] -%}
             {%- set b = state_attr(states('input_text.hesc_price_sensor'), 'raw_tomorrow') or [] -%}
             {%- set pr = namespace(items=[], last=none) -%}
-            {%- for p in a + b -%}{%- set pr.last = p.end -%}{%- if as_datetime(p.end) > now() and as_datetime(p.end) <= dl -%}{%- set pr.items = pr.items + [p] -%}{%- endif -%}{%- endfor -%}
-            {%- set pick = (pr.items | sort(attribute='value'))[:n] | sort(attribute='start') -%}
+            {%- for p in a + b -%}{%- set pr.last = p.end -%}{%- if as_datetime(p.end) > now() and as_datetime(p.end) <= dl -%}{%- set pr.items = pr.items + [{'start': p.start, 'end': p.end, 'value': p.value, 'sort': p.value, 'fc': false}] -%}{%- endif -%}{%- endfor -%}
+            {#- v1.3.0: after the last known price the planner may use the HESC price forecast (sensor.hesc_price_forecast);
+                forecast quarters count as 'penalty' (2 ct) more expensive, so HESC only waits for them when clearly cheaper -#}
+            {%- set fcs = state_attr('sensor.hesc_price_forecast', 'forecast') or [] -%}
+            {%- set pen = state_attr('sensor.hesc_price_forecast', 'penalty') | float(0.02) -%}
+            {%- set fcn = namespace(last=none) -%}
+            {%- for p in fcs -%}{%- if (pr.last is none or as_datetime(p.start) >= as_datetime(pr.last)) and as_datetime(p.end) > now() and as_datetime(p.end) <= dl -%}{%- set pr.items = pr.items + [{'start': p.start, 'end': p.end, 'value': p.value, 'sort': p.value + pen, 'fc': true}] -%}{%- set fcn.last = p.end -%}{%- endif -%}{%- endfor -%}
+            {%- set pick = (pr.items | sort(attribute='sort'))[:n] | sort(attribute='start') -%}
+            {%- set pf = namespace(items=[]) -%}{%- for p in pick if p.fc -%}{%- set pf.items = pf.items + [as_datetime(p.start).isoformat()] -%}{%- endfor -%}
             {%- set pl = namespace(items=[]) -%}{%- for p in pick -%}{%- set pl.items = pl.items + [as_datetime(p.start).isoformat()] -%}{%- endfor -%}
             {%- set avg = ((pick | map(attribute='value') | sum) / (pick | count) * 100) | round(1) if pick | count > 0 else none -%}
             {%- set hrs = grid_kwh / kw if kw > 0 else 0 -%}
             {{ {'soc': soc | round(1) if soc >= 0 else none, 'goal': goal | int, 'need_kwh': need_kwh | round(1), 'solar_kwh': solar_kwh | round(1), 'grid_kwh': grid_kwh | round(1), 'quarters': n,
                 'charge_time': '%d:%02d' | format((hrs | int), ((hrs * 60) | int) % 60), 'kw': kw, 'avg_price_ct': avg,
                 'planned': pl.items, 'prices_complete': (pr.last is not none and as_datetime(pr.last) >= dl),
-                'prices_until': as_datetime(pr.last).isoformat() if pr.last is not none else none, 'deadline': dl.isoformat(), 'source': src, 'active': one_on or rep_on, 'deadline_text': dl.strftime('%a %d-%m %H:%M') } | tojson }}
+                'prices_until': as_datetime(pr.last).isoformat() if pr.last is not none else none, 'planned_forecast': pf.items, 'forecast_until': as_datetime(fcn.last).isoformat() if fcn.last is not none else none, 'deadline': dl.isoformat(), 'source': src, 'active': one_on or rep_on, 'deadline_text': dl.strftime('%a %d-%m %H:%M') } | tojson }}
 
 input_button:
   hesc_generate_report:
@@ -756,6 +802,7 @@ automation:
       - trigger: state
         entity_id: input_boolean.hesc_use_hpvc_sources
         to: "on"
+        id: switched_on
     conditions:
       - condition: state
         entity_id: input_boolean.hesc_use_hpvc_sources
@@ -764,6 +811,19 @@ automation:
       - variables:
           pv: "{{ states('input_text.hpvc_pv_power_sensor') | trim }}"
           grid: "{{ states('input_text.hpvc_grid_power_sensor') | trim }}"
+          own_pv: "{{ states('input_text.hesc_pv_power_sensor') | trim }}"
+          own_grid: "{{ states('input_text.hesc_grid_power_sensor') | trim }}"
+      # remember the own choice first, so switching 'PV & grid from HPVC' off puts it back
+      - if: "{{ trigger.id == 'switched_on' and own_pv not in ['', 'unknown', 'unavailable'] and own_pv != pv }}"
+        then:
+          - action: input_text.set_value
+            target: { entity_id: input_text.hesc_own_pv_power_sensor }
+            data: { value: "{{ own_pv }}" }
+      - if: "{{ trigger.id == 'switched_on' and own_grid not in ['', 'unknown', 'unavailable'] and own_grid != grid }}"
+        then:
+          - action: input_text.set_value
+            target: { entity_id: input_text.hesc_own_grid_power_sensor }
+            data: { value: "{{ own_grid }}" }
       - if: "{{ pv not in ['', 'unknown', 'unavailable'] and pv != states('input_text.hesc_pv_power_sensor') }}"
         then:
           - action: input_text.set_value
@@ -774,6 +834,30 @@ automation:
           - action: input_text.set_value
             target: { entity_id: input_text.hesc_grid_power_sensor }
             data: { value: "{{ grid }}" }
+
+  # Switching 'PV & grid from HPVC' off puts back the own PV and grid sensors that were kept when it was switched on.
+  - id: hesc_restore_own_sources
+    alias: "HESC - Put back own PV and grid sensors"
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.hesc_use_hpvc_sources
+        from: "on"
+        to: "off"
+    actions:
+      - variables:
+          own_pv: "{{ states('input_text.hesc_own_pv_power_sensor') | trim }}"
+          own_grid: "{{ states('input_text.hesc_own_grid_power_sensor') | trim }}"
+      - if: "{{ own_pv not in ['', 'unknown', 'unavailable'] }}"
+        then:
+          - action: input_text.set_value
+            target: { entity_id: input_text.hesc_pv_power_sensor }
+            data: { value: "{{ own_pv }}" }
+      - if: "{{ own_grid not in ['', 'unknown', 'unavailable'] }}"
+        then:
+          - action: input_text.set_value
+            target: { entity_id: input_text.hesc_grid_power_sensor }
+            data: { value: "{{ own_grid }}" }
 
   # Same pattern as HPVC: opening the report resets the tile to "Generate report".
   - id: hesc_reset_report_after_view
@@ -931,3 +1015,28 @@ automation:
         data: { value: 60 }
       - action: input_boolean.turn_on
         target: { entity_id: input_boolean.hesc_defaults_v120_applied }
+
+  # Minimum charge gets its starting values once (20% within 3 hours); it stays off until switched on.
+  - id: hesc_apply_defaults_min_charge
+    alias: "HESC - Apply minimum charge defaults (once)"
+    mode: single
+    triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: state
+        entity_id: input_boolean.hesc_defaults_min_charge_applied
+        to: "off"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.hesc_defaults_min_charge_applied
+        state: "off"
+    actions:
+      - delay: "00:00:15"
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_min_charge_soc }
+        data: { value: 20 }
+      - action: input_number.set_value
+        target: { entity_id: input_number.hesc_min_charge_hours }
+        data: { value: 3 }
+      - action: input_boolean.turn_on
+        target: { entity_id: input_boolean.hesc_defaults_min_charge_applied }

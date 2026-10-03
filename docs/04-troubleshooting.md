@@ -35,4 +35,10 @@
 | Notification *EV not charged to goal* | At the ready-by time the EV was below its goal. The message shows the last HESC status; check the charger, the plan settings and the report |
 | `EV already charging, left alone` | The car was already charging (for example on sun). HESC does not take it over |
 | `Finished, charger stopped by itself` | The charger drew no power for a few minutes (car full or its own charge limit). HESC put it back and waits for the next plan |
-| Prices known only until tonight | Normal before the next day's prices are published (about 13:00). The plan firms up then; the safety net still meets the deadline |
+| Prices known only until tonight | Normal before the next day's prices are published (about 13:00). After the first full day the plan also uses expected prices (grey bars) and firms up when the real prices arrive; the safety net still meets the deadline |
+| No grey *Expected price* bars | `sensor.hesc_price_forecast` has no quarters yet: it needs at least one full day of prices in the history (`hesc-data/price_history.json`), and only shows after the last known price (before about 13:00 the chart shows them for tomorrow) |
+| `Within 3% of goal (x%, charges below y%)` | Normal: grid charging only starts more than 3% below the goal |
+| `Cheap chance skipped: enough sun today (…)` | Normal: the sun is expected to cover the need later today. Lower *Cheap when below* or switch *take cheap chances* off if you prefer |
+| `Minimum charge: below x%, waiting for the cheapest quarter (hh:mm), ready by hh:mm` | Normal: the optional minimum charge waits for the cheapest quarter in its window |
+| Charger stays *paused* after charging | Normal with a start/stop switch: it comes back on for sun, a drop of more than 3%, a new plan or when you unplug. To charge now, switch it on yourself; HESC leaves a charge it did not start alone |
+| Notification *Charger not switched back on* | HESC tried 3 times to switch the charger back on. Check the charger (cloud connection) |
