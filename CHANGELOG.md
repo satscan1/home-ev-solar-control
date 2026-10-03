@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.3.0 — 2026-10-03
+
+**Smart charging, almost on autopilot.**
+
+Price forecast
+- New *Price forecast* on the Engine tab. HESC keeps its own price history (`hesc-data/price_history.json`) and predicts the 24 hours after the last known price: the hourly pattern of the last 14 full days plus half of a solar index (sunny days are cheap at midday and expensive in the evening). The index starts from a default for the Dutch market and is refined every week with your own history. Published as `sensor.hesc_price_forecast`.
+- The charge plan uses these expected quarters after the last known price, with a 2 ct/kWh penalty, so known prices win unless an expected one is clearly cheaper. New plan attributes `planned_forecast` and `forecast_until`.
+- Price chart: grey *Expected price* bars.
+
+Charging strategy
+- Cheap chances are skipped when the cautious solar forecast for the rest of that day covers what the EV still needs with 20% to spare (status *Cheap chance skipped: enough sun today*). The price chart leaves those quarters out too.
+- Cheap chances also charge without an active plan (as intended), and have their own colour in the price chart (blue-green); inside an active plan they stay amber.
+- 3% margin: grid charging only starts when the EV is more than 3% below its goal; once charging, it continues to the goal. The goal check uses the same margin.
+- With a start/stop switch the charger now stays **paused** after grid charging, so the car cannot top itself up from the grid. It comes back on for solar charging, a drop of more than 3% when no planned charge is coming (top-up), a new plan or unplugging. A refused pause is retried after 30 minutes and a refused resume after 5 minutes, each at most 3 times.
+- New optional **minimum charge** (Settings, block 3, *Use* + *Settings*): plugged in below a level (default 20%), the EV reaches it within a set time (default 3 h) in the cheapest quarters of that window. Off by default; new helpers `input_boolean.hesc_min_charge_enabled`, `input_number.hesc_min_charge_soc`, `input_number.hesc_min_charge_hours`.
+- Status *No active plan* instead of *Goal reached* when there is no plan.
+
+Dashboard
+- Built-in guide in English and Dutch: two hidden pages, opened with the ⓘ next to the headings and the *Guide* badge on Main (hold it for Dutch). Same text as the new [Smart charging explained](docs/07-smart-charging-explained.md) ([Nederlands](docs/07-smart-charging-explained.nl.md)).
+- Charge plan card: a plan that is not active is shown as a grey *preview*.
+- Local weather station and minimum charge: *Use* and *Settings* switches side by side.
+- Control States and their timelines in one card.
+- A small *star this project* line at the top of Main.
+
+Settings
+- *PV & grid from HPVC* no longer overwrites your own PV and grid sensors for good: switching it on remembers them, switching it off puts them back (`input_text.hesc_own_pv_power_sensor` / `hesc_own_grid_power_sensor`).
+
+Upgrade from v1.2.0: replace `hesc_config.yaml` and the dashboard, re-import the flow, restart Home Assistant or reload helpers, template entities and automations. See the [release notes](releases/v1.3.0/release.md).
+
 ## v1.2.0 — 2026-09-28
 
 **A charge plan you can rely on.**

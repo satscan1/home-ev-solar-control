@@ -76,12 +76,23 @@ The *Charge plan* node in the Engine tab runs every 30 seconds and decides:
 | Safety net: only just enough time left | started (remaining time ≤ charging time + 15 min) |
 | Final check: below goal, charging to goal | started in the last *final check* minutes before the deadline (default 60) while the EV is below its goal, whatever the price |
 | Cheap chance (x ct ≤ y ct) | started, only when *take cheap chances* is on |
+| Cheap chance skipped: enough sun today (~x kWh for y kWh) | not started: the cautious solar forecast for the rest of today covers the need with 20% to spare |
+| Within 3% of goal (x%, charges below y%) | not started: the EV is less than 3% below its goal |
+| Minimum charge: below x%, waiting for the cheapest quarter … / charging | the optional minimum charge (see below) |
 | Waiting for the next planned quarter / No active plan | not started; if HESC started it, back to how it was |
-| Goal reached (x%) | back to how it was |
+| Goal reached (x%) | charger paused (start/stop switch) or previous mode |
 | Finished, charger stopped by itself | the charger drew no power for the *charger stopped* time after the *wait for charger* time; back to how it was, and left alone for 30 minutes (then the plan continues; the final check ignores this pause) |
 | EV already charging, left alone | a charge HESC did not start (for example on sun) is never taken over |
 
-How it starts follows from what is filled in: a start/stop switch is switched on; otherwise the mode is set to the "charge now" value. Back to how it was: the switch returns to the state it had before HESC started (normally off), or the mode that was active before is selected again (or the first solar value). After a restart, `input_boolean.hesc_plan_owns_charging` tells HESC that it had started the charger, so it is put back.
+How it starts follows from what is filled in: a start/stop switch is switched on; otherwise the mode is set to the "charge now" value.
+
+**3% margin.** Grid charging (planned quarter, safety net, final check, cheap chance) only starts when the EV is more than 3% below the goal; once charging, it continues to the goal. This stops the charger from starting for a few minutes of nothing.
+
+**Afterwards: paused.** With a start/stop switch that was on before HESC started, the charger stays paused after grid charging, so the EV cannot top itself up from the grid. HESC switches it on again when there is enough sun to start solar charging (cautious forecast now at or above the start threshold, sun up), when the EV drops more than 3% below the goal (plan goal, otherwise *EV counts as full at*) and no planned charge is still coming, when a plan starts, or when the EV is unplugged. A refused pause is retried after 30 minutes, a refused resume after 5 minutes, each at most 3 times (`pause_retry`, `pause_failed`, `resume_retry`, `resume_failed` in the history). With a mode value the mode that was active before is selected again (or the first solar value).
+
+**Cheap chances and the sun.** Before taking a cheap chance HESC adds up the cautious solar forecast for the rest of that calendar day (half hours at or above the hold threshold, minus 0.4 kW for the house, at most the grid charging power). If that covers what the EV still needs (to the plan goal, otherwise *EV counts as full at*) with 20% to spare, the cheap chance is skipped. The price chart leaves those quarters out too.
+
+**Minimum charge** (optional, `input_boolean.hesc_min_charge_enabled`). EV connected below the minimum level → a window of the set number of hours starts. HESC works out the quarters needed ((minimum − battery) × capacity ÷ grid charging power) and charges in the cheapest quarters of the window; at the end of the window the safety net starts, and without known prices it charges straight away. It stops at the minimum level and works independently of the charge plan. After a restart, `input_boolean.hesc_plan_owns_charging` tells HESC that it had started the charger, so it is put back.
 
 Every start and stop is written to the history (`type: charge_plan`).
 
@@ -89,7 +100,16 @@ Every start and stop is written to the history (`type: charge_plan`).
 
 **Restarts.** While `sensor.hesc_charge_plan` is briefly missing (Home Assistant restart, template reload), the node keeps using the last valid plan for up to 10 minutes, so a running charge is not stopped.
 
-Not yet: expected prices beyond the known day-ahead prices. Until then only known quarters are planned; the safety net makes sure the deadline is still met.
+## Price forecast
+
+The Engine tab also holds the **Price forecast** (every 15 minutes, and 40 s after a deploy for loading the history).
+
+- **Own history.** Every complete day in the price sensor is stored as 24 hourly averages, together with that day's solar forecast (kWh), in `hesc-data/price_history.json` (last 90 days).
+- **Profile.** The hourly pattern of the last 14 full days (fewer when there is less history; from 1 full day on).
+- **Solar index.** How each hour relates to the day average, per *solar class* (the day's solar forecast as a fraction of a sunny day: the 90th percentile of the last 30 days). The index starts from a default for the Dutch market (293 days of market prices) and is refined every week with your own history; the default counts as 30 days of evidence. The forecast adds half of the index difference between tomorrow's solar class and that of the profile days.
+- **Output.** 96 quarters after the last known price, published as `sensor.hesc_price_forecast` (attribute `forecast`, plus `basis_days`, `index_days`, `penalty`).
+
+The charge plan template uses these quarters after the last known price, with a 2 ct/kWh penalty, so it only waits for an expected price when that is clearly cheaper than a known one. They show as grey *Expected price* bars in the price chart. The safety net and the final check still make sure the deadline is met.
 
 ## Advisor
 
