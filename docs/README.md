@@ -9,3 +9,4 @@
 | [05 Chargers and sources](05-chargers-and-sources.md) | What HESC needs from your charger, forecast and (optional) weather station; tested setup; source reliability |
 | [06 A day in practice](06-a-day-in-practice.md) | One real day with a home battery (HBC), HPVC and HESC: what each part did and why |
 | [07 Smart charging explained](07-smart-charging-explained.md) · [Nederlands](07-smart-charging-explained.nl.md) | For everyone: what HESC does between plugging in and leaving, the order it follows, and what to do in common situations |
+| [08 The dashboard explained](08-dashboard.md) · [Nederlands](08-dashboard.nl.md) | Numbered screenshots of the Main, Charge plan and Settings tabs, with what every part does |
