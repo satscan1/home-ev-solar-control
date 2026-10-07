@@ -64,7 +64,7 @@ HPVC v1.5.1 treats the request as a question, not a command. It waits behind its
 
 ## Charge plan
 
-The plan itself is a Home Assistant template (`sensor.hesc_charge_plan`, attribute `plan`): active plan (one-off or weekly, the earliest wins), goal, deadline, energy needed (battery level × usable capacity), the part expected from the sun (`solar_kwh`), the rest from the grid (`grid_kwh`), the number of quarters that takes at the grid charging power, and the cheapest known quarters before the deadline (`planned`), taken from the price sensor in `input_text.hesc_price_sensor`. It is recalculated every minute and whenever a plan setting changes.
+The plan itself is a Home Assistant template (`sensor.hesc_charge_plan`, attribute `plan`): active plan (one-off or weekly, the earliest wins; a one-off plan gets a fixed deadline the moment you choose its day and time, so *Tomorrow* does not roll on at midnight, and it stops after that deadline), goal, deadline, energy needed (battery level × usable capacity), the part expected from the sun (`solar_kwh`), the rest from the grid (`grid_kwh`), the number of quarters that takes at the grid charging power, and the cheapest known quarters before the deadline (`planned`), taken from the price sensor in `input_text.hesc_price_sensor`. It is recalculated every minute and whenever a plan setting changes.
 
 **Sun in the plan.** For every half hour between now and the deadline the plan reads the cautious solar forecast (`pv_estimate10`, kW) from the two solar forecast sensors (today and tomorrow). A half hour counts with the same rule as the *Expected solar charging* bar: at or above the start threshold the charger can start, after that at or above the hold threshold it keeps charging. Such a half hour adds (forecast − 0.4 kW for the house) × 0.5 h, at most the grid charging power. Example: 2.0 kW forecast gives (2.0 − 0.4) × 0.5 = 0.8 kWh. What the sun cannot deliver is planned from the grid.
 
@@ -88,17 +88,39 @@ How it starts follows from what is filled in: a start/stop switch is switched on
 
 **3% margin.** Grid charging (planned quarter, safety net, final check, cheap chance) only starts when the EV is more than 3% below the goal; once charging, it continues to the goal. This stops the charger from starting for a few minutes of nothing.
 
-**Afterwards: paused.** With a start/stop switch that was on before HESC started, the charger stays paused after grid charging, so the EV cannot top itself up from the grid. HESC switches it on again when there is enough sun to start solar charging (cautious forecast now at or above the start threshold, sun up), when the EV drops more than 3% below the goal (plan goal, otherwise *EV counts as full at*) and no planned charge is still coming, when a plan starts, or when the EV is unplugged. A refused pause is retried after 30 minutes, a refused resume after 5 minutes, each at most 3 times (`pause_retry`, `pause_failed`, `resume_retry`, `resume_failed` in the history). With a mode value the mode that was active before is selected again (or the first solar value).
+**Afterwards: back to solar mode.** With a start/stop switch and `input_text.hesc_charger_resume_entity` (*Back to solar mode*, e.g. Wallbox *Resume schedule*) filled in, HESC pauses the charger after grid charging and presses *Back to solar mode* about a minute later, so the charger waits in its own solar mode again (`charger_resume` in the history). A plain *resume* is not used for this: on a Wallbox it starts full charging from the grid.
+
+**Afterwards: paused.** With only a start/stop switch that was on before HESC started, the charger stays paused after grid charging, so the EV cannot top itself up from the grid. HESC switches it on again when there is enough sun to start solar charging (cautious forecast now at or above the start threshold, sun up), when the EV drops more than 3% below the goal (plan goal, otherwise *EV counts as full at*) and no planned charge is still coming, when a plan starts, or when the EV is unplugged. A refused pause is retried after 30 minutes, a refused resume after 5 minutes, each at most 3 times (`pause_retry`, `pause_failed`, `resume_retry`, `resume_failed` in the history). With a mode value the mode that was active before is selected again (or the first solar value).
 
 **Cheap chances and the sun.** Before taking a cheap chance HESC adds up the cautious solar forecast for the rest of that calendar day (half hours at or above the hold threshold, minus 0.4 kW for the house, at most the grid charging power). If that covers what the EV still needs (to the plan goal, otherwise *EV counts as full at*) with 20% to spare, the cheap chance is skipped. The price chart leaves those quarters out too.
 
 **Minimum charge** (optional, `input_boolean.hesc_min_charge_enabled`). EV connected below the minimum level → a window of the set number of hours starts. HESC works out the quarters needed ((minimum − battery) × capacity ÷ grid charging power) and charges in the cheapest quarters of the window; at the end of the window the safety net starts, and without known prices it charges straight away. It stops at the minimum level and works independently of the charge plan. After a restart, `input_boolean.hesc_plan_owns_charging` tells HESC that it had started the charger, so it is put back.
 
-Every start and stop is written to the history (`type: charge_plan`).
+Every start and stop is written to the history (`type: charge_plan`), with the charger mode, the start/stop switch and the EV power on every record; a change of plan is written as `plan_changed`.
+
+**Goal unknown.** When the EV is not plugged in at the deadline, the goal check writes `goal_unknown` instead of a result.
 
 **Goal check.** At the deadline HESC compares the battery level with the goal. Below the goal: a notification inside Home Assistant (`persistent_notification`) and to the notify services in `input_text.hesc_notify_services`, and a `goal_missed` line in the history (otherwise `goal_check`).
 
 **Restarts.** While `sensor.hesc_charge_plan` is briefly missing (Home Assistant restart, template reload), the node keeps using the last valid plan for up to 10 minutes, so a running charge is not stopped.
+
+## Home battery and EV
+
+The *Home battery and EV (kickstart)* node in the Engine tab (optional, `input_boolean.hesc_kick_enabled`) runs on the same 30-second input as the charge plan and writes its status to `input_text.hesc_kick_status`. It never controls the home battery; it only starts the charger and reads the home battery level (`input_text.hesc_home_battery_soc_sensors`) and power (`input_text.hesc_home_battery_power_sensors`, positive = charging; several sensors comma separated are added up).
+
+**Kickstart** when all of these hold:
+
+- the EV is plugged in, waiting in solar mode, not charging and not full;
+- the home batteries have been charging above 500 W for 5 minutes;
+- the cautious forecast now is at or above the start threshold;
+- the sun left today minus 1.2 × what the home batteries still need to be full is at least *minimum sun left for the EV* (default 2 kWh);
+- no charge plan has the charger, no HPVC release is running, the sun is up, fewer than *kickstarts per day* (default 3) today and at least 30 minutes since the last one.
+
+The sequence: switch the charger on (start/stop switch) → pause as soon as the battery control sees the EV charging (with Home Battery Control: the EV sensor HBC itself uses for its EV load lock, `input_text.house_battery_strategy_ev_sensor_entity_id`; otherwise as soon as the EV draws power) → about 40 seconds → *Back to solar mode*. The charger's own solar mode must then charge on sun within 6–8 minutes. A start that does not take is tried once more.
+
+**Back to the home battery** when the EV has been charging on sun for 10 minutes or more and the sun left today is at most 1.2 × what the home batteries still need: pause → about 1 minute → *Back to solar mode*, and no new kickstart that day. Not while an active plan still needs the charge.
+
+Every step is written to the history as `type: home_battery_ev`; the report and the Advisor leave those records out of the solar sessions.
 
 ## Price forecast
 

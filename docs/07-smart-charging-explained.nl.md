@@ -43,7 +43,7 @@ Voor alles hierboven gelden een paar regels:
 
 - **3% marge.** HESC laadt pas van het net als de auto meer dan 3% onder het doel zit. Een auto op 78% met een doel van 80% blijft met rust; op 76,9% wordt er geladen. Zo start de laadpaal niet voor een paar minuten niets.
 - **HESC maakt alleen ongedaan wat het zelf startte.** Start je zelf met laden, of laadt de auto al op zon, dan laat HESC het met rust.
-- **Na het laden van het net blijft de laadpaal op pauze** (laadpalen met een start/stop-schakelaar). Anders kan de auto stilletjes in de dure avondpiek bijladen van het net. De laadpaal gaat weer aan als er genoeg zon is, als de auto meer dan 3% onder het doel zakt en er geen geplande lading meer komt, als een plan start, of als je de stekker eruit haalt.
+- **Na het laden van het net blijft de laadpaal niet aan staan** (laadpalen met een start/stop-schakelaar). Anders kan de auto stilletjes in de dure avondpiek bijladen van het net. Is *Back to solar mode* ingevuld (Wallbox: *Resume schedule*; HESC vult dat zelf in), dan zet HESC de laadpaal op pauze en zet hem ongeveer een minuut later terug in zijn eigen zonnestand, zodat het volgende zonnige uur de auto vanzelf laadt. Zonder dat veld blijft de laadpaal op pauze, en zet HESC hem weer aan als er genoeg zon is, als de auto meer dan 3% onder het doel zakt en er geen geplande lading meer komt, als een plan start, of als je de stekker eruit haalt.
 
 ## Hoe het plan de goedkoopste uren kiest
 
@@ -62,6 +62,27 @@ De geplande kwartieren zie je **oranje** in de prijsgrafiek op het tabblad *Char
 
 Maar een goedkoop moment in de ochtend is geen koopje als de middagzon de auto gratis had kunnen vullen. Daarom kijkt HESC eerst naar de zonverwachting voor de rest van die dag. Dekt de zon naar verwachting wat de auto nog nodig heeft, met 20% over, dan wordt de goedkope kans overgeslagen. Je ziet dan *Cheap chance skipped: enough sun today*, en de prijsgrafiek laat die kwartieren weg.
 
+## Thuisbatterij en EV
+
+*Optioneel, standaard uit. Alleen voor huizen met een thuisbatterij.*
+
+Op een zonnige ochtend pakt de thuisbatterij meestal eerst alle zon die over is. De laadpaal in zonnestand ziet dan geen overschot en wacht, soms tot de thuisbatterij 's middags vol is. Op een dag met minder zon kan dat betekenen dat de auto niets krijgt.
+
+Met **Home battery and EV** aan helpt HESC de auto aan de beurt te komen:
+
+1. **Aftrap.** Hangt de auto aan de laadpaal en wacht hij op zon, laadt de thuisbatterij al een paar minuten en zegt de voorzichtige verwachting dat er nu genoeg zon is, dan kijkt HESC naar de rest van de dag. Is er duidelijk meer zon over dan de thuisbatterij nog nodig heeft (met 20% over, en minstens *Minimum sun left for the EV*)? Dan geeft HESC de laadpaal een korte start. Je batterijsysteem ziet de auto laden en stopt met het vullen van de thuisbatterij; daarna zet HESC de laadpaal terug in zijn eigen zonnestand, die blijft laden op de zon die nu vrijkomt.
+2. **Terug naar de thuisbatterij.** Later op de dag, als de resterende zon nog maar net genoeg is om de thuisbatterij te vullen, zet HESC de laadpaal weer op wachten, zodat de thuisbatterij 's avonds vol is. Daarna volgt die dag geen nieuwe aftrap.
+
+Tijdens de korte start kan de thuisbatterij heel even wat stroom aan de auto leveren. Dat is normaal en weinig.
+
+HESC stuurt de thuisbatterij nooit zelf. Het bepaalt alleen wanneer de auto start, en leest het niveau en het vermogen van de thuisbatterij. Het doet niets terwijl een laadplan laadt, tijdens een vrijgave van HPVC of na zonsondergang, en hoogstens een paar keer per dag (*Kickstarts per day*, standaard 3, met minstens 30 minuten ertussen).
+
+Wat je invult (Settings, blok 3, *Home battery and EV* → *Settings*): de niveausensor(en) van je thuisbatterij, de vermogenssensor(en) (positief = laden) en de totale grootte in kWh. Het heeft ook de start/stop-schakelaar van de laadpaal nodig en *Back to solar mode* (blok 3, *Charge plan*); bij laadpaaltype Wallbox worden die twee voor je ingevuld. Hangt de auto aan de laadpaal, dan laat Main in een extra regel onder *Control States* zien wat het doet.
+
+## Wat gaat het kosten?
+
+Het kadertje **Expected charge cost** bovenaan Main toont wat het actieve plan naar verwachting kost: de stroom die het van het net wil halen, keer de gemiddelde prijs van de geplande kwartieren. Zon telt als gratis. Zonder actief plan, of als de auto zijn doel al heeft, staat er € 0,00.
+
 ## Situaties
 
 ### "Ik rijd elke werkdag naar mijn werk"
@@ -72,6 +93,8 @@ Maak een **weekplan**: vink de dagen aan, zet je vertrektijd en het niveau dat j
 
 Maak een **eenmalig plan** voor zaterdag op je vertrektijd, bijvoorbeeld 100%. Staan een eenmalig plan en een weekplan allebei aan, dan gaat het vroegste voor. Daarna gaat je weekplan gewoon door.
 
+Een eenmalig plan geldt voor één datum. Kies je vandaag *Tomorrow*, dan betekent dat die datum: om middernacht schuift het niet door naar de dag erna. Na de tijd die je hebt gekozen, stopt het eenmalige plan vanzelf.
+
 ### "De auto blijft een paar dagen thuis"
 
 Geen plan nodig. De auto laadt op zon, pakt goedkope kansen als ze komen, en verder blijft de laadpaal op pauze. Pas als de auto meer dan 3% onder *EV counts as full at* zakt, laadt HESC hem bij.
@@ -79,6 +102,10 @@ Geen plan nodig. De auto laadt op zon, pakt goedkope kansen als ze komen, en ver
 ### "Ik kom thuis met een bijna lege accu en heb de auto vanavond misschien nog nodig"
 
 Zet **Minimumlading** aan (Settings, blok 3, *Use*). Standaard: minstens 20% binnen 3 uur. HESC kiest de goedkoopste kwartieren in die 3 uur, en laadt meteen als er geen prijzen bekend zijn. Beide getallen kun je aanpassen onder *Settings*.
+
+### "Ik heb een thuisbatterij en de auto krijgt nooit zon"
+
+Zet **Home battery and EV** aan (Settings, blok 3, *Use*) en vul je thuisbatterij in onder *Settings*. Zie [Thuisbatterij en EV](#thuisbatterij-en-ev) hierboven.
 
 ### "Ik heb de auto nu nodig, laat het plan maar"
 
@@ -118,11 +145,16 @@ HESC gebruikt het laatste geldige plan nog tot 10 minuten, zodat een lopende lad
 | EV counts as full at | tabblad *Charge plan* en Settings | 80% | Het niveau dat zonder plan wordt vastgehouden |
 | Final check | Settings | 60 min | Hoe lang voor vertrek HESC laadt, wat de prijs ook is |
 | Minimum charge | Settings, blok 3 | uit (20%, 3 uur) | Schakelaars Use + Settings |
+| Home battery and EV | Settings, blok 3 | uit (3 per dag) | Alleen met een thuisbatterij; schakelaars Use + Settings |
+| Back to solar mode | Settings, blok 3, *Charge plan* | ingevuld bij Wallbox | Zet de laadpaal na netladen terug in zijn eigen zonnestand |
 
 ## Waar je kijkt
 
 - **Status** op het dashboard: één regel met wat HESC nu doet en waarom.
 - **Prijsgrafiek** (tabblad *Charge plan*): oranje = gepland, blauwgroen = goedkope kans, grijs = verwachte prijs.
+- **Expected charge cost** (kadertje bovenaan Main): wat het actieve plan naar verwachting kost.
+- **Controle** (tabblad *Settings*): één regel per onderdeel met een vinkje en de waarden van nu. Klopt er iets niet, dan gaat dat onderdeel vanzelf open en zegt het wat er ontbreekt.
+- **Solar next 7 days** (tabblad *Settings*): geel is de verwachte zon per dag, groen wat er naar verwachting voor de auto overblijft na het huis en de thuisbatterij.
 - **Rapport**: alles wat HESC gemeten en besloten heeft, voor jezelf of als je om hulp vraagt.
 
 Zie ook (Engels): [How it works](03-how-it-works.md) voor de technische details, en [A day in practice](06-a-day-in-practice.md) voor één echte dag.

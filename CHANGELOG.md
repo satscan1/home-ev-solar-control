@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.4.0 — 2026-10-07
+
+**The sun shared between home battery and car.**
+
+Home battery and EV (optional)
+- New node *Home battery and EV (kickstart)* on the Engine tab. With a home battery, HESC gives the charger a short start when the EV waits in solar mode, the home batteries have been charging above 500 W for 5 minutes, the cautious forecast now is at or above the start threshold, and the sun left today minus 1.2 × what the home batteries still need is at least *minimum sun left for the EV* (default 2 kWh). Sequence: start → pause as soon as the battery control sees the EV (HBC's own EV sensor when set, otherwise EV power) → ~40 s → *Back to solar mode*. A start that does not take is tried once more.
+- Back to the home battery: when the EV has charged on sun for 10 minutes or more and the sun left today is at most 1.2 × what the home batteries still need, HESC pauses the charger, returns it to solar mode, and makes no new kickstart that day.
+- At most *kickstarts per day* (default 3), at least 30 minutes apart; nothing while a charge plan has the charger, during an HPVC release or after sunset. HESC never controls the home battery.
+- New helpers `input_boolean.hesc_kick_enabled`, `hesc_show_kick_settings`, `input_text.hesc_home_battery_soc_sensors`, `hesc_home_battery_power_sensors`, `hesc_kick_status`, `input_number.hesc_home_battery_kwh`, `hesc_kick_max_per_day`, `hesc_kick_min_ev_kwh`. History type `home_battery_ev` (left out of the solar sessions in the report and the Advisor). Status line on Main under *Control States* while the EV is plugged in.
+
+Charge plan
+- New optional *Back to solar mode* (`input_text.hesc_charger_resume_entity`): after grid charging HESC pauses the charger and presses it about a minute later, so the charger returns to its own solar mode. Wallbox: *Resume schedule*, filled in by the charger search. Without it the charger stays paused as before.
+- One-off plan: the deadline is fixed when you choose the day and time; *Tomorrow* no longer rolls on at midnight, and the plan stops after its deadline.
+- Goal check writes `goal_unknown` instead of `ok` when the EV is not plugged in.
+- History: charger mode, start/stop switch and EV power on every record; `plan_changed` when a plan changes.
+- New `sensor.hesc_expected_charge_cost` (EUR): grid kWh of the active plan × the average planned price, sun counted as free. Shown as the *Expected charge cost* badge on Main.
+
+Settings
+- Checks per block: `binary_sensor.hesc_check_charger`, `…_sources`, `…_weather_station`, `…_charge_plan`, `…_home_battery_and_ev` (on = OK, attribute `missing`). Fields stay closed while a check is OK and open by themselves when it fails; *Charger fields* (`input_boolean.hesc_show_charger_fields`) opens the charger fields.
+- One compact setup check (*Setup verified · all OK*), a read-only *Your settings* card and a *Solar next 7 days* chart (expected sun, and what is left for the EV after the house and the home battery).
+- PV/grid, forecast and HPVC behind one switch, *Change sources*.
+- New default thresholds for new installations: forecast 2 000 / 1 500 W, weather station 220 / 160 W/m² (from 33 solar starts on 8 days). Existing installations keep their values.
+
+Dashboard
+- All cards grow with their content (no fixed heights, no scroll bars inside cards).
+- The guide (dashboard and docs/07, English and Dutch) covers home battery and EV, back to solar mode, the fixed date of a one-off plan, the expected charge cost and the setup check.
+
+Upgrade from v1.3.0: replace `hesc_config.yaml` and the dashboard, re-import the flow, reload helpers, template entities and automations (or restart Home Assistant). Wallbox: press *Search again* to fill in *Back to solar mode*. See the [release notes](releases/v1.4.0/release.md).
+
 ## v1.3.0 — 2026-10-03
 
 **Smart charging, almost on autopilot.**

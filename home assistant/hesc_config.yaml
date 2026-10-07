@@ -1,6 +1,6 @@
 # =============================================================================
 # Home EV Solar Control (HESC) — Home Assistant package 
-# Version: v1.3.0 (2026-10-03)
+# Version: v1.4.0 (2026-10-07)
 # Project tag: [WALLBOX] [PV] 
 #
 # Works alongside Home PV Control (HPVC):
@@ -120,12 +120,32 @@ input_boolean:
   hesc_show_advice:
     name: "HESC show advice settings"
     icon: mdi:lightbulb-on-outline
+  # v1.4.0: home battery <-> EV. With enough sun left today for the home batteries,
+  # HESC gives the charger a short kick (start, pause, back to solar) so it takes the surplus before the home
+  # batteries do. When the sun left today is only just enough to fill the home batteries, the EV is paused
+  # and the charger goes back to waiting for sun, so the home batteries can charge.
+  hesc_kick_enabled:
+    name: "HESC home battery and EV (kickstart)"
+    icon: mdi:battery-arrow-up-outline
+  # v1.4.0: Settings — open the charger fields / the home battery and EV settings
+  # (they also open by themselves when the configuration check finds a problem)
+  hesc_show_charger_fields:
+    name: "HESC show charger fields"
+    icon: mdi:form-textbox
+  hesc_show_kick_settings:
+    name: "HESC show home battery and EV settings"
+    icon: mdi:tune-vertical
 
 input_text:
   # Charge plan: fill in ONE of these. A start/stop switch (on = charge; afterwards back to its previous state)
   # or the value of the charger mode entity that means "charge now" (afterwards back to the previous mode)
   hesc_charger_start_stop_entity:
     name: "HESC charger start/stop entity"
+    max: 255
+  # v1.4.0: button/switch that puts the charger back in its own (solar) mode after grid charging
+  # (Wallbox: "resume schedule" = "Resume" in the Wallbox app; the start/stop switch = "Start")
+  hesc_charger_resume_entity:
+    name: "HESC charger back-to-solar entity"
     max: 255
   hesc_charger_grid_mode_value:
     name: "HESC charger 'charge now' mode value"
@@ -233,6 +253,17 @@ input_text:
   hesc_advice_updated:
     name: "HESC advice updated"
     max: 64
+  # v1.4.0: home battery <-> EV. Comma-separated sensors, one per home battery.
+  # Power: positive = charging (as HBC shows it).
+  hesc_home_battery_soc_sensors:
+    name: "HESC home battery level sensors"
+    max: 255
+  hesc_home_battery_power_sensors:
+    name: "HESC home battery power sensors"
+    max: 255
+  hesc_kick_status:
+    name: "HESC home battery and EV status"
+    max: 255
 
 input_number:
   hesc_plan_opportunity_price:
@@ -412,6 +443,30 @@ input_number:
     unit_of_measurement: "W"
     icon: mdi:flash
     mode: box
+  # v1.4.0: home battery <-> EV
+  hesc_home_battery_kwh:
+    name: "HESC home battery size (all together)"
+    min: 0
+    max: 100
+    step: 0.01
+    unit_of_measurement: "kWh"
+    icon: mdi:home-battery
+    mode: box
+  hesc_kick_max_per_day:
+    name: "HESC kickstarts per day (max)"
+    min: 1
+    max: 10
+    step: 1
+    icon: mdi:counter
+    mode: box
+  hesc_kick_min_ev_kwh:
+    name: "HESC kickstart: minimum sun left for the EV"
+    min: 0.5
+    max: 20
+    step: 0.5
+    unit_of_measurement: "kWh"
+    icon: mdi:car-electric
+    mode: box
 
 template:
   # Diagnostic mirrors of the selected sources (same idea as the hpvc_diag_* sensors).
@@ -550,7 +605,7 @@ template:
                 searched on the same device; only filled in when exactly one match is found.
                 Based on the integrations' source code; only Wallbox has been tested in practice. -#}
             {%- set T = {
-              'Wallbox': {'values': 'eco_mode, full_solar', 'nc': 'Ready, Disconnected', 'mode': '^select\\..*_solar_charging$', 'conn': '_status_description$', 'power': '_charging_power$', 'switch': '', 'startstop': '^switch\\.', 'tested': true, 'note': 'Official Wallbox integration. Tested with a Pulsar Plus.'},
+              'Wallbox': {'values': 'eco_mode, full_solar', 'nc': 'Ready, Disconnected', 'mode': '^select\\..*_solar_charging$', 'conn': '_status_description$', 'power': '_charging_power$', 'switch': '', 'startstop': '^switch\\.', 'resume': '^button\\..*_resume_schedule$', 'tested': true, 'note': 'Official Wallbox integration. Tested with a Pulsar Plus.'},
               'Alfen Eve': {'values': 'Green', 'nc': 'Available', 'mode': '^select\\..*_solar_charging_mode$', 'conn': '_status_code_socket_1$', 'power': '_active_power_total_socket_1$', 'switch': '', 'tested': false, 'note': 'Needs a meter on the Alfen load balancing.'},
               'Peblar': {'values': 'pure_solar', 'nc': 'no_ev_connected', 'mode': '^select\\..*_smart_charging$', 'conn': '_state$', 'power': '_power$', 'switch': '', 'tested': false, 'note': ''},
               'myenergi Zappi': {'values': 'Eco+', 'nc': 'EV Disconnected', 'mode': '^select\\.myenergi_.*_charge_mode$', 'conn': '_plug_status$', 'power': '', 'switch': '', 'tested': false, 'note': 'Charging power: pick the Zappi internal-load CT power sensor yourself.'},
@@ -583,8 +638,9 @@ template:
             {%- if conn | count == 0 -%}{%- set conn = near | select('match', '^sensor\\.') | select('search', '(status|state|plug|car|connect)') | reject('search', '(power|energy|current|voltage)') | reject('is_state_attr', 'state_class', 'measurement') | list -%}{%- endif -%}
             {%- set sw = near | select('search', p.switch) | list if p.switch else [] -%}
             {%- set ss = near | select('search', p.startstop) | list if p.get('startstop') else [] -%}
+            {%- set rs = near | select('search', p.resume) | list if p.get('resume') else [] -%}
             {{ {'type': type, 'known': true, 'values': p['values'], 'not_connected': p.nc, 'tested': p.tested, 'note': p.note,
-                'mode': modes, 'connected': conn[:5], 'power': power[:5], 'switch': sw[:5], 'startstop': ss[:5]} }}
+                'mode': modes, 'connected': conn[:5], 'power': power[:5], 'switch': sw[:5], 'startstop': ss[:5], 'resume': rs[:5]} }}
             {%- endif -%}
   # --- Charge plan: calculates the plan; the Node-RED "Charge plan" node acts on it ---
   - triggers:
@@ -596,6 +652,7 @@ template:
           - input_select.hesc_plan_time
           - input_select.hesc_plan_goal
           - input_boolean.hesc_plan_enabled
+          - input_datetime.hesc_plan_deadline
           - input_number.hesc_ev_battery_kwh
           - input_number.hesc_plan_charge_kw
           - input_boolean.hesc_rep_enabled
@@ -618,11 +675,11 @@ template:
           {%- set day = states('input_select.hesc_plan_day') -%}
           {%- set base = today_at(states('input_select.hesc_plan_time')) -%}
           {%- if day == 'Today' -%}{%- set off = 0 -%}{%- elif day == 'Tomorrow' -%}{%- set off = 1 -%}{%- elif day in wds -%}{%- set off = (wds.index(day) - now().weekday()) % 7 -%}{%- if off == 0 and base <= now() -%}{%- set off = 7 -%}{%- endif -%}{%- else -%}{%- set off = 1 -%}{%- endif -%}
-          {%- set one_dl = base + timedelta(days=off) -%}
+          {%- set fx_ts = state_attr('input_datetime.hesc_plan_deadline', 'timestamp') | float(0) -%}{#- v1.4.0: one-off deadline fixed when day/time is chosen -#}{%- set one_dl = (fx_ts | as_datetime | as_local) if fx_ts > (as_timestamp(now()) - 400 * 86400) else base + timedelta(days=off) -%}
           {%- set rb = today_at(states('input_select.hesc_rep_time')) -%}
           {%- set rp = namespace(dl=none) -%}
           {%- for i in range(0, 8) -%}{%- set d = rb + timedelta(days=i) -%}{%- if rp.dl is none and d > now() and is_state('input_boolean.hesc_rep_' ~ (wds[d.weekday()] | lower), 'on') -%}{%- set rp.dl = d -%}{%- endif -%}{%- endfor -%}
-          {%- set one_on = is_state('input_boolean.hesc_plan_enabled', 'on') -%}
+          {%- set one_on = is_state('input_boolean.hesc_plan_enabled', 'on') and one_dl > now() -%}
           {%- set rep_on = is_state('input_boolean.hesc_rep_enabled', 'on') and rp.dl is not none -%}
           {%- if rep_on and (not one_on or rp.dl < one_dl) -%}{%- set dl = rp.dl -%}{%- set src = 'repeating' -%}{%- set goal_sel = states('input_select.hesc_rep_goal') -%}{%- else -%}{%- set dl = one_dl -%}{%- set src = 'one-off' -%}{%- set goal_sel = states('input_select.hesc_plan_goal') -%}{%- endif -%}
           {{ dl.isoformat() }}
@@ -632,11 +689,11 @@ template:
             {%- set day = states('input_select.hesc_plan_day') -%}
             {%- set base = today_at(states('input_select.hesc_plan_time')) -%}
             {%- if day == 'Today' -%}{%- set off = 0 -%}{%- elif day == 'Tomorrow' -%}{%- set off = 1 -%}{%- elif day in wds -%}{%- set off = (wds.index(day) - now().weekday()) % 7 -%}{%- if off == 0 and base <= now() -%}{%- set off = 7 -%}{%- endif -%}{%- else -%}{%- set off = 1 -%}{%- endif -%}
-            {%- set one_dl = base + timedelta(days=off) -%}
+            {%- set fx_ts = state_attr('input_datetime.hesc_plan_deadline', 'timestamp') | float(0) -%}{#- v1.4.0: one-off deadline fixed when day/time is chosen -#}{%- set one_dl = (fx_ts | as_datetime | as_local) if fx_ts > (as_timestamp(now()) - 400 * 86400) else base + timedelta(days=off) -%}
             {%- set rb = today_at(states('input_select.hesc_rep_time')) -%}
             {%- set rp = namespace(dl=none) -%}
             {%- for i in range(0, 8) -%}{%- set d = rb + timedelta(days=i) -%}{%- if rp.dl is none and d > now() and is_state('input_boolean.hesc_rep_' ~ (wds[d.weekday()] | lower), 'on') -%}{%- set rp.dl = d -%}{%- endif -%}{%- endfor -%}
-            {%- set one_on = is_state('input_boolean.hesc_plan_enabled', 'on') -%}
+            {%- set one_on = is_state('input_boolean.hesc_plan_enabled', 'on') and one_dl > now() -%}
             {%- set rep_on = is_state('input_boolean.hesc_rep_enabled', 'on') and rp.dl is not none -%}
             {%- if rep_on and (not one_on or rp.dl < one_dl) -%}{%- set dl = rp.dl -%}{%- set src = 'repeating' -%}{%- set goal_sel = states('input_select.hesc_rep_goal') -%}{%- else -%}{%- set dl = one_dl -%}{%- set src = 'one-off' -%}{%- set goal_sel = states('input_select.hesc_plan_goal') -%}{%- endif -%}
             {%- set soc_e = states('input_text.hesc_ev_soc_sensor') | trim -%}
@@ -649,8 +706,8 @@ template:
                 pv_estimate10 in kW). Same rule as the 'Expected solar charging' bar: >= start threshold starts,
                 then >= hold threshold keeps charging. Per half hour (forecast - 0.4 kW house) x 0.5 h, max. the
                 charging power. The rest comes from the grid in the cheapest quarters. -#}
-            {%- set pstart = states('input_number.hesc_p_start') | float(1500) -%}
-            {%- set phold = states('input_number.hesc_p_hold') | float(1200) -%}
+            {%- set pstart = states('input_number.hesc_p_start') | float(2000) -%}
+            {%- set phold = states('input_number.hesc_p_hold') | float(1500) -%}
             {%- set sol = namespace(kwh=0, phase='') -%}
             {%- for se in [states('input_text.hesc_solar_today_sensor') | trim, states('input_text.hesc_solar_tomorrow_sensor') | trim] -%}
             {%- for r in (state_attr(se, 'detailedForecast') or []) if se not in ['', 'unknown', 'unavailable'] -%}
@@ -686,6 +743,159 @@ template:
                 'charge_time': '%d:%02d' | format((hrs | int), ((hrs * 60) | int) % 60), 'kw': kw, 'avg_price_ct': avg,
                 'planned': pl.items, 'prices_complete': (pr.last is not none and as_datetime(pr.last) >= dl),
                 'prices_until': as_datetime(pr.last).isoformat() if pr.last is not none else none, 'planned_forecast': pf.items, 'forecast_until': as_datetime(fcn.last).isoformat() if fcn.last is not none else none, 'deadline': dl.isoformat(), 'source': src, 'active': one_on or rep_on, 'deadline_text': dl.strftime('%a %d-%m %H:%M') } | tojson }}
+  # v1.4.0: configuration checks per settings block (on = OK). The Settings page closes a block when its
+  # check is OK and opens it by itself when something is wrong. Attribute "missing" says what is wrong.
+  - binary_sensor:
+      - name: "HESC check charger"
+        unique_id: hesc_check_charger
+        icon: mdi:ev-station
+        state: >-
+          {%- macro bad(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none or states(e) == 'unavailable' }}{%- endmacro -%}{%- macro gone(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none }}{%- endmacro -%}
+          {%- set ns = namespace(m=[]) -%}
+          {%- for t, label in [('input_text.hesc_ev_connected_sensor', 'EV connected sensor'), ('input_text.hesc_ev_power_sensor', 'charging power sensor'), ('input_text.hesc_charger_mode_entity', 'charger mode entity')] -%}
+          {%- if bad(states(t) | trim) == 'True' -%}{%- set ns.m = ns.m + [label] -%}{%- endif -%}
+          {%- endfor -%}
+          {%- if (states('input_text.hesc_charger_eco_value') | trim) in ['', 'unknown', 'unavailable'] -%}{%- set ns.m = ns.m + ['solar mode value'] -%}{%- endif -%}
+          {{ ns.m | count == 0 }}
+        attributes:
+          missing: >-
+            {%- macro bad(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none or states(e) == 'unavailable' }}{%- endmacro -%}{%- macro gone(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none }}{%- endmacro -%}
+            {%- set ns = namespace(m=[]) -%}
+            {%- for t, label in [('input_text.hesc_ev_connected_sensor', 'EV connected sensor'), ('input_text.hesc_ev_power_sensor', 'charging power sensor'), ('input_text.hesc_charger_mode_entity', 'charger mode entity')] -%}
+            {%- if bad(states(t) | trim) == 'True' -%}{%- set ns.m = ns.m + [label] -%}{%- endif -%}
+            {%- endfor -%}
+            {%- if (states('input_text.hesc_charger_eco_value') | trim) in ['', 'unknown', 'unavailable'] -%}{%- set ns.m = ns.m + ['solar mode value'] -%}{%- endif -%}
+            {{ ns.m | join(', ') }}
+      - name: "HESC check sources"
+        unique_id: hesc_check_sources
+        icon: mdi:solar-power-variant
+        state: >-
+          {%- macro bad(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none or states(e) == 'unavailable' }}{%- endmacro -%}{%- macro gone(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none }}{%- endmacro -%}
+          {%- set ns = namespace(m=[]) -%}
+          {%- if bad(states('input_text.hesc_pv_power_sensor') | trim) == 'True' -%}{%- set ns.m = ns.m + ['PV power sensor'] -%}{%- endif -%}
+          {%- set g = states('input_text.hesc_grid_power_sensor') | trim -%}
+          {%- if g not in ['', 'unknown'] and bad(g) == 'True' -%}{%- set ns.m = ns.m + ['grid power sensor'] -%}{%- endif -%}
+          {%- set fc = states('input_text.hesc_forecast_now_sensor') | trim -%}{%- set fa = states('input_text.hesc_forecast_attribute') | trim -%}
+          {%- if bad(fc) == 'True' or (fa not in ['', 'unknown', 'unavailable'] and state_attr(fc, fa) is none) -%}{%- set ns.m = ns.m + ['solar forecast'] -%}{%- endif -%}
+          {%- if is_state('input_boolean.hesc_standalone', 'off') -%}
+          {%- for t in ['input_text.hesc_hpvc_enabled_entity', 'input_text.hesc_hpvc_limited_entity'] -%}
+          {%- if bad(states(t) | trim) == 'True' and 'HPVC entities' not in ns.m -%}{%- set ns.m = ns.m + ['HPVC entities'] -%}{%- endif -%}
+          {%- endfor -%}
+          {%- endif -%}
+          {{ ns.m | count == 0 }}
+        attributes:
+          missing: >-
+            {%- macro bad(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none or states(e) == 'unavailable' }}{%- endmacro -%}{%- macro gone(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none }}{%- endmacro -%}
+            {%- set ns = namespace(m=[]) -%}
+            {%- if bad(states('input_text.hesc_pv_power_sensor') | trim) == 'True' -%}{%- set ns.m = ns.m + ['PV power sensor'] -%}{%- endif -%}
+            {%- set g = states('input_text.hesc_grid_power_sensor') | trim -%}
+            {%- if g not in ['', 'unknown'] and bad(g) == 'True' -%}{%- set ns.m = ns.m + ['grid power sensor'] -%}{%- endif -%}
+            {%- set fc = states('input_text.hesc_forecast_now_sensor') | trim -%}{%- set fa = states('input_text.hesc_forecast_attribute') | trim -%}
+            {%- if bad(fc) == 'True' or (fa not in ['', 'unknown', 'unavailable'] and state_attr(fc, fa) is none) -%}{%- set ns.m = ns.m + ['solar forecast'] -%}{%- endif -%}
+            {%- if is_state('input_boolean.hesc_standalone', 'off') -%}
+            {%- for t in ['input_text.hesc_hpvc_enabled_entity', 'input_text.hesc_hpvc_limited_entity'] -%}
+            {%- if bad(states(t) | trim) == 'True' and 'HPVC entities' not in ns.m -%}{%- set ns.m = ns.m + ['HPVC entities'] -%}{%- endif -%}
+            {%- endfor -%}
+            {%- endif -%}
+            {{ ns.m | join(', ') }}
+      - name: "HESC check weather station"
+        unique_id: hesc_check_weather
+        icon: mdi:weather-sunny
+        state: >-
+          {%- macro bad(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none or states(e) == 'unavailable' }}{%- endmacro -%}{%- macro gone(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none }}{%- endmacro -%}
+          {%- set ns = namespace(m=[]) -%}
+          {%- if is_state('input_boolean.hesc_use_irradiance', 'on') -%}
+          {%- set e = states('input_text.hesc_irradiance_sensor') | trim -%}
+          {%- if bad(e) == 'True' or states(e) | float(none) is none -%}{%- set ns.m = ns.m + ['irradiance sensor'] -%}{%- endif -%}
+          {%- endif -%}
+          {{ ns.m | count == 0 }}
+        attributes:
+          missing: >-
+            {%- macro bad(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none or states(e) == 'unavailable' }}{%- endmacro -%}{%- macro gone(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none }}{%- endmacro -%}
+            {%- set ns = namespace(m=[]) -%}
+            {%- if is_state('input_boolean.hesc_use_irradiance', 'on') -%}
+            {%- set e = states('input_text.hesc_irradiance_sensor') | trim -%}
+            {%- if bad(e) == 'True' or states(e) | float(none) is none -%}{%- set ns.m = ns.m + ['irradiance sensor'] -%}{%- endif -%}
+            {%- endif -%}
+            {{ ns.m | join(', ') }}
+      - name: "HESC check charge plan"
+        unique_id: hesc_check_plan
+        icon: mdi:calendar-clock
+        state: >-
+          {%- macro bad(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none or states(e) == 'unavailable' }}{%- endmacro -%}{%- macro gone(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none }}{%- endmacro -%}
+          {%- set ns = namespace(m=[]) -%}
+          {%- set ss = states('input_text.hesc_charger_start_stop_entity') | trim -%}{%- set gm = states('input_text.hesc_charger_grid_mode_value') | trim -%}
+          {%- if gone(ss) == 'True' and gm in ['', 'unknown', 'unavailable'] -%}{%- set ns.m = ns.m + ['start/stop switch or charge-now value'] -%}{%- endif -%}
+          {%- set rs = states('input_text.hesc_charger_resume_entity') | trim -%}
+          {%- if rs not in ['', 'unknown'] and gone(rs) == 'True' -%}{%- set ns.m = ns.m + ['back-to-solar entity'] -%}{%- endif -%}
+          {%- set p = states('input_text.hesc_price_sensor') | trim -%}
+          {%- if bad(p) == 'True' or state_attr(p, 'raw_today') is none -%}{%- set ns.m = ns.m + ['price sensor'] -%}{%- endif -%}
+          {%- if bad(states('input_text.hesc_solar_today_sensor') | trim) == 'True' -%}{%- set ns.m = ns.m + ['solar forecast today'] -%}{%- endif -%}
+          {{ ns.m | count == 0 }}
+        attributes:
+          missing: >-
+            {%- macro bad(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none or states(e) == 'unavailable' }}{%- endmacro -%}{%- macro gone(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none }}{%- endmacro -%}
+            {%- set ns = namespace(m=[]) -%}
+            {%- set ss = states('input_text.hesc_charger_start_stop_entity') | trim -%}{%- set gm = states('input_text.hesc_charger_grid_mode_value') | trim -%}
+            {%- if gone(ss) == 'True' and gm in ['', 'unknown', 'unavailable'] -%}{%- set ns.m = ns.m + ['start/stop switch or charge-now value'] -%}{%- endif -%}
+            {%- set rs = states('input_text.hesc_charger_resume_entity') | trim -%}
+            {%- if rs not in ['', 'unknown'] and gone(rs) == 'True' -%}{%- set ns.m = ns.m + ['back-to-solar entity'] -%}{%- endif -%}
+            {%- set p = states('input_text.hesc_price_sensor') | trim -%}
+            {%- if bad(p) == 'True' or state_attr(p, 'raw_today') is none -%}{%- set ns.m = ns.m + ['price sensor'] -%}{%- endif -%}
+            {%- if bad(states('input_text.hesc_solar_today_sensor') | trim) == 'True' -%}{%- set ns.m = ns.m + ['solar forecast today'] -%}{%- endif -%}
+            {{ ns.m | join(', ') }}
+      - name: "HESC check home battery and EV"
+        unique_id: hesc_check_kick
+        icon: mdi:battery-arrow-up-outline
+        state: >-
+          {%- macro bad(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none or states(e) == 'unavailable' }}{%- endmacro -%}{%- macro gone(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none }}{%- endmacro -%}
+          {%- set ns = namespace(m=[]) -%}
+          {%- if is_state('input_boolean.hesc_kick_enabled', 'on') -%}
+          {%- set socs = (states('input_text.hesc_home_battery_soc_sensors') | trim).split(',') | map('trim') | reject('in', ['', 'unknown', 'unavailable']) | list -%}
+          {%- set pws = (states('input_text.hesc_home_battery_power_sensors') | trim).split(',') | map('trim') | reject('in', ['', 'unknown', 'unavailable']) | list -%}
+          {%- if socs | count == 0 or socs | select('is_state', 'unavailable') | list | count > 0 or socs | map('state_attr', 'friendly_name') | select('none') | list | count > 0 -%}{%- set ns.m = ns.m + ['home battery level sensors'] -%}{%- endif -%}
+          {%- if pws | count == 0 or pws | select('is_state', 'unavailable') | list | count > 0 or pws | map('state_attr', 'friendly_name') | select('none') | list | count > 0 -%}{%- set ns.m = ns.m + ['home battery power sensors'] -%}{%- endif -%}
+          {%- if states('input_number.hesc_home_battery_kwh') | float(0) <= 0 -%}{%- set ns.m = ns.m + ['home battery size'] -%}{%- endif -%}
+          {%- set ss = states('input_text.hesc_charger_start_stop_entity') | trim -%}
+          {%- if gone(ss) == 'True' or ss.startswith('button.') -%}{%- set ns.m = ns.m + ['start/stop switch (Charge plan)'] -%}{%- endif -%}
+          {%- if gone(states('input_text.hesc_charger_resume_entity') | trim) == 'True' -%}{%- set ns.m = ns.m + ['back-to-solar entity (Charge plan)'] -%}{%- endif -%}
+          {%- endif -%}
+          {{ ns.m | count == 0 }}
+        attributes:
+          missing: >-
+            {%- macro bad(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none or states(e) == 'unavailable' }}{%- endmacro -%}{%- macro gone(e) -%}{{ e in ['', 'unknown', 'unavailable'] or state_attr(e, 'friendly_name') is none }}{%- endmacro -%}
+            {%- set ns = namespace(m=[]) -%}
+            {%- if is_state('input_boolean.hesc_kick_enabled', 'on') -%}
+            {%- set socs = (states('input_text.hesc_home_battery_soc_sensors') | trim).split(',') | map('trim') | reject('in', ['', 'unknown', 'unavailable']) | list -%}
+            {%- set pws = (states('input_text.hesc_home_battery_power_sensors') | trim).split(',') | map('trim') | reject('in', ['', 'unknown', 'unavailable']) | list -%}
+            {%- if socs | count == 0 or socs | select('is_state', 'unavailable') | list | count > 0 or socs | map('state_attr', 'friendly_name') | select('none') | list | count > 0 -%}{%- set ns.m = ns.m + ['home battery level sensors'] -%}{%- endif -%}
+            {%- if pws | count == 0 or pws | select('is_state', 'unavailable') | list | count > 0 or pws | map('state_attr', 'friendly_name') | select('none') | list | count > 0 -%}{%- set ns.m = ns.m + ['home battery power sensors'] -%}{%- endif -%}
+            {%- if states('input_number.hesc_home_battery_kwh') | float(0) <= 0 -%}{%- set ns.m = ns.m + ['home battery size'] -%}{%- endif -%}
+            {%- set ss = states('input_text.hesc_charger_start_stop_entity') | trim -%}
+            {%- if gone(ss) == 'True' or ss.startswith('button.') -%}{%- set ns.m = ns.m + ['start/stop switch (Charge plan)'] -%}{%- endif -%}
+            {%- if gone(states('input_text.hesc_charger_resume_entity') | trim) == 'True' -%}{%- set ns.m = ns.m + ['back-to-solar entity (Charge plan)'] -%}{%- endif -%}
+            {%- endif -%}
+            {{ ns.m | join(', ') }}
+  # v1.4.0: expected cost of the active charge plan (grid kWh x average planned price), for the badge on Main
+  - sensor:
+      - name: "HESC expected charge cost"
+        unique_id: hesc_planned_cost
+        icon: mdi:cash-clock
+        unit_of_measurement: "EUR"
+        device_class: monetary
+        state: >-
+          {%- set raw = state_attr('sensor.hesc_charge_plan', 'plan') -%}
+          {%- set P = (raw | from_json if raw is string else raw) or {} -%}
+          {%- if P.get('active') -%}{{ ((P.get('grid_kwh') | float(0)) * (P.get('avg_price_ct') | float(0)) / 100) | round(2) }}{%- else -%}0{%- endif -%}
+        attributes:
+          grid_kwh: >-
+            {%- set raw = state_attr('sensor.hesc_charge_plan', 'plan') -%}{%- set P = (raw | from_json if raw is string else raw) or {} -%}{{ P.get('grid_kwh') | float(0) | round(1) }}
+          avg_price_ct: >-
+            {%- set raw = state_attr('sensor.hesc_charge_plan', 'plan') -%}{%- set P = (raw | from_json if raw is string else raw) or {} -%}{{ P.get('avg_price_ct') }}
+          ready_by: >-
+            {%- set raw = state_attr('sensor.hesc_charge_plan', 'plan') -%}{%- set P = (raw | from_json if raw is string else raw) or {} -%}{{ P.get('deadline_text') if P.get('active') else 'no active plan' }}
+          partly_expected_prices: >-
+            {%- set raw = state_attr('sensor.hesc_charge_plan', 'plan') -%}{%- set P = (raw | from_json if raw is string else raw) or {} -%}{{ (P.get('planned_forecast') or []) | count > 0 }}
 
 input_button:
   hesc_generate_report:
@@ -745,6 +955,30 @@ input_select:
       - "Other (manual)"
 
 automation:
+  # v1.4.0: fix the one-off deadline when day or time is chosen (or the plan is switched on).
+  # "Tomorrow" chosen on Wednesday stays Thursday, also after midnight. After the deadline the one-off plan is finished.
+  - id: hesc_plan_fix_deadline
+    alias: "HESC - Fix one-off charge plan deadline"
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id:
+          - input_select.hesc_plan_day
+          - input_select.hesc_plan_time
+      - trigger: state
+        entity_id: input_boolean.hesc_plan_enabled
+        to: "on"
+    actions:
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.hesc_plan_deadline
+        data:
+          datetime: >-
+            {%- set wds = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] -%}
+            {%- set day = states('input_select.hesc_plan_day') -%}
+            {%- set base = today_at(states('input_select.hesc_plan_time')) -%}
+            {%- if day == 'Today' -%}{%- set off = 0 -%}{%- elif day == 'Tomorrow' -%}{%- set off = 1 -%}{%- elif day in wds -%}{%- set off = (wds.index(day) - now().weekday()) % 7 -%}{%- if off == 0 and base <= now() -%}{%- set off = 7 -%}{%- endif -%}{%- else -%}{%- set off = 1 -%}{%- endif -%}
+            {{ (base + timedelta(days=off)).strftime('%Y-%m-%d %H:%M:%S') }}
   # Charger type chosen: fill the brand values, and the charger entities when exactly one match was found.
   # Filled-in entity fields are never overwritten.
   - id: hesc_apply_charger_type
@@ -754,13 +988,24 @@ automation:
       - trigger: state
         entity_id: sensor.hesc_charger_profile
         not_from: [unavailable, unknown]
-    conditions:
-      - "{{ (state_attr('sensor.hesc_charger_profile', 'profile') or {}).get('known', false) }}"
+      # v1.4.0: also after HA start, a template reload or "search again", so new empty fields (e.g. back-to-solar) get filled.
+      # Filled-in fields are never overwritten; the brand values only change when the charger type itself changes.
+      - trigger: homeassistant
+        event: start
+      - trigger: event
+        event_type: event_template_reloaded
+      - trigger: state
+        entity_id: input_button.hesc_charger_search
     actions:
+      # give the charger profile a moment to be (re)calculated
+      - delay: { seconds: 5 }
+      - condition: template
+        value_template: "{{ (state_attr('sensor.hesc_charger_profile', 'profile') or {}).get('known', false) }}"
       - variables:
           p: "{{ state_attr('sensor.hesc_charger_profile', 'profile') }}"
           brand_changed: >-
-            {{ trigger.from_state.state != trigger.to_state.state
+            {{ trigger.platform == 'state' and trigger.entity_id == 'sensor.hesc_charger_profile'
+               and trigger.from_state is not none and trigger.from_state.state != trigger.to_state.state
                and trigger.from_state.state not in ['Not chosen', 'Other (manual)', 'unknown', 'unavailable'] }}
           empty: "{{ ['', 'unknown', 'unavailable'] }}"
       - if: "{{ brand_changed or (states('input_text.hesc_charger_eco_value') | trim) in empty }}"
@@ -780,6 +1025,7 @@ automation:
             - { field: hesc_ev_power_sensor, key: power }
             - { field: hesc_charger_solar_switch_entity, key: switch }
             - { field: hesc_charger_start_stop_entity, key: startstop }
+            - { field: hesc_charger_resume_entity, key: resume }
           sequence:
             - if: "{{ (states('input_text.' ~ repeat.item.field) | trim) in empty and (p.get(repeat.item.key) or []) | count == 1 }}"
               then:
@@ -921,16 +1167,16 @@ automation:
         data: { value: "binary_sensor.hpvc_pv_limited" }
       - action: input_number.set_value
         target: { entity_id: input_number.hesc_p_start }
-        data: { value: 1500 }
+        data: { value: 2000 }
       - action: input_number.set_value
         target: { entity_id: input_number.hesc_p_hold }
-        data: { value: 1200 }
+        data: { value: 1500 }
       - action: input_number.set_value
         target: { entity_id: input_number.hesc_irr_start }
-        data: { value: 150 }
+        data: { value: 220 }
       - action: input_number.set_value
         target: { entity_id: input_number.hesc_irr_hold }
-        data: { value: 120 }
+        data: { value: 160 }
       - action: input_number.set_value
         target: { entity_id: input_number.hesc_t_stable }
         data: { value: 5 }
