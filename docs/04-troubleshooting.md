@@ -42,3 +42,21 @@
 | `Minimum charge: below x%, waiting for the cheapest quarter (hh:mm), ready by hh:mm` | Normal: the optional minimum charge waits for the cheapest quarter in its window |
 | Charger stays *paused* after charging | Normal with a start/stop switch: it comes back on for sun, a drop of more than 3%, a new plan or when you unplug. To charge now, switch it on yourself; HESC leaves a charge it did not start alone |
 | Notification *Charger not switched back on* | HESC tried 3 times to switch the charger back on. Check the charger (cloud connection) |
+| Charger paused, then back in solar mode after grid charging | Normal with *Back to solar mode* filled in (Wallbox *Resume schedule*) |
+
+## Home battery and EV
+
+Shown on Main under *Control States* while the EV is plugged in, and in `input_text.hesc_kick_status`.
+
+| Status | Check |
+|---|---|
+| `Not set up: start/stop switch and back-to-solar entity needed` | Settings → step 3 → *Charge plan*: fill in the start/stop switch and *Back to solar mode* |
+| `Not set up: home battery size and level sensors needed` | Settings → step 3 → *Home battery and EV* → *Settings* |
+| `Waiting: home batteries not taking the sun` | Normal: the home battery is not charging, so the charger can already see the surplus |
+| `Waiting: forecast now …` | The cautious forecast is below the start threshold |
+| `Home batteries first for the rest of today` / `Sun left today for the home batteries (…)` | Not enough sun left for both; the home battery gets it |
+| `Kickstart: charger started, waiting until the home battery control sees the EV` → `Kickstart: charger paused, back to solar mode in a moment` → `Kickstart: waiting for the charger to start on sun` | A kickstart in progress |
+| `Home batteries first: EV paused, charger back to waiting for sun` | Later in the day: the rest of the sun goes to the home battery |
+| `Done for today (…)` | The maximum number of kickstarts was reached, or the home battery got priority. Starts again tomorrow |
+| `Charge plan has the charger` / `HPVC release running` | Normal: the kickstart waits |
+| The home battery delivers some power to the EV for a moment | Expected during the short start, until the battery control sees the EV |

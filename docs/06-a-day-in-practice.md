@@ -4,8 +4,8 @@ What does HESC actually do? Instead of giving you a list of features, I'd rather
 
 Nothing special was planned. Clouds came and went, the washing machine ran, the home batteries wanted their share of the sun, and around noon electricity was free for a while. The car was plugged in all day. Just a normal day at home, and that makes it a good test.
 
-<p align="center"><img src="../screenshots/suite_hbc_hpvc_hevs.png" alt="HBC, HPVC and HEVS" width="100%"></p>
-<p align="center"><sub>My setup: HBC + HPVC + HEVS. Icons are illustrations for this page, not the official logos of the other projects.</sub></p>
+<p align="center"><img src="../screenshots/suite_hbc_hpvc_hevs.png" alt="HBC, HPVC and HESC" width="100%"></p>
+<p align="center"><sub>My setup: HBC + HPVC + HESC. Icons are illustrations for this page, not the official logos of the other projects.</sub></p>
 
 ## Who lives in this house
 

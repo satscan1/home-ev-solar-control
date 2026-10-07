@@ -339,6 +339,7 @@ views:
                       entity: input_text.hesc_kick_status
                       name: Home battery and EV
                       icon: mdi:battery-arrow-up-outline
+                      type: simple-entity
                 card_mod:
                   style: 'ha-card { border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none; }'
               - type: history-graph

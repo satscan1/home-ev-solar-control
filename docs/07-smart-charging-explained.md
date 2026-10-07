@@ -45,7 +45,7 @@ A few rules apply to all of these:
 
 - **3% margin.** HESC only starts charging from the grid when the car is more than 3% below the goal. A car at 78% with a goal of 80% is left alone; at 76.9% it charges. This avoids starting the charger for a few minutes of nothing.
 - **HESC only undoes what it started.** If you start charging yourself, or the car is already charging on sun, HESC leaves it alone.
-- **After grid charging the charger stays paused** (chargers with a start/stop switch). Otherwise the car could quietly top itself up from the grid in the evening peak. The charger is switched on again when there is enough sun, when the car drops more than 3% below the goal and no planned charge is coming, when a plan starts, or when you unplug.
+- **After grid charging the charger is not left on** (chargers with a start/stop switch). Otherwise the car could quietly top itself up from the grid in the evening peak. If *Back to solar mode* is filled in (Wallbox: *Resume schedule*; HESC fills it in itself), HESC pauses the charger and about a minute later puts it back in its own solar mode, so the next sunny hour charges the car by itself. Without that field the charger stays paused, and HESC switches it on again when there is enough sun, when the car drops more than 3% below the goal and no planned charge is coming, when a plan starts, or when you unplug.
 
 ## How the plan picks the cheapest hours
 
@@ -64,6 +64,27 @@ The planned quarters show up in **amber** in the price chart on the *Charge plan
 
 But a cheap moment in the morning is not a bargain when the afternoon sun would have filled the car for free. So before taking a cheap chance, HESC looks at the solar forecast for the rest of that day. If the sun is expected to cover what the car still needs, with 20% to spare, the cheap chance is skipped. You then see *Cheap chance skipped: enough sun today*, and the price chart leaves those quarters out.
 
+## Home battery and EV
+
+*Optional, off by default. Only for homes with a home battery.*
+
+On a sunny morning the home battery usually takes all the spare sun first. The charger in solar mode then sees no surplus and waits, sometimes until the home battery is full in the afternoon. On a day with less sun, that can mean the car gets nothing.
+
+With **Home battery and EV** switched on, HESC helps the car get its turn:
+
+1. **Kickstart.** When the car is plugged in and waiting for sun, the home battery has been charging for a few minutes and the cautious forecast says there is enough sun now, HESC checks the rest of the day. Is there clearly more sun left than the home battery still needs (with 20% to spare, and at least *Minimum sun left for the EV*)? Then HESC gives the charger a short start. Your battery system sees the car charging and stops filling the home battery; HESC then puts the charger back in its own solar mode, which keeps charging on the sun that is now free.
+2. **Back to the home battery.** Later in the day, when the sun left is only just enough to fill the home battery, HESC puts the charger back to waiting, so the home battery is full by the evening. After that there is no new kickstart that day.
+
+During the short start the home battery may deliver some power to the car for a moment. That is expected and small.
+
+HESC never controls the home battery itself. It only decides when the car starts, and reads the home battery level and power. It does nothing while a charge plan is charging, during an HPVC release, or after sunset, and at most a few times a day (*Kickstarts per day*, default 3, with at least 30 minutes in between).
+
+What you fill in (Settings, block 3, *Home battery and EV* → *Settings*): the level sensor(s) of your home battery, its power sensor(s) (positive = charging) and its total size in kWh. It also needs the charger's start/stop switch and *Back to solar mode* (block 3, *Charge plan*); with charger type Wallbox both are filled in for you. When the car is plugged in, Main shows what it is doing in an extra line under *Control States*.
+
+## What will it cost?
+
+The **Expected charge cost** badge at the top of Main shows what the active plan is expected to cost: the energy it plans to take from the grid times the average price of the planned quarters. Sun counts as free. Without an active plan, or with the car already at its goal, it shows € 0.00.
+
 ## Situations
 
 ### "I drive to work every weekday"
@@ -74,6 +95,8 @@ Make a **weekly plan**: tick the days, set the time you leave and the level you 
 
 Make a **one-off plan** for Saturday at the time you leave, for example 100%. When a one-off and a weekly plan are both active, the earliest one wins. Afterwards your weekly plan simply continues.
 
+A one-off plan is for one date. If you pick *Tomorrow* today, it means that date: it does not move on to the next day at midnight. After the time you set, the one-off plan stops by itself.
+
 ### "The car stays at home for a few days"
 
 No plan is needed. The car charges on sun, takes cheap chances when they come, and the charger stays paused otherwise. Only when the car drops more than 3% below *EV counts as full at* does HESC top it up.
@@ -81,6 +104,10 @@ No plan is needed. The car charges on sun, takes cheap chances when they come, a
 ### "I came home with an almost empty battery and might need the car tonight"
 
 Switch on **Minimum charge** (Settings, block 3, *Use*). Default: at least 20% within 3 hours. HESC picks the cheapest quarters in those 3 hours, and charges straight away if no prices are known. Both numbers can be changed under *Settings*.
+
+### "I have a home battery and the car never gets any sun"
+
+Switch on **Home battery and EV** (Settings, block 3, *Use*) and fill in your home battery under *Settings*. See [Home battery and EV](#home-battery-and-ev) above.
 
 ### "I need the car now, forget the plan"
 
@@ -120,11 +147,16 @@ HESC keeps using the last valid plan for up to 10 minutes, so a running charge d
 | EV counts as full at | *Charge plan* tab and Settings | 80% | The level to keep without a plan |
 | Final check | Settings | 60 min | How long before you leave HESC charges whatever the price |
 | Minimum charge | Settings, block 3 | off (20%, 3 h) | Use + Settings switches |
+| Home battery and EV | Settings, block 3 | off (3 per day) | Only with a home battery; Use + Settings switches |
+| Back to solar mode | Settings, block 3, *Charge plan* | filled in for Wallbox | Puts the charger back in its own solar mode after grid charging |
 
 ## Where to look
 
 - **Status** on the dashboard: one line saying what HESC does now and why.
 - **Price chart** (*Charge plan* tab): amber = planned, blue-green = cheap chance, grey = expected price.
+- **Expected charge cost** (badge at the top of Main): what the active plan is expected to cost.
+- **Setup check** (*Settings* tab): one line per part with a tick and the values of now. When something is wrong, that part opens by itself and says what is missing.
+- **Solar next 7 days** (*Settings* tab): yellow is the expected sun per day, green what is expected to be left for the car after the house and the home battery.
 - **Report**: everything HESC measured and decided, for yourself or when you ask for help.
 
 See also: [How it works](03-how-it-works.md) for the technical details, and [A day in practice](06-a-day-in-practice.md) for one real day.
