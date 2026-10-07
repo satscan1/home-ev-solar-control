@@ -339,6 +339,7 @@ views:
                       entity: input_text.hesc_kick_status
                       name: Home battery and EV
                       icon: mdi:battery-arrow-up-outline
+                      type: simple-entity
                 card_mod:
                   style: 'ha-card { border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none; }'
               - type: history-graph
@@ -1733,8 +1734,8 @@ views:
           - type: markdown
             content: |-
               {% if is_state('input_boolean.hesc_standalone', 'on') %}### 🔗 2 · Sources <a href="/home-ev-solar-control/guide" title="Guide: how smart charging works"><ha-icon icon="mdi:information-outline" style="--mdc-icon-size:20px;color:#8ab4f8;vertical-align:-2px"></ha-icon></a>
-              Running **without HPVC**. Pick your own PV and grid power sensors below. The solar forecast (Solcast, cautious estimate) is filled in on install. Without HPVC nothing is curtailed, so there is no release step: the charger starts on solar by itself, HEVS follows it and gives advice.{% else %}### 🔗 2 · Sources <a href="/home-ev-solar-control/guide" title="Guide: how smart charging works"><ha-icon icon="mdi:information-outline" style="--mdc-icon-size:20px;color:#8ab4f8;vertical-align:-2px"></ha-icon></a>
-              **PV & grid from HPVC** takes over the PV and grid sensors from Home PV Control. Only use it if HPVC sees **all** your solar panels: HEVS needs your total solar power. Switching it off puts your own sensors back. The solar forecast (Solcast, cautious estimate) and the HPVC switch are filled in on install.{% endif %}
+              Running **without HPVC**. Pick your own PV and grid power sensors below. The solar forecast (Solcast, cautious estimate) is filled in on install. Without HPVC nothing is curtailed, so there is no release step: the charger starts on solar by itself, HESC follows it and gives advice.{% else %}### 🔗 2 · Sources <a href="/home-ev-solar-control/guide" title="Guide: how smart charging works"><ha-icon icon="mdi:information-outline" style="--mdc-icon-size:20px;color:#8ab4f8;vertical-align:-2px"></ha-icon></a>
+              **PV & grid from HPVC** takes over the PV and grid sensors from Home PV Control. Only use it if HPVC sees **all** your solar panels: HESC needs your total solar power. Switching it off puts your own sensors back. The solar forecast (Solcast, cautious estimate) and the HPVC switch are filled in on install.{% endif %}
             grid_options:
               columns: 12
           - type: tile
