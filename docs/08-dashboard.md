@@ -1,17 +1,5 @@
 # The dashboard explained
-Had precies hetzelfde met v4.15.1: helper goed, Node-RED verbonden, Insights mode gaat aan, en toch een leeg tabblad. Of je zag alleen rondes met "Stopped processing" binnen de deadband, en nooit de rondes waarin HBC echt bijstuurt.
 
-Bij mij zat het in de flow zelf, op de tab Home Battery Start, in het laatste stukje dat de uitleg naar HA stuurt (de node **Show on debug board**, event update_trace_sensor). Daar gingen twee dingen mis:
-1. Na een schrijfactie naar een batterij draagt het bericht nog de laatste opdracht mee. De Fire event-node gebruikt die als event-data in plaats van trace en log, dus in HA komt alleen {"value": 749} aan. Block input overrides aanzetten hielp bij mij niet.
-2. Sinds v4.15.1 worden de batterijen parallel aangestuurd. Het bericht dat na het schrijven doorgaat naar het tabblad heeft trace en log niet meer bij zich.
-Binnen de deadband wordt niet geschreven, daarom zie je alleen die rondes.
-
-Controleren: Ontwikkelhulpmiddelen → Gebeurtenissen, luister naar update_trace_sensor terwijl Insights mode aan staat. Zie je daar {"value": ...}, dan is het dit.
-
-Mijn oplossing, twee extra function-nodes, verder niets veranderd:
-- na Strategy evaluation: bewaart bij debug_mode trace, start, end en log even in flow-context;
-- vóór Show on debug board: bouwt msg.data en msg.payload.data op uit msg.strategy en msg.log, en gebruikt de bewaarde data als die leeg zijn.
-Daarna zie ik ook de rondes met Calculate corrections en Load distribution. Misschien iets voor een volgende HBC-versie?
 *What every numbered part of the HESC dashboard does.* (Nederlands: [Het dashboard uitgelegd](08-dashboard.nl.md))
 
 The HESC dashboard has three tabs, **Main**, **Charge plan** and **Settings**, plus the **Costs** page, opened from the *Costs* badge on Main. Below, each screen has a numbered screenshot and a short explanation per number.
