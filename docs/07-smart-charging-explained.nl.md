@@ -7,7 +7,7 @@
 Na ongeveer twee weken werkt HESC bijna helemaal vanzelf. Jouw deel is klein:
 
 1. **Stekker erin** als je thuiskomt.
-2. **Zorg dat je planning klopt met je vertrektijd.** Een weekplan voor je vaste dagen (bijvoorbeeld *80% op werkdagen om 07:30*), een eenmalig plan voor al het andere (*100% op zaterdag om 09:00*).
+2. **Zorg dat je planning klopt met je vertrektijd.** Een weekplan voor je vaste dagen (bijvoorbeeld *80% op werkdagen om 07:30*), en het plan *one day, every week* voor één extra dag (*100% op zaterdag om 09:00*).
 
 De rest doet HESC. Tussen het moment dat je aansluit en het moment dat je vertrekt, zoekt het de goedkoopste manier om de auto op het gewenste niveau te krijgen. Eerst met gratis zonnestroom, dan met de goedkoopste uren van het net, en altijd met een vangnet zodat de auto op tijd klaar is.
 
@@ -42,8 +42,9 @@ Elke 30 seconden kijkt HESC naar de auto, de zon, de prijzen en je plan, en stel
 Voor alles hierboven gelden een paar regels:
 
 - **3% marge.** HESC laadt pas van het net als de auto meer dan 3% onder het doel zit. Een auto op 78% met een doel van 80% blijft met rust; op 76,9% wordt er geladen. Zo start de laadpaal niet voor een paar minuten niets.
+- **Welk doel?** Met een actief plan: het doel van dat plan. Zonder plan (goedkope kansen, bijladen): *EV counts as full at* (standaard 80%). Een goedkope kans vult dus nooit een auto die al als vol telt.
 - **HESC maakt alleen ongedaan wat het zelf startte.** Start je zelf met laden, of laadt de auto al op zon, dan laat HESC het met rust.
-- **Na het laden van het net blijft de laadpaal niet aan staan** (laadpalen met een start/stop-schakelaar). Anders kan de auto stilletjes in de dure avondpiek bijladen van het net. Is *Back to solar mode* ingevuld (Wallbox: *Resume schedule*; HESC vult dat zelf in), dan zet HESC de laadpaal op pauze en zet hem ongeveer een minuut later terug in zijn eigen zonnestand, zodat het volgende zonnige uur de auto vanzelf laadt. Zonder dat veld blijft de laadpaal op pauze, en zet HESC hem weer aan als er genoeg zon is, als de auto meer dan 3% onder het doel zakt en er geen geplande lading meer komt, als een plan start, of als je de stekker eruit haalt.
+- **Na het laden van het net blijft de laadpaal niet aan staan** (laadpalen met een start/stop-schakelaar). Anders kan de auto stilletjes in de dure avondpiek bijladen van het net. Is *Back to solar mode* ingevuld (Wallbox: *Resume schedule*; HESC vult dat zelf in), dan zet HESC de laadpaal op pauze, controleert dat de pauze echt is doorgekomen (laadpalen via de cloud reageren ongeveer een minuut later) en zet hem daarna terug in zijn eigen zonnestand, zodat het volgende zonnige uur de auto vanzelf laadt. Zonder dat veld blijft de laadpaal op pauze, en zet HESC hem weer aan als er genoeg zon is, als de auto meer dan 3% onder het doel zakt en er geen geplande lading meer komt, als een plan start, of als je de stekker eruit haalt.
 
 ## Hoe het plan de goedkoopste uren kiest
 
@@ -81,7 +82,11 @@ Wat je invult (Settings, blok 3, *Home battery and EV* → *Settings*): de nivea
 
 ## Wat gaat het kosten?
 
-Het kadertje **Expected charge cost** bovenaan Main toont wat het actieve plan naar verwachting kost: de stroom die het van het net wil halen, keer de gemiddelde prijs van de geplande kwartieren. Zon telt als gratis. Zonder actief plan, of als de auto zijn doel al heeft, staat er € 0,00.
+Het kadertje **Expected charge cost** bovenaan Main toont wat het actieve plan naar verwachting van het net kost, met dezelfde rekenregel als de kostenpagina (de prijs van elk gepland kwartier, plus je opslag en btw, of de all-in prijs). Het telt alleen netladen dat echt gaat gebeuren: zonder actief plan, als de auto zijn doel al heeft, of als de auto al op zon laadt, staat er 0,00.
+
+**Wat heeft het gekost?** Tik op het kadertje **Costs** bovenaan Main. Per dag, week, maand, kwartaal of jaar zie je hoeveel er in de auto ging, hoeveel daarvan van de zon kwam (groen) en van het net (grijs), en wat het netdeel kostte tegen de prijs van dat kwartier. Je opslag, btw en de waarde van een zon-kWh stel je één keer in onder *Settings → Charging costs*; de hele geschiedenis rekent mee. Met **Export to spreadsheet (CSV)** onderaan maak je twee bestanden die je in Excel opent.
+
+Alle bedragen staan in de munt van je prijzen (€, kr, £ of $), geschreven zoals dat in jouw land gebruikelijk is.
 
 ## Situaties
 
@@ -91,9 +96,9 @@ Maak een **weekplan**: vink de dagen aan, zet je vertrektijd en het niveau dat j
 
 ### "Ik ga zaterdag op reis"
 
-Maak een **eenmalig plan** voor zaterdag op je vertrektijd, bijvoorbeeld 100%. Staan een eenmalig plan en een weekplan allebei aan, dan gaat het vroegste voor. Daarna gaat je weekplan gewoon door.
+Gebruik het plan **one day, every week**: kies *Saturday*, je vertrektijd en bijvoorbeeld 100%, en zet het aan. Staan dit plan en het weekplan allebei aan, dan gaat het vroegste voor; je weekplan gaat gewoon door.
 
-Een eenmalig plan geldt voor één datum. Kies je vandaag *Tomorrow*, dan betekent dat die datum: om middernacht schuift het niet door naar de dag erna. Na de tijd die je hebt gekozen, stopt het eenmalige plan vanzelf.
+Dit plan komt elke week terug op dezelfde dag en tijd. Heb je het maar één keer nodig? Zet *Active* na de reis weer uit.
 
 ### "De auto blijft een paar dagen thuis"
 
@@ -113,7 +118,7 @@ Start zelf met laden (app, knop op de laadpaal of de eigen stand van de laadpaal
 
 ### "Ik heb laat aangesloten; is er nog tijd?"
 
-HESC houdt dat steeds in de gaten. Is de resterende tijd nog maar net genoeg, dan start het vangnet meteen. Wordt het doel toch niet gehaald, dan krijg je op je vertrektijd een melding: *EV not charged to goal*, met de reden.
+HESC houdt dat steeds in de gaten. Is de resterende tijd nog maar net genoeg, dan start het vangnet meteen. Wordt het doel toch niet gehaald, dan krijg je op je vertrektijd een melding op je telefoon: *EV goal missed*, met de stand die gehaald is.
 
 ### "Morgen wordt het zonnig"
 
@@ -129,11 +134,19 @@ Veel auto's hebben een eigen laadgrens. Ligt die lager dan je doel, dan stopt de
 
 ### "De laadpaal reageerde niet"
 
-Laadpalen die via de cloud werken, negeren soms een opdracht. HESC controleert en probeert opnieuw: een geweigerde pauze na 30 minuten, een geweigerde hervatting na 5 minuten, elk hoogstens 3 keer.
+Laadpalen die via de cloud werken, negeren soms een opdracht. HESC controleert en probeert opnieuw: een geweigerde start of hervatting na 5 minuten, een geweigerde pauze na 30 minuten, elk hoogstens 3 keer. Voordat HESC de laadpaal terugzet in zijn zonnestand, wacht het tot de pauze echt is doorgekomen.
 
 ### "Home Assistant is tijdens het laden herstart"
 
 HESC gebruikt het laatste geldige plan nog tot 10 minuten, zodat een lopende lading niet stopt.
+
+### "Ik heb Home Assistant net herstart en sommige waarden zijn leeg, of de setup-controle toont een rode ❌"
+
+Dat is normaal en komt vanzelf goed; je hoeft niets te doen. Prijzen, instellingen en de setup-controle zijn er meteen weer; accuniveau van de auto, kosten en de meldingenregel binnen ongeveer 5 minuten; de prijsvoorspelling (verwachte prijzen in de grafiek) binnen 15 minuten; het advies voor de startdrempel binnen een paar minuten. Een rode ❌ kan even verschijnen terwijl de koppeling van je laadpaal, omvormer of auto nog opstart. Na 15 minuten nog steeds rood? Dan ontbreekt er echt iets, en gaan de juiste instellingen vanzelf open. Vlak na een herstart kan de koppeling van de auto ook even een oud accuniveau geven; HESC neemt de correctie mee bij de volgende ronde.
+
+### "Ik ga op vakantie"
+
+Zet **Holiday mode** aan, onder het weekplan. Het weekplan doet dan niets; je dagplan blijft actief, zodat je op de dag dat je terugkomt toch een volle auto kunt hebben. Laden op zon gaat gewoon door. Vul eventueel **Holiday until** in: de dag na die datum gaat de vakantiemodus vanzelf uit.
 
 ## Wat je één keer instelt
 
@@ -141,20 +154,24 @@ HESC gebruikt het laatste geldige plan nog tot 10 minuten, zodat een lopende lad
 |---|---|---|---|
 | Usable battery capacity | tabblad *Charge plan* | 60 kWh | Wat je auto echt kan gebruiken |
 | Grid charging power | tabblad *Charge plan* | 11 kW | Iets onder wat je laadpaal echt levert geeft wat marge |
-| Take cheap chances / Cheap when below | tabblad *Charge plan* | eigen keuze / 0,05 €/kWh | Lager = minder maar betere kansen |
+| Take cheap chances / Cheap when below | tabblad *Charge plan* | eigen keuze / 0,05 per kWh | In de munt van je prijzen. Lager = minder maar betere kansen |
 | EV counts as full at | tabblad *Charge plan* en Settings | 80% | Het niveau dat zonder plan wordt vastgehouden |
 | Final check | Settings | 60 min | Hoe lang voor vertrek HESC laadt, wat de prijs ook is |
 | Minimum charge | Settings, blok 3 | uit (20%, 3 uur) | Schakelaars Use + Settings |
 | Home battery and EV | Settings, blok 3 | uit (3 per dag) | Alleen met een thuisbatterij; schakelaars Use + Settings |
 | Back to solar mode | Settings, blok 3, *Charge plan* | ingevuld bij Wallbox | Zet de laadpaal na netladen terug in zijn eigen zonnestand |
+| Telefoons voor meldingen | Settings, blok 3, *Charge plan* | geen | Kies ze uit de lijst; test met *Send a test notification* |
+| Ochtendoverzicht | Settings, blok 3, *Charge plan* | uit (06:00) | Eén bericht per dag: accuniveau, volgend plan, zon vandaag, gisteren |
+| Laadkosten | Settings, *Charging costs* | opslag 0, btw 0, zon-kWh gratis | Of zet *all-in* aan als je prijssensor al de volledige prijs geeft |
 
 ## Waar je kijkt
 
 - **Status** op het dashboard: één regel met wat HESC nu doet en waarom.
 - **Prijsgrafiek** (tabblad *Charge plan*): oranje = gepland, blauwgroen = goedkope kans, grijs = verwachte prijs.
+- **Meldingenregel** (bovenaan Main): *✓ No notices*, of wat aandacht nodig heeft. Rood = het laaddoel komt in gevaar (ook op je telefoon), oranje = een sensor ontbreekt maar HESC werkt door, grijs = ter info. Tik erop om naar de plek te gaan waar je iets kunt doen.
 - **Expected charge cost** (kadertje bovenaan Main): wat het actieve plan naar verwachting kost.
+- **Costs** (kadertje bovenaan Main): wat er in de auto ging, van de zon en van het net, en wat het kostte.
 - **Controle** (tabblad *Settings*): één regel per onderdeel met een vinkje en de waarden van nu. Klopt er iets niet, dan gaat dat onderdeel vanzelf open en zegt het wat er ontbreekt.
-- **Solar next 7 days** (tabblad *Settings*): geel is de verwachte zon per dag, groen wat er naar verwachting voor de auto overblijft na het huis en de thuisbatterij.
 - **Rapport**: alles wat HESC gemeten en besloten heeft, voor jezelf of als je om hulp vraagt.
 
 Zie ook (Engels): [How it works](03-how-it-works.md) voor de technische details, en [A day in practice](06-a-day-in-practice.md) voor één echte dag.

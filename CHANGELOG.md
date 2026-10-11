@@ -1,5 +1,75 @@
 # Changelog
 
+## v2.0.0 — 2026-10-11
+
+**One dashboard, any country: prices, costs and notifications grown up.**
+
+A major release: many new parts, and a few changes existing users will notice (the one-off plan now comes back every week, money fields are *per kWh* in your own currency, Main and Charge plan have a new layout). Read [Upgrade from v1.4.0](releases/v2.0.0/release.md#upgrade-from-v140) before you install.
+
+Prices
+- New price adapter: `sensor.hesc_prices` turns every supported price source into one list of quarters (`raw_today` / `raw_tomorrow`). The charge plan, the price chart, the price forecast and the cost counter all read it.
+- New settings `input_select.hesc_price_source` (*Price list in sensor*, *EnergyZero / ANWB Energie*, *EasyEnergy*, *Tibber*, *Nord Pool (official)*) and `input_select.hesc_price_resolution` (*Automatic*, *Per quarter*, *Per hour*). A price list in a sensor is recognised by its field names: Nord Pool (HACS), ENTSO-E, Energi Data Service, EPEX Spot, Frank Energie, Zonneplan, Octopus (half-hourly), Amber Electric (half-hourly, `forecasts` / `per_kwh`) and Spain's PVPC (`price_00h` … `price_next_day_23h`). Sources that only answer an action are fetched every 30 minutes by `sensor.hesc_price_fetch`. Hourly and half-hourly prices become equal quarters; prices per MWh are converted to kWh.
+- Currencies EUR, SEK, DKK, NOK, GBP and AUD. New `input_select.hesc_currency`: *Automatic* (default) takes the currency from the price sensor (`currency` attribute or unit, e.g. `SEK/kWh`, `£`, `$`). `sensor.hesc_prices` gives `currency`, `symbol`, `minor` (ct, öre, øre, p, c), `symbol_after`, `decimal` and `fx_vs_eur`.
+- Amounts are written the way the country does it, taken from the Home Assistant time zone: decimal comma in most of Europe, decimal point in the UK, Ireland, Malta, Switzerland and outside Europe; the euro after the amount in e.g. Germany, Spain, France and Italy (`1,12 €`), before it in the Netherlands, Belgium, Austria and Ireland (`€ 1,12`); kronor after the amount (`1,12 kr`); no space after the sign with a decimal point (`£1.12`). No new setting.
+- The three money fields (mark-up, feed-in compensation, *Cheap when below*) are now *per kWh* in your own currency, with a wider range.
+- HESC uses the Home Assistant time zone for day boundaries everywhere (was fixed to Europe/Amsterdam).
+
+Price forecast
+- Weekend days and working days are forecast separately (last 8 weekend days / 14 working days); public holidays count as weekend days, read from the Workday integration's calendar (found through the integration itself, whatever its name). Back-tested over 30 days: average error per day 4.8 → 4.3 ct.
+- The built-in default for the Dutch market and the 2 ct waiting margin are scaled to your currency; your own history corrects them.
+
+Charging costs (new, optional)
+- New node *Charging costs (sun / grid)* on the Engine tab. Every 30 seconds it splits the EV's charging power into grid (at most what comes from the grid) and sun (the rest, which includes energy from a home battery), and prices the grid part at the price of that quarter. Grid energy without a known price is counted separately; when grid power is unknown everything counts as grid. Gaps longer than 2 minutes (restarts) are skipped, never estimated. Day totals in `hesc-data/charging_costs.json` (about 3 years), published every 5 minutes as `sensor.hesc_charging_costs` (last 100 days, all months, today).
+- New **Costs** page (opened with the *Costs* badge on Main, switch `input_boolean.hesc_costs_enabled`): a calendar per day, and tiles per week, month, quarter and year; green = sun, grey = grid, ▲▼ = more expensive / cheaper than the period before. Settings: value of a solar kWh (`input_number.hesc_feed_in_price`), *Price from the price source is already all-in* (`input_boolean.hesc_costs_all_in`), or mark-up per kWh (`input_number.hesc_costs_markup`) and VAT (`input_number.hesc_costs_vat`). The costs are stored without mark-up and VAT, so changing them recalculates the whole history.
+- **Export to spreadsheet (CSV)** (`input_button.hesc_costs_export`): writes `hesc-data/charging_costs_days.csv` and `charging_costs_months.csv` (overwritten every time). Separator and decimal mark follow the country (`;` with a decimal comma, `,` with a decimal point), so Excel opens it in columns.
+- `sensor.hesc_expected_charge_cost` uses the same rule as the Costs page and only counts grid charging that will really happen (0 while the plan leaves a charging EV alone). New attribute `display` with the amount in your currency.
+
+Charge plan
+- The one-off plan now **comes back every week** on the same day and time: *Charging plan · one day, every week*. This reverses the v1.4.0 choice. Switch *Active* off when you only need it once.
+- New **Holiday mode** (`input_boolean.hesc_vacation`, optional end date `input_datetime.hesc_vacation_until`): the weekly plan does nothing, the one-day plan stays active, solar charging carries on. The day after the end date it switches itself off (automation *HESC - Holiday mode ends*).
+- Fixed: a cheap chance without an active plan charged towards the goal of the inactive plan (for example 100%) and could fill a car that already counted as full. The goal is now the plan goal when a plan is active, otherwise *EV counts as full at*, also for the top-up and the solar check.
+- Fixed: after grid charging, *Back to solar mode* could be pressed while the charger was still charging (cloud chargers carry out a command about a minute late, and a start sent just before can still arrive), so the grid charge went on. HESC now checks that the pause took effect; while the EV still charges or the switch is still on it pauses again and waits a minute (at most 3 times, `pause_retry`), then returns to solar mode (`pause_failed` when it was still charging).
+- A refused grid start is retried after 5 minutes, at most 3 times (`grid_start_retry`), never when the EV is (nearly) at its goal.
+- Planned quarters move along with the clock; new warning *not enough time left for the goal*.
+- Plan status *☀ charging by itself* when the EV already charges on sun: the plan watches and does not take over.
+- *Last action* survives a restart.
+- Grid charging by the plan no longer counts as a solar session; a running solar session is closed with *grid charging by plan*.
+
+Notifications
+- Pick the phones from a list: `sensor.hesc_notification_phones` finds every device with the Home Assistant app; `input_select.hesc_notify_pick` adds or removes one (✓ = gets notifications); `input_button.hesc_notify_test` sends a test. `input_text.hesc_notify_services` is filled by the list (existing installations keep working).
+- Notifications with a priority, short and to the point: **P1** charge goal missed or not confirmable, or a real fault (time-sensitive on the phone, red on Main for 12 hours); **P2** a sensor is missing but HESC keeps working (orange, as long as the problem lasts); **P3** harmless (grey, Main only, 2 hours). P1 and P3 show the time of the event.
+- New notice line at the top of Main (`sensor.hesc_notice`): *✓ No notices* or the notice with its time. Tap it to go where you can act (Charge plan or Settings); without a notice it opens the HESC repository.
+- New **morning summary** (`input_boolean.hesc_morning_summary`, time `input_select.hesc_morning_summary_time`, 06:00–10:00, off by default): one message a day with the battery level and whether the EV is plugged in, the next plan, sun today, yesterday (kWh, % sun, costs) and whether yesterday's goal was reached. Sent within 60 minutes after the chosen time, once a day.
+
+EV battery level
+- Fallbacks when the battery-level sensor from Settings has no value, in this order: a second battery sensor of the same car that HESC finds by itself (no extra field; while charging it only counts when it changed in the last 2 hours), the last level seen during this plug-in plus 90% of what was charged since, and the usual level at plug-in over the last 14 days (25th percentile, at least 5 plug-ins). Result in `sensor.hesc_ev_soc`, used by the engine, the charge plan, the kickstart and the plan sensor. Plug-in levels are kept in `hesc-data/ev_soc_plugins.json` (60 days); the session survives a Node-RED restart (up to 6 hours). Only a real change from unplugged to plugged in counts as a plug-in.
+- A P2 notice (and one phone notification per plug-in) when the level is estimated or unknown; a P1 *EV goal not confirmed* at the ready-by time when the EV is plugged in but no level is known at all.
+- Live Inputs shows the level and where it came from.
+
+Solar charging
+- Home battery and EV: after the kickstart the charger goes straight back to its solar mode as soon as the EV charges, without the pause. Only a start that does not take (no charging after 2 minutes) still gets the pause.
+- Optional start threshold per season (`input_boolean.hesc_seasonal_threshold`, off by default): every night at 00:05 June–July 2 500 W, April–May and August–September 2 000 W, March and October 1 500 W, November–February 1 200 W; hold 75%.
+- Start threshold advice from your own history, based on **sun share**: the lowest start forecast from which the next 8 sessions together got at least 70% of their energy from the sun (weighted by kWh), rounded to 50 W, between 1 000 and 3 500 W; hold 75%. Fewer than 15 sessions with sun data: the earlier rule (sessions that kept charging). Looks back 30 days, up to 60 in winter when there are fewer than 15 sessions. `sensor.hesc_advice_threshold`, shown in the Status card on Main and on Settings.
+- Optional **Apply advice automatically** (`input_boolean.hesc_advice_auto`, off by default): at most one step per 7 days and 200 W per step, only with at least 100 W difference and 8 good sessions on 5 days. It cannot run together with the seasonal threshold. Every change is written to the history (`advice_applied`) and shown as a P3 notice.
+- *Solar still to come today* (kWh) in Live Inputs.
+
+Settings
+- **Back up settings / Restore back-up / Standard values** (Settings). A back-up writes all HESC settings to `hesc-data/settings_backup.json` plus a dated copy. *Standard values* first makes a back-up, then resets only the tuning (thresholds, timing, advice, final check); sensors, switches, goals and costs stay.
+- New *Grid sensor: export is positive* (`input_boolean.hesc_grid_export_positive`) for meters that count the other way round; used by the engine, the cost counter and the report.
+- *Solar next 7 days* removed from Settings.
+- Setup check: the charge plan line shows the price now in your currency.
+
+Dashboard
+- Main: compact Live Inputs and Status tables; the Status card shows the start threshold advice; *EV today* and *Sun vs forecast* moved to Costs and the report; *Home battery and EV* line reads *home batteries x% · charging y W · EV z%*; one solar forecast number, *Forecast HESC uses* (the cautious estimate HESC decides on).
+- Charge plan: three narrow sections (one day every week, weekly plan with holiday mode, plan settings) above the plan and the price chart, full width on a phone too. The price-chart title follows your currency (cents, öre, øre, pence; needs card-mod).
+- Brighter colours in all charts.
+- Built-in guide (English and Dutch) and [Smart charging explained](docs/07-smart-charging-explained.md): one day every week, which goal a cheap chance uses, costs, notices, holiday mode and what to expect right after a Home Assistant restart.
+
+Removed / not included
+- The internal performance meter used during development is not part of the release.
+
+Upgrade from v1.4.0: replace `hesc_config.yaml` and the dashboard, re-import the flow, restart Home Assistant. Check the price source, the currency and the money fields in Settings. See the [release notes](releases/v2.0.0/release.md).
+
 ## v1.4.0 — 2026-10-07
 
 **The sun shared between home battery and car.**

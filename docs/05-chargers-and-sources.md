@@ -26,13 +26,15 @@ Only needed for the charge plan. Chargers do this in one of two ways; fill in th
 
 Only the Wallbox *Pause/resume* switch has been built and checked against a real installation. For other chargers, test in shadow mode first and check that the charger returns to its solar mode afterwards.
 
+**One planner per charger.** Turn off charging schedules in the charger's own app or in another integration while HESC plans the charging. Two planners on one charger get in each other's way. After an update of the charger app or firmware, check that no schedule has appeared by itself.
+
 ### EV charging threshold
 
 `input_number.hesc_ev_active_w` (default 400 W) decides when the EV counts as *charging*. Set it above the standby draw of your charger and below the lowest charging power it uses. Most chargers start at 6 A: about 1.4 kW single-phase or 4.1 kW three-phase.
 
 ### Start and hold thresholds
 
-`hesc_p_start` and `hesc_p_hold` are **forecast production** thresholds. Your charger starts on **surplus**, which is production minus house load minus battery charging. Choose a start threshold that leaves enough surplus for your charger's solar-mode start level. The per-day tables in the report show whether releases actually led to charging; adjust from there. The **Advice** in the report does this for you: it works out the surplus at which Eco kept charging, adds your typical house-and-battery use, and gives the result as a start threshold.
+`hesc_p_start` and `hesc_p_hold` are **forecast production** thresholds. Your charger starts on **surplus**, which is production minus house load minus battery charging. Choose a start threshold that leaves enough surplus for your charger's solar-mode start level. The **advice** on Main and Settings does this for you from your own sessions: the lowest start forecast from which your sessions got most of their energy from the sun. You can let HESC apply it in small steps, or use the optional start threshold per season. See [How it works](03-how-it-works.md#start-threshold-advice-sun-share).
 
 ## Tested with
 
@@ -140,6 +142,31 @@ The report section **How reliable are the sources?** shows:
 | Irradiance ↔ PV | correlation between irradiance and PV | close to 1,0 |
 
 Intervals in which HPVC limited PV are left out: curtailed PV says nothing about how good the forecast was.
+
+## Energy prices
+
+Prices are only needed for the charge plan, cheap chances and the Costs page, and only make sense with a **dynamic** contract (a price per quarter or hour). With a fixed price, use HESC for solar charging and choose your own charging moment.
+
+Settings → step 3 → *Charge plan*:
+
+| Price source | Sources | How |
+|---|---|---|
+| *Price list in sensor* (default) | [Nord Pool](https://github.com/custom-components/nordpool) (HACS), ENTSO-E, [Energi Data Service](https://github.com/MTrab/energidataservice), EPEX Spot, Frank Energie, Zonneplan, [Octopus Energy](https://github.com/BottlecapDave/HomeAssistant-OctopusEnergy) (Agile, half-hourly), [Amber Electric](https://www.home-assistant.io/integrations/amberelectric/) (half-hourly), Spain's PVPC ([ESIOS](https://www.home-assistant.io/integrations/pvpc_hourly_pricing/)) | Pick the price sensor; HESC recognises the price list by its field names |
+| *EnergyZero / ANWB Energie*, *EasyEnergy*, *Tibber*, *Nord Pool (official)* | the core integrations that only give prices through an action | Pick any sensor of that integration; HESC fetches today and tomorrow every 30 minutes |
+
+- **Quarter, half hour or hour:** HESC always plans in quarters. Hourly and half-hourly prices become equal quarters. *Prices per* → *Per hour* gives every quarter the average of its hour, for suppliers that bill per hour.
+- **Currency:** EUR, SEK, DKK, NOK, GBP or AUD. *Currency* → *Automatic* takes it from the price sensor (`currency` attribute or a unit such as `SEK/kWh`, `£/kWh`, `$/kWh`). The action sources count as EUR on *Automatic*: pick your currency there. Prices show in the small unit (ct, öre, øre, p, c); *Cheap when below*, the mark-up and the feed-in compensation are per kWh in that currency.
+- **How amounts are written** follows the Home Assistant time zone: a decimal comma in most of Europe and a decimal point in the UK, Ireland, Malta, Switzerland and outside Europe; the euro after the amount in for example Germany, Spain, France, Italy, Portugal, Finland and Greece (`1,12 €`) and before it in the Netherlands, Belgium, Austria and Ireland (`€ 1,12`); kronor after the amount (`1,12 kr`); `£1.12` and `$1.12` without a space.
+- **Public holidays** for the price forecast come from the [Workday](https://www.home-assistant.io/integrations/workday/) integration of your country. Without it, only Saturday and Sunday count as weekend days.
+- **The price forecast** starts from a default for the Dutch market, scaled to your currency, and learns your own market from your price history.
+
+**Tested:** live with Nord Pool (the Netherlands, quarters). The other price lists, the action sources and the currencies were checked with simulated data in the same formats; reports from users in other countries are very welcome as an issue.
+
+**Not modelled (yet):** grid tariffs that change during the day (for example in Denmark, Germany or Austria). Include them through *all-in* prices from your source, or keep them in mind when you read the costs.
+
+## EV battery level
+
+Optional, but needed for *EV full*, the charge plan and the goal check. Any `%` sensor of your car works (`hesc_ev_soc_sensor`). When it has no value, HESC falls back by itself: a second battery sensor of the same car (found automatically), the last level plus what was charged since, or the usual level at plug-in. See [How it works](03-how-it-works.md#ev-battery-level).
 
 ## Template helpers
 
