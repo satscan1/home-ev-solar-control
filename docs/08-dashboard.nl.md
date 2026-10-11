@@ -8,7 +8,7 @@ Het HESC-dashboard heeft drie tabbladen, het **hoofdscherm**, het **laadplan** e
 
 ![Hoofdscherm met genummerde onderdelen](../screenshots/dashboard_main_numbered.jpg)
 
-1. **Statusbalk:** in één oogopslag wat HESC doet, of de auto is aangesloten, of de laadpaal op zonneladen staat en of HPVC de panelen afknijpt. *Expected charge cost* toont wat het actieve plan naar verwachting kost aan netstroom, in de munt van je prijzen. *Costs* opent de kostenpagina (als die in Settings aan staat), *Guide* opent de uitleg, ook in het Nederlands.
+1. **Statusbalk:** in één oogopslag wat HESC doet, of de auto is aangesloten, of de laadpaal op zonneladen staat en of HPVC de panelen afknijpt. *Expected charge cost* toont wat het actieve plan naar verwachting kost aan netstroom, in de valuta van je prijzen. *Costs* opent de kostenpagina (als die in Settings aan staat), *Guide* opent de uitleg, ook in het Nederlands.
 2. **Meldingenregel:** *✓ No notices*, of wat je aandacht nodig heeft, met de tijd: rood = het laaddoel komt in gevaar (ook naar je telefoon), oranje = een sensor ontbreekt maar HESC werkt door, grijs = ter info. Tik erop om naar de plek te gaan waar je iets kunt doen; zonder melding opent hij de HESC-pagina op GitHub.
 3. **Enable HESC:** de hoofdschakelaar. Uit betekent dat HESC niets meer beoordeelt. Had HESC HPVC uitgezet, dan zet het HPVC eerst terug.
 4. **Shadow mode:** HESC beoordeelt en logt alles, maar schakelt niets. Begin hier altijd mee.
@@ -29,11 +29,11 @@ Het HESC-dashboard heeft drie tabbladen, het **hoofdscherm**, het **laadplan** e
 3. **Active:** zet een plan aan of uit. Elk plan heeft een eigen schakelaar. Staan ze allebei aan, dan gaat het vroegste voor.
 4. **Holiday mode (vakantiemodus):** het weekplan rust terwijl je weg bent; het dagplan blijft werken en laden op zon gaat door. Staat hij aan, dan verschijnt *Holiday until*: de dag na die datum gaat hij vanzelf uit.
 5. **Take cheap chances:** laadt ook zonder plan zodra de prijs onder de grens zakt, tenzij de zon die dag naar verwachting genoeg levert. Zonder plan laadt hij tot *EV counts as full at*.
-6. **Cheap when below:** de prijsgrens voor een goedkope kans, per kWh in de munt van je prijzen.
+6. **Cheap when below:** de prijsgrens voor een goedkope kans, per kWh in de valuta van je prijzen.
 7. **Usable battery capacity:** hoeveel kWh je auto echt kan gebruiken. Daarmee rekent HESC uit hoeveel energie er nodig is.
 8. **Grid charging power:** hoeveel kW je laadpaal van het net levert. Daarmee rekent HESC uit hoeveel kwartieren er nodig zijn.
 9. **Planstatus:** wat HESC nu doet, voor welk plan en tot wanneer, hoe lang het laden duurt, de gemiddelde stroomprijs, de accustand nu, het doel, wat er nog nodig is (en hoeveel daarvan de zon naar verwachting levert) en de status.
-10. **Prijsgrafiek:** de stroomprijs per kwartier voor vandaag en morgen, in de kleine eenheid van je munt (cent, öre, øre, pence). Oranje is gepland laden van het net, blauwgroen een goedkope kans, grijs een verwachte prijs.
+10. **Prijsgrafiek:** de stroomprijs per kwartier voor vandaag en morgen, in de kleine eenheid van je valuta (cent, öre, øre, pence). Oranje is gepland laden van het net, blauwgroen een goedkope kans, grijs een verwachte prijs.
 
 ## Instellingen
 
@@ -53,7 +53,7 @@ Het HESC-dashboard heeft drie tabbladen, het **hoofdscherm**, het **laadplan** e
 12. **Change sources:** opent de sensoren voor zon en net (en of je netmeter teruglevering positief telt), de zonvoorspelling en de HPVC-onderdelen. Klopt er iets niet, dan gaan ze vanzelf open.
 13. **Show optional fields:** extra velden voor sommige laadpalen of voor meer detail in het rapport, zoals de accustand van de auto en *EV counts as full at*.
 14. **Weerstation:** *Use* zet het weerstation aan of uit, *Settings* toont de sensor en de drempels. Zonder weerstation werkt HESC alleen op de voorspelling.
-15. **Stap 3, geavanceerd:** drempels (en de optionele startdrempel per seizoen), timing, advies en de instellingen voor het laadplan: start/stop-schakelaar, *Back to solar mode*, prijsbron, prijssensor, prijzen per, munt, telefoons voor meldingen en het ochtendoverzicht. De standaardwaarden werken voor de meeste installaties.
+15. **Stap 3, geavanceerd:** drempels (en de optionele startdrempel per seizoen), timing, advies en de instellingen voor het laadplan: start/stop-schakelaar, *Back to solar mode*, prijsbron, prijssensor, prijzen per, valuta, telefoons voor meldingen en het ochtendoverzicht. De standaardwaarden werken voor de meeste installaties.
 16. **Minimumlading:** houdt de auto op minimaal een gekozen accustand, standaard 20% binnen 3 uur, in de goedkoopste kwartieren. Zet het aan met *Use*.
 17. **Thuisbatterij en EV:** met een thuisbatterij krijgt de auto zijn deel van de zon voordat de thuisbatterij alles pakt. Zet het aan met *Use* en vul je thuisbatterij in onder *Settings*.
 

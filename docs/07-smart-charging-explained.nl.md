@@ -86,7 +86,7 @@ Het kadertje **Expected charge cost** bovenaan Main toont wat het actieve plan n
 
 **Wat heeft het gekost?** Tik op het kadertje **Costs** bovenaan Main. Per dag, week, maand, kwartaal of jaar zie je hoeveel er in de auto ging, hoeveel daarvan van de zon kwam (groen) en van het net (grijs), en wat het netdeel kostte tegen de prijs van dat kwartier. Je opslag, btw en de waarde van een zon-kWh stel je één keer in onder *Settings → Charging costs*; de hele geschiedenis rekent mee. Met **Export to spreadsheet (CSV)** onderaan maak je twee bestanden die je in Excel opent.
 
-Alle bedragen staan in de munt van je prijzen (€, kr, £ of $), geschreven zoals dat in jouw land gebruikelijk is.
+Alle bedragen staan in de valuta van je prijzen (€, kr, £ of $), geschreven zoals dat in jouw land gebruikelijk is.
 
 ## Situaties
 
@@ -154,7 +154,7 @@ Zet **Holiday mode** aan, onder het weekplan. Het weekplan doet dan niets; je da
 |---|---|---|---|
 | Usable battery capacity | tabblad *Charge plan* | 60 kWh | Wat je auto echt kan gebruiken |
 | Grid charging power | tabblad *Charge plan* | 11 kW | Iets onder wat je laadpaal echt levert geeft wat marge |
-| Take cheap chances / Cheap when below | tabblad *Charge plan* | eigen keuze / 0,05 per kWh | In de munt van je prijzen. Lager = minder maar betere kansen |
+| Take cheap chances / Cheap when below | tabblad *Charge plan* | eigen keuze / 0,05 per kWh | In de valuta van je prijzen. Lager = minder maar betere kansen |
 | EV counts as full at | tabblad *Charge plan* en Settings | 80% | Het niveau dat zonder plan wordt vastgehouden |
 | Final check | Settings | 60 min | Hoe lang voor vertrek HESC laadt, wat de prijs ook is |
 | Minimum charge | Settings, blok 3 | uit (20%, 3 uur) | Schakelaars Use + Settings |
