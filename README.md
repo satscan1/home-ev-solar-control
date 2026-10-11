@@ -1,16 +1,19 @@
-<p align="center">
+<a href="screenshots/banner.png" title="Click for the full overview"><img src="screenshots/hesc_logo.png" alt="HESC logo, click for the full overview" align="right" width="140"></a>
+
+# Home EV Solar Control
+
+**Charge your EV for less.** Sun first, then the cheapest quarters of the day.<br>
+**Plug and play. Set and forget.** Your car is ready when you leave.
+
+*Now with: what charging cost, any price source and currency, and notifications on your phone.*
+
+<p>
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v2.0.0-blue" alt="Release v2.0.0"></a>
   <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-ready-41BDF5" alt="Home Assistant ready"></a>
   <a href="https://nodered.org/"><img src="https://img.shields.io/badge/Node--RED-flow-8F0000" alt="Node-RED flow"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later"></a>
   <img src="https://img.shields.io/badge/HPVC-optional-brightgreen" alt="HPVC optional">
 </p>
-
-<p align="center"><img src="screenshots/banner.png" alt="HESC – Home EV Solar Control" width="100%"></p>
-
-# Home EV Solar Control
-
-**HESC** makes sure your EV has the charge you want at the time you want, charged the cheapest way: on the sun first, then in the cheapest quarters. A Home Assistant package with a Node-RED flow, free and open source.
 
 <p align="center">
   <a href="#quick-install"><b>Quick install</b></a> &nbsp;·&nbsp; <a href="docs/README.md"><b>Documentation</b></a> &nbsp;·&nbsp; <a href="releases/v2.0.0/release.md"><b>What's new in v2.0.0</b></a> &nbsp;·&nbsp; <a href="docs/07-smart-charging-explained.md"><b>Smart charging explained</b></a>
