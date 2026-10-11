@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v1.4.0-blue" alt="Release v1.4.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v2.0.0-blue" alt="Release v2.0.0"></a>
   <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-ready-41BDF5" alt="Home Assistant ready"></a>
   <a href="https://nodered.org/"><img src="https://img.shields.io/badge/Node--RED-flow-8F0000" alt="Node-RED flow"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later"></a>
@@ -18,7 +18,10 @@ What HESC does for you:
 - **Charge plan:** *"100% by Tuesday 10:00"* or *"80% on weekdays at 07:30"*. HESC picks the cheapest hours before that moment, also when tomorrow's prices are not published yet: it learns the price pattern from your own history.
 - **Smart charging, almost on autopilot:** plug in and keep your plan in line with when you leave. HESC uses the sun first, then the cheapest hours, takes very cheap moments when the sun will not do the job, and can keep a minimum level in the car. See [Smart charging explained](docs/07-smart-charging-explained.md) ([Nederlands](docs/07-smart-charging-explained.nl.md)), also built into the dashboard.
 - **Home battery and EV:** with a home battery, HESC helps the car get its share of the sun before the home battery takes it all, and gives the home battery its turn again later in the day.
-- **Advice in plain language**, based on your own history, for example the best start threshold for your house.
+- **What did charging cost?** A Costs page per day, week, month, quarter or year: sun and grid, the grid part at the price of that quarter, and an export to a spreadsheet.
+- **Any country, any currency:** many price sources (Nord Pool, ENTSO-E, Tibber, Octopus Agile, Amber, EnergyZero and more), EUR, SEK, DKK, NOK, GBP and AUD, amounts written the way your country does it.
+- **Notifications that matter:** your phone hears from HESC when the charge goal is at risk, a notice line on Main says what needs attention, and an optional morning summary.
+- **Advice in plain language**, based on your own history, for example the start threshold from which your sessions got most of their energy from the sun. Optionally HESC applies it itself, in small steps.
 - **A support report** with everything it measured and decided.
 - **Together with [Home PV Control (HPVC)](https://github.com/BioPC/home-pv-control):** when HPVC turns your panels down, HESC can ask HPVC to let the sun through for the car.
 
@@ -27,6 +30,8 @@ HPVC is optional: HESC runs **on its own (standalone)** or **together with HPVC*
 **See it in practice:** [a day at home with HESC](docs/06-a-day-in-practice.md), one real day with home batteries, solar panels, a car and changing weather.
 
 **New to HESC?** Start with [Smart charging explained](docs/07-smart-charging-explained.md): what HESC does between plugging in and leaving, and what to do in common situations.
+
+**Upgrading from v1.4.0?** Read the [v2.0.0 release notes](releases/v2.0.0/release.md#upgrade-from-v140) first.
 
 > [!IMPORTANT]
 > A new install starts in **shadow mode**: HESC evaluates and logs every decision, but never starts the charger and never asks HPVC for anything. Switch shadow mode off after you have checked the report for your own installation.
@@ -42,6 +47,9 @@ HPVC is optional: HESC runs **on its own (standalone)** or **together with HPVC*
 - [Safety and recovery](#safety-and-recovery)
 - [Accuracy, insights and reports](#accuracy-insights-and-reports)
 - [Charge plan](#charge-plan)
+- [Charging costs](#charging-costs)
+- [Prices, currencies and countries](#prices-currencies-and-countries)
+- [Notifications](#notifications)
 - [Tested with](#tested-with)
 - [Architecture and persistence](#architecture-and-persistence)
 - [Documentation](#documentation)
@@ -61,8 +69,9 @@ HPVC is optional: HESC runs **on its own (standalone)** or **together with HPVC*
 3. Restart Home Assistant (first install creates the helpers and applies the defaults once)
 4. Import `node-red/hesc_flow.json` into Node-RED, select your Home Assistant server on the action and trigger nodes, and deploy
 5. Add `home assistant/hesc_dashboard.yaml` as a separate dashboard
-6. Open **Settings** and fill in step 1, *Your charger* (see [examples](examples/)). With HPVC, PV and grid are taken over from HPVC; without HPVC, switch on *No HPVC (standalone)* and pick your PV and grid sensors in step 2. The forecast comes from Solcast. Until the required fields are complete the dashboard shows a setup checklist
-7. Leave **shadow mode** on and check the report after a few charging days
+6. Turn off charging schedules in your charger's own app: **one planner per charger** ([why](docs/05-chargers-and-sources.md#what-hesc-needs-from-your-charger))
+7. Open **Settings** and fill in step 1, *Your charger* (see [examples](examples/)). With HPVC, PV and grid are taken over from HPVC; without HPVC, switch on *No HPVC (standalone)* and pick your PV and grid sensors in step 2. The forecast comes from Solcast. Until the required fields are complete the dashboard shows a setup checklist
+8. Leave **shadow mode** on and check the report after a few charging days
 
 Full guide: [docs/01-installation.md](docs/01-installation.md)
 
@@ -74,7 +83,7 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 | Setting | *No HPVC (standalone)* **on** (a new install without HPVC does this by itself) | *No HPVC (standalone)* **off** |
 | PV and grid power | you pick your own sensors | taken over from HPVC |
 | Follow solar sessions, forecast vs actual, advice, report | ✅ | ✅ |
-| Charge plan (cheapest hours) | ✅ | ✅ |
+| Charge plan (cheapest hours), charging costs, notifications | ✅ | ✅ |
 | Ask HPVC to let the sun through for the car | – (nothing holds the panels back) | ✅ |
 
 **Why the release is needed with HPVC.** The solar/Eco mode of many wallboxes only starts when the house sends enough power back to the grid. HPVC does the opposite: when exporting does not pay, it turns the panels down so that export stays near zero. Both do their job, but together the wallbox waits for sunshine that never comes. HESC solves this: when the car is waiting in Eco mode, HPVC is holding the panels back and the forecast says enough sun is coming, HESC **asks HPVC for a temporary release**. HPVC decides when that is safe, turns the panels up and confirms. When the sun drops or the car stops, HESC withdraws the request and HPVC takes over again.
@@ -92,12 +101,18 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 | Hysteresis (start/hold thresholds), stability timer, cooldown, daily attempt limit | ✅ |
 | Shadow mode: full evaluation without writes | ✅ |
 | With HPVC: uses HPVC's release request/confirm interface (HPVC ≥ 1.5.1), so HPVC keeps all its own priorities | ✅ |
-| Charge plan: charge to a goal by a set time (one-off or weekly) in the cheapest quarters, with a safety net, a final check and optional *take cheap chances* | ✅ |
-| Price forecast from your own price history (14-day pattern plus a solar index), so the plan can look past the published day-ahead prices | ✅ |
+| Charge plan: charge to a goal by a set time (one day every week, or a weekly plan) in the cheapest quarters, with a safety net, a final check and optional *take cheap chances* | ✅ |
+| Holiday mode: the weekly plan rests, with an optional end date | ✅ |
+| Charging costs: sun and grid per day, week, month, quarter or year, at the price of each quarter, with mark-up and VAT or all-in, and a CSV export | ✅ |
+| Price sources: any sensor with a price list (Nord Pool, ENTSO-E, Energi Data Service, EPEX Spot, Frank Energie, Zonneplan, Octopus Agile, Amber Electric, PVPC) and action-based sources (EnergyZero / ANWB Energie, EasyEnergy, Tibber, Nord Pool official); per quarter, half hour or hour | ✅ |
+| Currencies EUR, SEK, DKK, NOK, GBP, AUD, with the number notation of your country | ✅ |
+| Notifications with priorities (P1 to the phone as time-sensitive), phones picked from a list, a notice line on Main and an optional morning summary | ✅ |
+| EV battery level fallbacks: a second sensor of the same car, the last level plus what was charged, or the usual level at plug-in | ✅ |
+| Price forecast from your own price history (working days and weekend days or public holidays apart, plus a solar index), so the plan can look past the published day-ahead prices | ✅ |
 | Cheap chances are skipped when the sun is expected to do the same job later that day | ✅ |
 | Optional minimum charge: at least a set level within a set time after plugging in, in the cheapest quarters | ✅ |
 | 3% margin before grid charging, and afterwards the charger goes back to its own solar mode (*Back to solar mode*, e.g. Wallbox *Resume schedule*) or stays paused (no silent top-ups from the grid) | ✅ |
-| One-off plan with a fixed date: *Tomorrow* does not roll on at midnight, and the plan stops after its time | ✅ |
+| Pause checked before the charger returns to its solar mode, and a refused start is tried again | ✅ |
 | Optional home battery and EV: a short kickstart lets the car use the sun before the home battery takes it all, and the home battery gets the rest of the day when the sun runs short | ✅ |
 | *Expected charge cost* of the active plan on Main | ✅ |
 | Charger-independent grid charging: a start/stop switch **or** a "charge now" mode value | ✅ |
@@ -107,7 +122,8 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 | Forecast vs actual per solar/Eco charging session and per day | ✅ |
 | Source reliability: forecast and irradiance vs actual PV every 15 minutes | ✅ |
 | On-demand HTML support report | ✅ |
-| Plain-language setting advice from your own history, only after a minimum number of sessions, following the seasons | ✅ |
+| Plain-language setting advice from your own history, only after a minimum number of sessions, following the seasons; optionally applied by HESC in small steps, or a start threshold per season | ✅ |
+| Back up, restore and reset settings from the dashboard | ✅ |
 | Separate Home Assistant dashboard (same layout as HPVC): status badges, master-control toggles, live inputs, control-state timeline and a forecast vs actual graph | ✅ |
 | No InfluxDB required (file-based history) | ✅ |
 
@@ -120,10 +136,12 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 - A solar power forecast in watts (e.g. [Solcast PV Forecast](https://github.com/BJReplay/ha-solcast-solar) `power_now` / `power_in_30_minutes`, or any other forecast sensor in W)
 - Optional: a local weather station with an irradiance sensor (W/m²). HESC works without one
 - Optional: the EV's battery level (any `%` sensor), for *EV full* detection and the charge plan
-- Optional: day-ahead prices for the charge plan: a sensor with `raw_today` / `raw_tomorrow` (e.g. the Nord Pool integration), selected in Settings
+- Optional: dynamic prices for the charge plan and the costs: a sensor with a price list (e.g. Nord Pool, ENTSO-E, Octopus Energy) or one of the action-based sources (EnergyZero, EasyEnergy, Tibber, Nord Pool official), selected in Settings. See [Energy prices](docs/05-chargers-and-sources.md#energy-prices)
+- Optional: the [Workday](https://www.home-assistant.io/integrations/workday/) integration of your country, so the price forecast knows the public holidays
 - Home Battery Control is **not** needed
 - For the dashboard graphs: [apexcharts-card](https://github.com/RomRider/apexcharts-card) (HACS), the same card HPVC uses
 - Optional: [button-card](https://github.com/custom-cards/button-card) (HACS) for the *Expected solar charging* bar. Without it the bar simply stays hidden
+- Optional: [card-mod](https://github.com/thomasloven/lovelace-card-mod) (HACS) for the price-chart title in your currency
 
 ## Shipped defaults
 
@@ -143,12 +161,17 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 | EV counts as full at | 80% | set 100% for LFP batteries |
 | Charge plan: grid charging power | 11 kW | |
 | Charge plan: usable battery capacity | 60 kWh | set this to your own EV |
-| Charge plan: cheap when below | 0.05 €/kWh | only with *take cheap chances* on |
+| Charge plan: cheap when below | 0.05 per kWh | in the currency of your prices; only with *take cheap chances* on |
+| Charge plan: price source / prices per / currency | *Price list in sensor* / *Automatic* / *Automatic* | |
 | Charge plan: final check | 60 min | before the ready-by time; 0 = off |
 | Charge plan: solar forecast today / tomorrow | Solcast *forecast today / tomorrow* | per half hour, cautious estimate |
 | Grid charging margin | 3% (fixed) | grid charging only starts when the EV is more than 3% below its goal |
 | Minimum charge | off · 20% within 3 h | optional; switch it on in Settings, block 3 |
 | Home battery and EV | off · at most 3 kickstarts a day · at least 2 kWh sun left for the EV | optional, only with a home battery; Settings, block 3 |
+| Apply advice automatically | off | at most one step of 200 W per 7 days |
+| Start threshold per season | off | June–July 2 500 W … November–February 1 200 W |
+| Charging costs | off (counting runs in the background) | value of a solar kWh 0, mark-up 0, VAT 0 % |
+| Holiday mode, morning summary | off | |
 
 > [!NOTE]
 > The start threshold is a **production** forecast, while the wallbox looks at **surplus** (production minus house load minus battery charging). The defaults come from the test installation: every real solar/Eco start (8 starts over 3 days, September) happened at a cautious forecast of 1 500 W or more, with actual PV 3.2–5.8 kW. The Solcast cautious estimate is often well below the actual PV. A full day of measurements on 27 September 2026 confirmed this: in the 26 quarters with a cautious forecast above 1 500 W, actual PV was below 1 500 W only once. Two weeks of measurements later (23 September to 7 October 2026, 33 solar starts on 8 days) the defaults were raised to 2 000 / 1 500 W and 220 / 160 W/m²: 27 of the 32 Eco starts had PV of 2 000 W or more, the cautious forecast was reached only 80% of the time, and at 1 500 W forecast there was often too little for the charger's minimum. Tune the thresholds with the report and the advice of your own installation.
@@ -159,7 +182,7 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 
 Every 30 seconds HESC reads a bounded set of entities from the Node-RED Home Assistant state cache (no API reads, no copy of the full state table).
 
-**In both modes** HESC follows the charger: it logs every solar/Eco session with forecast and actual PV, stores forecast, actual PV and irradiance every 15 minutes, runs the charge plan and builds the advice and the report.
+**In both modes** HESC follows the charger: it logs every solar/Eco session with forecast and actual PV, stores forecast, actual PV and irradiance every 15 minutes, runs the charge plan, counts the charging costs, sends notices and builds the advice and the report.
 
 **Standalone:** that is all. Nothing holds the panels back, so the charger starts on sun by itself and there is nothing to release. The status then reads *Standalone (no HPVC): the charger starts on solar by itself*.
 
@@ -199,7 +222,7 @@ Every 15 minutes in daylight HESC stores the forecast, the actual PV power and, 
 
 ### Dashboard
 
-The dashboard follows the Home PV Control layout: status badges at the top, **EV Solar Master Control** with horizontal toggles, **Live Inputs**, **Control States** with a 12-hour timeline, and a **Solar forecast vs actual · EV** graph (actual PV, median and cautious forecast, EV charging power and the start threshold). The Settings tab works in three steps: *1 · Your charger* (the only required fields), *2 · Sources* (PV and grid from HPVC or your own sensors, Solcast forecast, HPVC entities) and *3 · Advanced* (thresholds, timing, advice, charge plan, minimum charge and home battery and EV, each behind its own switch). Fields stay closed while their check is OK and open by themselves when something is wrong. One setup check sums it all up, next to *Your settings* at a glance and a *Solar next 7 days* chart. Cards grow with their content, so nothing scrolls inside a card. See [Settings](docs/02-configuration.md).
+The dashboard follows the Home PV Control layout: status badges and a notice line at the top, **EV Solar Master Control** with horizontal toggles, **Live Inputs**, **Control States** with a 12-hour timeline, and a **Solar forecast vs actual · EV** graph (actual PV, median and cautious forecast, EV charging power and the start threshold). The Settings tab works in three steps: *1 · Your charger* (the only required fields), *2 · Sources* (PV and grid from HPVC or your own sensors, Solcast forecast, HPVC entities) and *3 · Advanced* (thresholds, timing, advice, charge plan, minimum charge and home battery and EV, each behind its own switch). Fields stay closed while their check is OK and open by themselves when something is wrong. One setup check sums it all up, next to the advice card, *Your settings* at a glance and the back-up buttons. A fourth page, **Costs**, opens from the *Costs* badge on Main. Cards grow with their content, so nothing scrolls inside a card. See [Settings](docs/02-configuration.md).
 
 The ⓘ next to the headings and the *Guide* badge on Main open a built-in guide (two hidden pages, English and Dutch), the same text as [Smart charging explained](docs/07-smart-charging-explained.md).
 
@@ -213,11 +236,11 @@ The dashboard shows today's releases (ok/failed), solar sessions, forecast accur
 
 Once a day (and with every report) HESC looks back over a recent period (default 30 days) and gives short advice in plain language: *this is what was measured, this is the advice*. For example: "20 solar sessions on 9 days (standalone). 9 of 18 kept charging for 20 minutes or more. At 1,900 W, 7 short sessions would not have started, but also 2 good ones."
 
-The start threshold advice looks at **all** solar sessions, the short ones too, and only at sessions from the way you work now (standalone or with HPVC). Sessions only start above your current threshold, so the advice can tell you to raise it when too many sessions stop early, and it shows what that would cost.
+The **start threshold advice** answers one question: from which forecast did your sessions get most of their energy from the sun? It takes the lowest start forecast from which the next 8 sessions together got at least 70% from the sun, between 1 000 and 3 500 W. It is shown in the Status card on Main and the advice card on Settings, with the sun share above and below it. See [How it works](docs/03-how-it-works.md#start-threshold-advice-sun-share).
 
 - **No advice without enough data.** Each advice needs a minimum number of sessions (default 8), and the threshold advice also needs sessions on at least 7 different days. Until then it says *collecting data*.
 - **Follows the seasons.** Only the recent period counts, so the advice moves with the season. When the threshold advice moves, the report says so for a week.
-- **Advice only.** HESC never changes a setting itself.
+- **Advice only, unless you say so.** HESC only changes the start threshold itself with *Apply advice automatically* on (off by default): at most one step of 200 W per 7 days, logged and shown as a notice. The optional *start threshold per season* is the simpler alternative; the two exclude each other.
 - Covers: start/hold threshold, wait time for the charger (needs real releases, so shadow mode off), releases without charging, forecast quality and, if switched on, the weather-station thresholds.
 
 The current advice is shown on the dashboard and at the top of the report.
@@ -237,9 +260,7 @@ The current advice is shown on the dashboard and at the top of the report.
 
 ## Charge plan
 
-The **Charge plan** tab lets you say *"100% by Tuesday 10:00"* (one-off) or *"80% on weekdays at 07:30"* (every week). HESC then:
-
-A one-off plan gets a fixed date the moment you choose its day and time, and stops after that moment.
+The **Charge plan** tab lets you say *"100% on Friday at 08:00"* (one day, every week) or *"80% on weekdays at 07:30"* (weekly plan). The one-day plan comes back every week on the same day and time; when both are active the earliest one wins. **Holiday mode** lets the weekly plan rest while you are away. HESC then:
 
 1. works out how much energy is still needed (battery level, usable capacity, grid charging power);
 2. counts on the **sun**: per half hour before the deadline it looks at the cautious solar forecast and expects the EV to charge on solar where the charger can start (same rule as the *Expected solar charging* bar), minus about 0.4 kW for the house;
@@ -247,11 +268,11 @@ A one-off plan gets a fixed date the moment you choose its day and time, and sto
 4. starts the charger from the grid in exactly those quarters (amber in the price chart), only when the EV is more than 3% below its goal;
 5. **safety net:** when the remaining time is only just enough, it starts right away;
 6. **final check:** one hour before the deadline (adjustable), if the EV is still below its goal, it charges to the goal whatever the price;
-7. **notification:** if the EV is not at its goal at the deadline, you get a message in Home Assistant and, if you set one, on your phone;
-8. optional **take cheap chances:** charges whenever the price is at or below a price you set, also without a plan, unless the solar forecast for the rest of that day covers what the EV still needs with 20% to spare (blue-green in the price chart);
+7. **notification:** if the EV is not at its goal at the deadline, you get a P1 notification *EV goal missed* on your phone and on Main;
+8. optional **take cheap chances:** charges whenever the price is at or below a price you set, also without a plan (then up to *EV counts as full at*), unless the solar forecast for the rest of that day covers what the EV still needs with 20% to spare (blue-green in the price chart);
 9. optional **minimum charge:** after plugging in below a level you set (default 20%), the EV gets at least that level within a set time (default 3 hours), in the cheapest quarters of that window.
 
-**Price forecast.** HESC keeps its own price history (`hesc-data/price_history.json`) and, every 15 minutes, predicts the 24 hours after the last known price: the hourly pattern of the last 14 full days, adjusted by half of a solar index (sunny days are cheap at midday and expensive in the evening). The index starts from a default for the Dutch market and is refined every week with your own history. The forecast works after one full day of prices and is complete after 14 days.
+**Price forecast.** HESC keeps its own price history (`hesc-data/price_history.json`) and, every 15 minutes, predicts the 24 hours after the last known price: the hourly pattern of the last 14 working days, or of the last 8 weekend days for a Saturday, Sunday or public holiday, adjusted by half of a solar index (sunny days are cheap at midday and expensive in the evening). The index starts from a default for the Dutch market and is refined every week with your own history. The forecast works after one full day of prices and is complete after 14 days.
 
 How the charger is started follows from what you fill in (Settings → step 3 → *Charge plan*), so it works for every charger:
 
@@ -262,13 +283,43 @@ How the charger is started follows from what you fill in (Settings → step 3 �
 
 Optional with a start/stop switch: **Back to solar mode**, a button that returns the charger to its own solar mode (Wallbox *Resume schedule*, filled in for you).
 
-Afterwards: with **Back to solar mode** HESC pauses the charger and about a minute later returns it to its own solar mode, so the next sunny hour charges the car by itself. With only a **start/stop switch** the charger stays **paused**, so the car cannot quietly top itself up from the grid in the evening peak. HESC switches it on again when there is enough sun to start solar charging, when the EV drops more than 3% below its goal and no planned charge is coming, when a plan starts, or when you unplug. A refused pause is retried after 30 minutes, at most 3 times. With a **mode value** the previous mode is selected again.
+Afterwards: with **Back to solar mode** HESC pauses the charger, checks that the pause took effect (cloud chargers carry out commands about a minute late), and then returns it to its own solar mode, so the next sunny hour charges the car by itself. With only a **start/stop switch** the charger stays **paused**, so the car cannot quietly top itself up from the grid in the evening peak. HESC switches it on again when there is enough sun to start solar charging, when the EV drops more than 3% below its goal and no planned charge is coming, when a plan starts, or when you unplug. A refused pause is retried after 30 minutes, at most 3 times; a refused start is tried again after 5 minutes, at most 3 times. With a **mode value** the previous mode is selected again.
 
 When the charger stops by itself (EV full, the car's own charge limit), HESC puts it back and leaves it alone for 30 minutes before it follows the plan again. It never takes over a charge it did not start, for example a solar session. See [How it works](docs/03-how-it-works.md#charge-plan).
 
+## Charging costs
+
+<img src="screenshots/costs.jpg" width="100%">
+
+Switch on **Charging costs** in Settings to show the *Costs* badge on Main and the Costs page. HESC counts every 30 seconds while the car charges: the **grid part** is the charging power, but never more than what comes from the grid at that moment, priced at that quarter's price; the rest is the **sun part** (this includes energy from a home battery). You set the value of a solar kWh and either *all-in* prices or a mark-up per kWh plus VAT. The costs are stored without those settings, so changing one recalculates the whole history. **Export to spreadsheet (CSV)** writes per day and per month. See [Settings](docs/02-configuration.md#charging-costs) and [How it works](docs/03-how-it-works.md#charging-costs).
+
+## Prices, currencies and countries
+
+<img src="screenshots/hesc_international_collage.jpg" width="100%">
+
+All price users (charge plan, price chart, price forecast, costs) read one sensor, `sensor.hesc_prices`, so HESC works with:
+
+- a sensor with a **price list**, recognised by its field names: Nord Pool, ENTSO-E, Energi Data Service, EPEX Spot, Frank Energie, Zonneplan, Octopus Agile, Amber Electric, Spain's PVPC;
+- **action-based** sources, fetched every 30 minutes: EnergyZero / ANWB Energie, EasyEnergy, Tibber, Nord Pool (official);
+- prices per **quarter, half hour or hour** (HESC always plans in quarters; *Per hour* for suppliers that bill per hour);
+- **EUR, SEK, DKK, NOK, GBP and AUD**, prices in their small unit (ct, öre, øre, p, c), and amounts written the way your country does it (`€ 1,12`, `1,12 €`, `1,12 kr`, `£1.12`, `$1.12`);
+- public holidays from the **Workday** integration of your country, and day boundaries in your Home Assistant time zone.
+
+Live-tested with Nord Pool in the Netherlands; the other sources and currencies with simulated data in the same formats. The collage above was made on one installation with test price lists. Reports from other countries are very welcome. See [Energy prices](docs/05-chargers-and-sources.md#energy-prices).
+
+## Notifications
+
+| Priority | When | Where |
+|---|---|---|
+| P1 | charge goal missed or not confirmable, or a real fault | phone (time-sensitive) and Main, red |
+| P2 | a sensor is missing but HESC keeps working | phone and Main, orange |
+| P3 | just so you know | Main only, grey |
+
+Pick the phones from a list (every device with the Home Assistant app) and send a test notification. The optional **morning summary** sends one message a day with the battery level, the next plan, the sun today and how yesterday went. Quiet hours are set on the phone or in Home Assistant. See [How it works](docs/03-how-it-works.md#notifications).
+
 ## Tested with
 
-HESC was developed and tested with a **Wallbox Pulsar Plus** (official Wallbox integration, solar charging mode *Eco*), **Solcast PV Forecast**, an **Ecowitt** weather station and **HPVC**. HESC uses the external PV release interface of **HPVC v1.5.1**. The charge plan's grid charging was built for the Wallbox *Pause/resume* switch; other chargers are untested. Standalone mode runs on the same installation with HPVC switched off. Other chargers should work when they expose the entities listed in [Chargers and sources](docs/05-chargers-and-sources.md); please test them in shadow mode first.
+HESC was developed and tested with a **Wallbox Pulsar Plus** (official Wallbox integration, solar charging mode *Eco*), **Solcast PV Forecast**, an **Ecowitt** weather station and **HPVC**. HESC uses the external PV release interface of **HPVC v1.5.1**. The charge plan's grid charging was built for the Wallbox *Pause/resume* switch; other chargers are untested. Prices: Nord Pool (the Netherlands, quarters) live; other price sources and currencies with simulated data. Standalone mode runs on the same installation with HPVC switched off. Other chargers should work when they expose the entities listed in [Chargers and sources](docs/05-chargers-and-sources.md); please test them in shadow mode first.
 
 ## Architecture and persistence
 
@@ -279,17 +330,20 @@ flowchart LR
   P[PV / grid power] --> E
   V[EV connected / power / mode] --> E
   H["HPVC limiting / release active (optional)"] --> E
-  CP[Charge plan + day-ahead prices] --> E
+  PR[Price source] --> PS[sensor.hesc_prices]
+  PS --> CP
+  CP[Charge plan] --> E
   E[HESC Engine] -->|only outside shadow mode| S[input_boolean.hpvc_external_release_request]
   E -->|charge plan, only outside shadow mode| C[Charger start/stop or mode]
-  E --> ST[Status helpers]
+  E --> ST[Status helpers + notices]
+  E --> K[(hesc-data/charging_costs.json)]
   E --> J[(hesc-data/history.jsonl)]
   PF[Price forecast] --> PH[(hesc-data/price_history.json)]
   PF --> CP
   J --> R[HESC Reports] --> W[/local/hesc/report.html/]
 ```
 
-The Node-RED flow has four tabs: **Inputs** (30-second trigger and startup safety), **Engine** (release state machine and charge plan), **Outputs** (the only write path, plus the history file) and **Reports** (on demand, outside the evaluation cycle). History is stored as JSON lines in `/homeassistant/hesc-data/history.jsonl`; the price history for the price forecast in `/homeassistant/hesc-data/price_history.json`. The forecast is published as `sensor.hesc_price_forecast`.
+The Node-RED flow has four tabs: **Inputs** (30-second trigger and startup safety), **Engine** (release state machine and charge plan), **Outputs** (the only write path, plus the history file) and **Reports** (on demand, outside the evaluation cycle). History is stored as JSON lines in `/homeassistant/hesc-data/history.jsonl`; the price history for the price forecast in `/homeassistant/hesc-data/price_history.json`; the charging costs per day in `charging_costs.json`; the EV battery level at plug-in in `ev_soc_plugins.json`; settings back-ups in `settings_backup.json`. The forecast is published as `sensor.hesc_price_forecast`, the costs as `sensor.hesc_charging_costs`.
 
 ## Documentation
 
@@ -303,6 +357,7 @@ The Node-RED flow has four tabs: **Inputs** (30-second trigger and startup safet
 - [The dashboard explained](docs/08-dashboard.md) · [Nederlands](docs/08-dashboard.nl.md)
 - [Documentation index](docs/README.md)
 - [Changelog](CHANGELOG.md)
+- [v2.0.0 release notes](releases/v2.0.0/release.md)
 - [v1.4.0 release notes](releases/v1.4.0/release.md)
 - [v1.3.0 release notes](releases/v1.3.0/release.md)
 - [v1.2.0 release notes](releases/v1.2.0/release.md)
@@ -321,6 +376,12 @@ Taken from the live test installation. The Settings screenshots show both ways: 
 
 <img src="screenshots/charge_plan.jpg" width="100%">
 
+### Costs
+
+A sample month.
+
+<img src="screenshots/costs.jpg" width="100%">
+
 ### Settings
 
 Standalone (no HPVC): you pick your own PV and grid sensors in step 2.
@@ -337,7 +398,8 @@ With HPVC: PV and grid are taken over from HPVC.
 
 ## Wish list
 
-- Retry a refused charger *start* in the charge plan (a refused pause and resume are already retried).
+- Grid tariffs that change during the day (for example in Denmark, Germany or Austria) in the costs and the plan.
+- Live tests of the other price sources and currencies by users in those countries.
 - Show the minimum charge quarters in the price chart.
 - The charger type table also fills in the grid charging method for more brands (Wallbox is done).
 - With HPVC: show in the report when HPVC paused a running release (for example because a negative price started).
@@ -382,6 +444,7 @@ releases/
   v1.2.0/
   v1.3.0/
   v1.4.0/
+  v2.0.0/
 ```
 
 ## Credits

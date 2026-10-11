@@ -6,7 +6,9 @@ Until step 1 is complete, the **Main** tab shows only a welcome card with a setu
 
 **Closed when OK, open when something is wrong.** Every block has its own check (`binary_sensor.hesc_check_charger`, `…_sources`, `…_weather_station`, `…_charge_plan`, `…_home_battery_and_ev`; on = OK, attribute `missing` lists what is wrong). While a check is OK, the fields of that block stay closed; a switch opens them (for example **Charger fields**). When a check fails, its fields open by themselves.
 
-**Setup check.** Under step 1 one card sums it up: *Setup verified · all OK*, or how many parts need attention. When all is well it shows one line per part with only the values of now (charger, sources, weather station, charge plan, home battery and EV); a part that is wrong unfolds with what is missing. Parts you do not use are listed on one line, *Not used*. Below it, **Your settings** shows your thresholds, EV, timing, charge plan and advice settings at a glance (change them in step 3), and **Solar next 7 days** shows per day the expected sun (yellow) and what is expected to be left for the EV after the house and the home battery (green).
+**Setup check.** Under step 1 one card sums it up: *Setup verified · all OK*, or how many parts need attention. When all is well it shows one line per part with only the values of now (charger, sources, weather station, charge plan, home battery and EV); a part that is wrong unfolds with what is missing. Parts you do not use are listed on one line, *Not used*. Next to it the **advice card** shows the start threshold advice from your own history, with the switch *Apply advice automatically* (see [Advice](#advice)). Below it, **Your settings** shows your thresholds, EV, timing, charge plan and advice settings at a glance (change them in step 3).
+
+**Back up settings / Restore back-up / Standard values.** *Back up settings* writes all HESC settings to `hesc-data/settings_backup.json` (plus a copy with date and time). *Restore back-up* puts them back; settings that no longer exist or are already the same are skipped. *Standard values* first makes a back-up, then resets only the tuning: thresholds, timing, advice and final check. Sensors, switches, battery size, charging power, goals, the cheap-chance price, minimum charge and costs stay as they are. The line below shows the last back-up or action.
 
 ## 1 · Your charger — required 
 
@@ -28,7 +30,8 @@ Only change these if you really have to.
 | Field | Default | Where it comes from |
 |---|---|---|
 | `hesc_pv_power_sensor` | HPVC's PV power sensor | Kept in sync with `input_text.hpvc_pv_power_sensor` while **PV & grid from HPVC** is on |
-| `hesc_grid_power_sensor` | HPVC's grid power sensor | Kept in sync with `input_text.hpvc_grid_power_sensor` (optional; used for the surplus in the advice) |
+| `hesc_grid_power_sensor` | HPVC's grid power sensor | Kept in sync with `input_text.hpvc_grid_power_sensor` (used for the surplus in the advice and for the sun/grid split of the costs) |
+| `input_boolean.hesc_grid_export_positive` | off | *Grid sensor: export is positive*. Off = import is positive and export negative (most meters). Switch it on when your meter counts the other way round |
 | `hesc_forecast_now_sensor` | `sensor.solcast_pv_forecast_power_now` | Set on first install |
 | `hesc_forecast_30m_sensor` | `sensor.solcast_pv_forecast_power_in_30_minutes` | Set on first install |
 | `hesc_forecast_attribute` | `estimate10` (Solcast cautious estimate) | Empty = use the state |
@@ -48,7 +51,7 @@ Shown with **Show optional fields** (`input_boolean.hesc_show_optional`).
 | `hesc_ev_disconnected_values` | Only when *EV connected* is a status sensor: the values that mean "no car", comma separated |
 | `hesc_charger_solar_switch_entity` | Chargers that need an extra switch to be `on` for solar mode (go-e, Wattpilot) |
 | `hesc_ev_green_energy_sensor` | The charger's solar energy counter, for "kWh from solar" in the report |
-| `hesc_ev_soc_sensor` + `input_number.hesc_ev_full_soc` | The EV's battery level (%) and the level that counts as full (default 80%; set 100% for LFP batteries). Used for *EV full* and the charge plan |
+| `hesc_ev_soc_sensor` + `input_number.hesc_ev_full_soc` | The EV's battery level (%) and the level that counts as full (default 80%; set 100% for LFP batteries). Used for *EV full*, the charge plan and as the goal of cheap chances and top-ups without an active plan. When the sensor has no value, HESC falls back by itself (see [How it works](03-how-it-works.md#ev-battery-level)) |
 
 **Local weather station**: two switches side by side. **Use** (`input_boolean.hesc_use_irradiance`) switches the weather station on or off; **Settings** (`input_boolean.hesc_show_weather_settings`) shows or hides the irradiance sensor and its start/hold thresholds. Without it HESC works on the forecast alone.
 
@@ -58,10 +61,10 @@ Three separate blocks, each with its own switch. The defaults work for most inst
 
 | Block (switch) | Settings | Defaults |
 |---|---|---|
-| Thresholds (`hesc_show_thresholds`) | Forecast power to start / hold, EV counts as charging above | 2 000 W / 1 500 W, 400 W (EV charging) · irradiance 220 / 160 W/m² |
+| Thresholds (`hesc_show_thresholds`) | *Start threshold per season* (`input_boolean.hesc_seasonal_threshold`), forecast power to start / hold, EV counts as charging above | off · 2 000 W / 1 500 W, 400 W (EV charging) · irradiance 220 / 160 W/m² |
 | Timing (`hesc_show_timing`) | Stable before release, wait for charger, allowed dip, charger stopped before restore, maximum duration, cooldown, failed releases per day | 5, 10, 5, 5, 240, 30 min, 3 |
 | Advice (`hesc_show_advice`) | Advice based on last, minimum sessions before advice | 30 days, 8 sessions |
-| Charge plan (`hesc_show_plan_settings`) | Charger start/stop switch **or** "charge now" mode value, day-ahead price sensor | empty (no grid charging) |
+| Charge plan (`hesc_show_plan_settings`) | Charger start/stop switch **or** "charge now" mode value, *Back to solar mode*, price source, price sensor, prices per, currency, solar forecast today / tomorrow, final check, phones for notifications, morning summary | empty (no grid charging) · *Price list in sensor* · *Automatic* · *Automatic* · 60 min · off |
 | Minimum charge: **Use** (`hesc_min_charge_enabled`) + **Settings** (`hesc_show_min_charge_settings`) | Minimum battery level (`input_number.hesc_min_charge_soc`), reach it within (`input_number.hesc_min_charge_hours`) | off · 20% · 3 h |
 | Home battery and EV: **Use** (`hesc_kick_enabled`) + **Settings** (`hesc_show_kick_settings`) | Home battery level sensor(s) (`input_text.hesc_home_battery_soc_sensors`), power sensor(s), + = charging (`input_text.hesc_home_battery_power_sensors`), size of all home batteries together (`input_number.hesc_home_battery_kwh`), kickstarts per day (`input_number.hesc_kick_max_per_day`), minimum sun left for the EV (`input_number.hesc_kick_min_ev_kwh`) | off · 3 · 2 kWh |
 
@@ -69,7 +72,28 @@ Three separate blocks, each with its own switch. The defaults work for most inst
 
 **Home battery and EV** (optional, only with a home battery). On a sunny morning the home battery usually takes all the spare sun first, so a charger in solar mode sees no surplus. With this on, HESC gives the charger a short start when the car is waiting for sun, the home battery is charging, the cautious forecast is above the start threshold and the sun left today is clearly more than the home battery still needs (1.2 × what it needs to be full, plus at least *minimum sun left for the EV*). Your battery control sees the car and stops filling the home battery; HESC then puts the charger back in its own solar mode. When the sun left is only just enough for the home battery, HESC puts the charger back to waiting, so the home battery is full by the evening. HESC never controls the home battery itself. Several sensors can be listed comma separated (for example two batteries). Needs the charger's start/stop switch and *Back to solar mode* (block *Charge plan*). See [Smart charging explained](07-smart-charging-explained.md#home-battery-and-ev).
 
+**Start threshold per season** (optional, off by default). Every night at 00:05 HESC sets the start threshold for the month: June–July 2 500 W, April–May and August–September 2 000 W, March and October 1 500 W, November–February 1 200 W. Hold is 75% of start. It cannot be on together with *Apply advice automatically*: switching one on switches the other off.
+
+### Advice
+
+The advice card on Settings (and the *Advice* line in the Status card on Main) shows the start threshold your own history points to, the threshold of now, how many sessions it is based on, the sun share above and below the advice, and when it was last checked. The advice looks back 30 days, up to 60 days in winter when there are fewer than 15 sessions in 30 days. How it is worked out: [How it works](03-how-it-works.md#advisor).
+
+**Apply advice automatically** (`input_boolean.hesc_advice_auto`, off by default): HESC moves the start threshold towards the advice by itself, in small steps: at most one step per 7 days and at most 200 W per step, only when the difference is at least 100 W and the advice rests on at least 8 good sessions on 5 different days. Every change is written to the history and shown as a grey notice on Main.
+
 More on the defaults: *Shipped defaults* in the [README](../README.md#shipped-defaults). Manual or scheduled starts are left out of the advice automatically, see [How it works](03-how-it-works.md#manual-and-scheduled-starts).
+
+## Charging costs
+
+Block *Charging costs* on Settings, with two switches side by side: **Use** (`input_boolean.hesc_costs_enabled`) shows the *Costs* badge on Main and the Costs page; **Settings** (`input_boolean.hesc_show_costs_settings`) shows the fields. HESC counts the costs whether the page is shown or not.
+
+| Field | Meaning | Default |
+|---|---|---|
+| `input_number.hesc_feed_in_price` | Value of a solar kWh: the feed-in compensation you miss by charging the car. 0 = free | 0 |
+| `input_boolean.hesc_costs_all_in` | *Price from the price source is already all-in*: the price already includes energy tax, supplier mark-up and VAT | off |
+| `input_number.hesc_costs_markup` | Mark-up per kWh (energy tax and supplier), in your currency. Only when not all-in | 0 |
+| `input_number.hesc_costs_vat` | VAT in %, over price + mark-up. Only when not all-in | 0 |
+
+Grid energy costs (price + mark-up) × (1 + VAT), or the all-in price; a solar kWh costs the feed-in compensation. The costs are stored without these settings, so a change recalculates the whole history. **Export to spreadsheet (CSV)** at the bottom of the Costs page writes `hesc-data/charging_costs_days.csv` and `charging_costs_months.csv`.
 
 ## Charge plan
 
@@ -77,9 +101,10 @@ On the **Charge plan** tab.
 
 | Setting | Meaning |
 |---|---|
-| One-off: day, time, goal, active | Charge to the goal by that day and time, once. The date is fixed when you choose it |
+| One day, every week: day, time, goal, active | Charge to the goal by that day and time. It comes back every week on the same day and time; switch *Active* off when you only need it once |
 | Every week: days, time, goal, active | Charge to the goal on the selected days at that time |
-| Take cheap chances + price | Also charge whenever the price is at or below this price (€/kWh), also without an active plan. Skipped when the solar forecast for the rest of that day covers what the EV still needs with 20% to spare |
+| Holiday mode (`input_boolean.hesc_vacation`) + Holiday until (`input_datetime.hesc_vacation_until`, optional) | The weekly plan does nothing; the one-day plan stays active and solar charging carries on. The day after *Holiday until* holiday mode switches itself off; a date of today or earlier counts as no end date |
+| Take cheap chances + price | Also charge whenever the price is at or below this price (per kWh, in the currency of your prices), also without an active plan. With an active plan it charges to the plan goal, otherwise to *EV counts as full at*. Skipped when the solar forecast for the rest of that day covers what the EV still needs with 20% to spare |
 | Usable battery capacity | kWh, to work out the energy needed |
 | Grid charging power | kW your charger delivers from the grid, to work out the number of quarters |
 
@@ -90,14 +115,22 @@ On the **Charge plan** tab.
 | `input_text.hesc_charger_start_stop_entity` | A start/stop switch: switched on in a planned quarter. E.g. Wallbox *Pause/resume* |
 | `input_text.hesc_charger_resume_entity` | **Back to solar mode** (optional, with a start/stop switch): a button or script that puts the charger back in its own solar mode after grid charging. E.g. Wallbox *Resume schedule* (`button.<name>_resume_schedule`) |
 | `input_text.hesc_charger_grid_mode_value` | Or: the value of the mode entity (step 1) that means "charge now", e.g. Zappi `Fast`, evcc `now` |
-| `input_text.hesc_price_sensor` | Your day-ahead price sensor with `raw_today` / `raw_tomorrow` attributes (e.g. Nord Pool). The price chart on the Charge plan tab follows it |
+| `input_select.hesc_price_source` | *Price list in sensor* (default): a sensor with a price list, recognised by its field names. *EnergyZero / ANWB Energie*, *EasyEnergy*, *Tibber*, *Nord Pool (official)*: sources that only give prices through an action; HESC fetches them every 30 minutes. See [Energy prices](05-chargers-and-sources.md#energy-prices) |
+| `input_text.hesc_price_sensor` | The price sensor. For the action sources: any sensor of that integration (HESC finds the integration from it). The price chart, the plan, the price forecast and the costs all follow it |
+| `input_select.hesc_price_resolution` | *Automatic* (follows the source), *Per quarter*, or *Per hour* (every quarter gets the average of its hour; for suppliers that bill per hour) |
+| `input_select.hesc_currency` | *Automatic* (default: from the price sensor's `currency` attribute or unit) or EUR, SEK, DKK, NOK, GBP, AUD. Sources that work through an action count as EUR on *Automatic*: pick your currency there |
 | `input_text.hesc_solar_today_sensor` / `hesc_solar_tomorrow_sensor` | Solar forecast per half hour for today and tomorrow (attribute `detailedForecast`, e.g. Solcast *forecast today / tomorrow*). The plan counts on this sun before the deadline. Empty = no sun in the plan |
 | `input_number.hesc_plan_final_check_min` | Final check this many minutes before the ready-by time: below the goal = charge to the goal, whatever the price. Default 60, 0 = off |
-| `input_text.hesc_notify_services` | Notify services for a message when the EV is not at its goal at the ready-by time, comma separated, e.g. `notify.mobile_app_phone`. Empty = only a notification inside Home Assistant |
+| `input_select.hesc_notify_pick` | *Add or remove a phone*: every device with the Home Assistant app is in the list (`sensor.hesc_notification_phones`); ✓ = gets notifications. *Notifications go to* shows who gets them |
+| `input_button.hesc_notify_test` | *Send a test notification* to the chosen phones |
+| `input_boolean.hesc_morning_summary` + `input_select.hesc_morning_summary_time` | *Morning summary every day* (off by default) at a time between 06:00 and 10:00: battery level and plugged in, the next plan, sun today, yesterday (kWh, % sun, costs) and whether yesterday's goal was reached |
+| `input_text.hesc_notify_services` | Filled by the list above (comma separated, e.g. `notify.mobile_app_phone`); edit by hand if needed. Empty = only notices inside Home Assistant |
 
 Grid charging only starts when the EV is more than 3% below its goal (fixed for now); once charging, it continues to the goal. Afterwards: with a start/stop switch and **Back to solar mode** filled in, HESC pauses the charger and about a minute later presses *Back to solar mode*, so the charger waits in its own solar mode again. With only a start/stop switch the charger stays **paused**, so the car cannot top itself up from the grid; HESC switches it on again for solar charging, a drop of more than 3% (when no planned charge is coming), a new plan or unplugging. With a mode value the previous mode is selected again. Nothing filled in = no grid charging. With charger type *Wallbox*, HESC fills in the start/stop switch (*Pause/resume*) and *Back to solar mode* (*Resume schedule*) itself when it finds exactly one.
 
-**One-off plan.** Choosing a day (*Today*, *Tomorrow*, …) and a time fixes the date: the plan does not move on to the next day at midnight. After that moment the one-off plan stops by itself.
+**One day, every week.** After its ready-by time the plan moves on one week, to the same day and time, like an extra weekly rule for one day. When it and the weekly plan are both active, the earliest one wins.
+
+**Notifications** have a priority. P1 (charge goal missed or not confirmable, a real fault) goes to the chosen phones as time-sensitive and shows red on Main; P2 (a sensor missing, HESC keeps working) goes to the phones and shows orange; P3 shows grey on Main only. Quiet hours are set on the phone or in Home Assistant.
 
 ## Switches
 
@@ -109,3 +142,8 @@ Grid charging only starts when the EV is more than 3% below its goal (fixed for 
 | HESC release via HPVC off (legacy fallback) | Off = ask HPVC for a release (needs HPVC 1.5.1). On = the old method (switch HPVC off and set its inverters to full). Keep off |
 | HESC switched HPVC off | Legacy ownership flag, set by HESC only. Do not change it manually |
 | HESC charge plan owns charging | Set while the charge plan started the charger. Do not change it manually |
+| Holiday mode | The weekly plan does nothing (Charge plan tab) |
+| Start threshold per season | Sets the start/hold threshold every month (Settings, *Thresholds*) |
+| Apply advice automatically | Moves the start threshold towards the advice in small steps (Settings, advice card) |
+| Charging costs: Use | Shows the *Costs* badge and page |
+| Morning summary every day | One message a day to the chosen phones |

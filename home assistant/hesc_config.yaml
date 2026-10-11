@@ -1,21 +1,52 @@
 # =============================================================================
-# Home EV Solar Control (HESC) — Home Assistant package 
-# Version: v1.4.0 (2026-10-07)
-# Project tag: [WALLBOX] [PV] 
+# Home EV Solar Control (HESC) — Home Assistant package
+# Version: v2.0.0 (2026-10-11)
+# Project tag: [WALLBOX] [PV]
 #
-# Works alongside Home PV Control (HPVC):
-# when the EV waits in solar/Eco charging mode and enough solar power is
-# forecast, HESC asks HPVC (v1.5.1+) for a temporary PV release so the charger
-# can start on sun. Optional charge plan: charge to a goal by a set time in the
-# cheapest quarters (known day-ahead prices first, then HESC's own price forecast),
-# counting on expected sun, with a final check and a notification if the goal is
-# not reached. Optional minimum charge and cheap chances (skipped when the sun will
-# do the job). Runs without HPVC too (standalone). Node-RED flow: hesc_flow.json.
+# Makes sure the EV has the energy you want at the time you want, charged the
+# cheapest way: on sun first, from the grid in the cheapest quarters when needed.
+# Works alongside Home PV Control (HPVC): when the EV waits in solar/Eco charging
+# mode and enough solar power is forecast, HESC asks HPVC (v1.5.1+) for a temporary
+# PV release so the charger can start on sun. Runs without HPVC too (standalone).
+# Optional: charge plan (one day every week + weekly plan, holiday mode), cheap
+# chances, minimum charge, home battery and EV kickstart, charging costs (with CSV
+# export), notifications with a priority and a morning summary on the phone.
+# Prices: many dynamic price sources, per quarter / half hour / hour, in EUR, SEK,
+# DKK, NOK, GBP or AUD; amounts are written the way the country does it.
+# Node-RED flow: hesc_flow.json. Dashboard: hesc_dashboard.yaml.
 # Shadow mode (default ON) evaluates only: no release requests, no charger writes.
 # =============================================================================
 
 input_boolean:
-  # Standalone: run HEVS without Home PV Control (HPVC). Off = HPVC installed (release via HPVC).
+  # v2.0.0 (11-10-2026): daily morning summary to the chosen phones (off by default)
+  hesc_morning_summary:
+    name: "HESC morning summary"
+    icon: mdi:weather-sunset-up
+  # v2.0.0 (own test; public in v1.6.0): let HESC set the start/hold threshold from its own advice
+  # (one step per week at most, 200 W per step). Excludes the seasonal start threshold: one system at a time.
+  hesc_advice_auto:
+    name: "HESC apply advice automatically"
+    icon: mdi:auto-fix
+  # 10-10-2026: start threshold per season on/off (see automation hesc_seasonal_threshold)
+  hesc_seasonal_threshold:
+    name: "HESC seasonal start threshold"
+    icon: mdi:calendar-sync
+  # v1.5 dummy (09-10-2026): charging costs overview, own page opened from Main (Use + Settings on Settings)
+  hesc_costs_enabled:
+    name: "HESC charging costs page"
+    icon: mdi:cash-multiple
+  hesc_show_costs_settings:
+    name: "HESC show charging costs settings"
+    icon: mdi:tune-vertical
+  # v1.5: on = the price from the price source is already the full price you pay (no mark-up / VAT added on the Costs page)
+  # v1.5: grid power sensor sign. Off (default) = import positive, export negative (most P1 meters). On = the other way round.
+  hesc_grid_export_positive:
+    name: "HESC grid sensor: export is positive"
+    icon: mdi:swap-vertical
+  hesc_costs_all_in:
+    name: "HESC costs: price is all-in"
+    icon: mdi:cash-check
+  # Standalone: run HESC without Home PV Control (HPVC). Off = HPVC installed (release via HPVC).
   # On = no HPVC: HPVC fields not needed, no release step; the charger starts on solar by itself.
   hesc_standalone:
     name: "HESC run without HPVC (standalone)"
@@ -32,6 +63,10 @@ input_boolean:
   hesc_release_legacy:
     name: HESC release via HPVC off (legacy fallback)
     icon: mdi:backup-restore
+  # v2.0.0 (11-10-2026): holiday mode - the weekly plan does nothing, the one-day plan stays active
+  hesc_vacation:
+    name: "HESC holiday mode"
+    icon: mdi:palm-tree
   hesc_rep_enabled:
     name: "HESC repeating plan"
     icon: mdi:calendar-sync
@@ -137,6 +172,14 @@ input_boolean:
     icon: mdi:tune-vertical
 
 input_text:
+  # v2.0.0 (11-10-2026): last export of the charging costs (written by Node-RED)
+  hesc_costs_export_info:
+    name: "HESC costs export info"
+    max: 255
+  # v1.5: last settings back-up / restore / reset (written by Node-RED)
+  hesc_settings_backup_info:
+    name: "HESC settings back-up info"
+    max: 255
   # Charge plan: fill in ONE of these. A start/stop switch (on = charge; afterwards back to its previous state)
   # or the value of the charger mode entity that means "charge now" (afterwards back to the previous mode)
   hesc_charger_start_stop_entity:
@@ -153,7 +196,7 @@ input_text:
   hesc_plan_status:
     name: "HESC charge plan status"
     max: 255
-  # Charge plan: day-ahead price sensor with raw_today / raw_tomorrow (e.g. Nord Pool)
+  # Charge plan: price SOURCE entity (v1.5: any supported source; HESC itself reads sensor.hesc_prices)
   hesc_price_sensor:
     name: "HESC day-ahead price sensor"
     max: 255
@@ -164,7 +207,8 @@ input_text:
   hesc_solar_tomorrow_sensor:
     name: "HESC solar forecast tomorrow (charge plan)"
     max: 255
-  # Home Assistant notify services for the charge plan goal check, comma separated (e.g. notify.mobile_app_phone).
+  # Home Assistant notify services for HESC notifications, comma separated (e.g. notify.mobile_app_phone).
+  # v2.0.0: normally filled by picking phones in Settings (input_select.hesc_notify_pick).
   # Empty = only a notification inside Home Assistant.
   hesc_notify_services:
     name: "HESC notify services"
@@ -266,12 +310,38 @@ input_text:
     max: 255
 
 input_number:
+  # v1.5 dummy: value of one solar kWh in the costs overview (feed-in compensation you miss), 0 = solar is free
+  # v1.5: Costs page, when the price is not all-in: (price + mark-up) x (1 + VAT)
+  hesc_costs_markup:
+    name: "HESC costs: mark-up per kWh (energy tax + supplier)"
+    min: 0
+    max: 10
+    step: 0.0001
+    unit_of_measurement: "per kWh"
+    icon: mdi:cash-plus
+    mode: box
+  hesc_costs_vat:
+    name: "HESC costs: VAT"
+    min: 0
+    max: 30
+    step: 0.5
+    unit_of_measurement: "%"
+    icon: mdi:percent
+    mode: box
+  hesc_feed_in_price:
+    name: "HESC feed-in compensation"
+    min: 0
+    max: 10
+    step: 0.005
+    unit_of_measurement: "per kWh"
+    icon: mdi:solar-power
+    mode: box
   hesc_plan_opportunity_price:
     name: "HESC charge plan opportunity price"
-    min: -0.5
-    max: 0.5
+    min: -5
+    max: 10
     step: 0.01
-    unit_of_measurement: "€/kWh"
+    unit_of_measurement: "per kWh"
     icon: mdi:cash-fast
     mode: box
   # --- Charge plan ---
@@ -469,6 +539,331 @@ input_number:
     mode: box
 
 template:
+  # --- v2.0.0 (10-10-2026): backup battery-level sensor, found automatically ----------------
+  # Another battery sensor (%, device class battery) on a device with the same car name as the device of
+  # the battery-level sensor from Settings (e.g. Electro "Atto3" and BYD "BYD ATTO 3"). Nothing to fill in.
+  # Trigger-based, so it is only worked out every 10 minutes and at start (light on the system).
+  - trigger:
+      - trigger: time_pattern
+        minutes: "/10"
+      - trigger: homeassistant
+        event: start
+      - trigger: state
+        entity_id: input_text.hesc_ev_soc_sensor
+    sensor:
+      - name: "HESC EV battery backup sensor"
+        unique_id: hesc_ev_soc_backup
+        icon: mdi:car-battery
+        state: >-
+          {%- set m = states('input_text.hesc_ev_soc_sensor') | trim -%}
+          {%- set md = device_id(m) if m not in ['', 'unknown', 'unavailable'] else none -%}
+          {%- set car = ((device_attr(md, 'name_by_user') or device_attr(md, 'name')) if md else '') | lower | regex_replace('[^a-z0-9]', '') -%}
+          {%- set ns = namespace(found='none') -%}
+          {%- if car | length >= 3 -%}
+          {%- for s in states.sensor | selectattr('attributes.device_class', 'defined') | selectattr('attributes.device_class', 'eq', 'battery') | selectattr('attributes.unit_of_measurement', 'defined') | selectattr('attributes.unit_of_measurement', 'eq', '%') -%}
+          {%- set d = device_id(s.entity_id) -%}
+          {%- if ns.found == 'none' and d and d != md -%}
+          {%- set n = (device_attr(d, 'name_by_user') or device_attr(d, 'name') or '') | lower | regex_replace('[^a-z0-9]', '') -%}
+          {%- if n | length >= 3 and (car in n or n in car) -%}{%- set ns.found = s.entity_id -%}{%- endif -%}
+          {%- endif -%}
+          {%- endfor -%}
+          {%- endif -%}
+          {{ ns.found }}
+        attributes:
+          device: >-
+            {%- set b = this.state if this is defined and this.state is defined else 'none' -%}
+            {{ (device_attr(device_id(b), 'name_by_user') or device_attr(device_id(b), 'name')) if b.startswith('sensor.') and device_id(b) else '' }}
+  # --- v2.0.0 (10-10-2026): phones that can get HESC notifications -----------------------------
+  # Every device with the Home Assistant companion app (mobile_app) has its own notify.mobile_app_<name>.
+  # State: the names of the phones that get notifications now (from input_text.hesc_notify_services).
+  - sensor:
+      - name: "HESC notification phones"
+        unique_id: hesc_notify_phones
+        icon: mdi:cellphone-message
+        state: >-
+          {%- set chosen = states('input_text.hesc_notify_services').split(',') | map('trim') | reject('eq', '') | list -%}
+          {%- set ns = namespace(n=[]) -%}
+          {%- for d in integration_entities('mobile_app') | map('device_id') | reject('none') | unique | list -%}
+          {%- set sv = 'notify.mobile_app_' ~ (device_attr(d, 'name') | slugify) -%}
+          {%- if sv in chosen -%}{%- set ns.n = ns.n + [device_attr(d, 'name_by_user') or device_attr(d, 'name')] -%}{%- endif -%}
+          {%- endfor -%}
+          {%- set other = chosen | reject('search', '^notify\\.mobile_app_') | list -%}
+          {%- set all = ns.n + other -%}
+          {{ (all | join(', ')) if all | count > 0 else 'none (only inside Home Assistant)' }}
+        attributes:
+          phones: >-
+            {%- set chosen = states('input_text.hesc_notify_services').split(',') | map('trim') | reject('eq', '') | list -%}
+            {%- set ns = namespace(p=[]) -%}
+            {%- for d in integration_entities('mobile_app') | map('device_id') | reject('none') | unique | list -%}
+            {%- set sv = 'notify.mobile_app_' ~ (device_attr(d, 'name') | slugify) -%}
+            {%- set ns.p = ns.p + [{'name': device_attr(d, 'name_by_user') or device_attr(d, 'name'), 'service': sv, 'chosen': sv in chosen}] -%}
+            {%- endfor -%}
+            {{ ns.p }}
+  # --- 10-10-2026: solar still to come today (Live Inputs on Main) ----------------------------------
+  # Same forecast HESC decides on: the "solar today" sensor from Settings (Solcast detailedForecast) and the
+  # forecast attribute from Settings (cautious estimate by default); half hours from now to the end of the day.
+  - sensor:
+      - name: "HESC solar still to come today"
+        unique_id: hesc_solar_remaining_today
+        unit_of_measurement: kWh
+        icon: mdi:weather-sunset-down
+        availability: "{{ state_attr(states('input_text.hesc_solar_today_sensor'), 'detailedForecast') is not none }}"
+        state: >-
+          {% set src = states('input_text.hesc_solar_today_sensor') %}
+          {% set key = {'estimate':'pv_estimate','estimate10':'pv_estimate10','estimate90':'pv_estimate90'}.get(states('input_text.hesc_forecast_attribute'), 'pv_estimate10') %}
+          {% set ns = namespace(k=0) %}
+          {% for p in state_attr(src, 'detailedForecast') or [] %}
+            {% set s = as_datetime(p.period_start) if p.period_start is string else p.period_start %}
+            {% set e = s + timedelta(minutes=30) %}
+            {% if e > now() %}{% set frac = [ (e - [s, now()] | max).total_seconds() / 1800, 1 ] | min %}{% set ns.k = ns.k + (p[key] | float(0)) * 0.5 * frac %}{% endif %}
+          {% endfor %}
+          {{ ns.k | round(1) }}
+  # --- 10-10-2026: solar still to come today (Live Inputs on Main) ----------------------------------
+  # Same forecast HESC decides on: the "solar today" sensor from Settings (Solcast detailedForecast) and the
+  # forecast attribute from Settings (cautious estimate by default); half hours from now to the end of the day.
+  - sensor:
+      - name: "HESC solar still to come today"
+        unique_id: hesc_solar_remaining_today
+        unit_of_measurement: kWh
+        icon: mdi:weather-sunset-down
+        availability: "{{ state_attr(states('input_text.hesc_solar_today_sensor'), 'detailedForecast') is not none }}"
+        state: >-
+          {% set src = states('input_text.hesc_solar_today_sensor') %}
+          {% set key = {'estimate':'pv_estimate','estimate10':'pv_estimate10','estimate90':'pv_estimate90'}.get(states('input_text.hesc_forecast_attribute'), 'pv_estimate10') %}
+          {% set ns = namespace(k=0) %}
+          {% for p in state_attr(src, 'detailedForecast') or [] %}
+            {% set s = as_datetime(p.period_start) if p.period_start is string else p.period_start %}
+            {% set e = s + timedelta(minutes=30) %}
+            {% if e > now() %}{% set frac = [ (e - [s, now()] | max).total_seconds() / 1800, 1 ] | min %}{% set ns.k = ns.k + (p[key] | float(0)) * 0.5 * frac %}{% endif %}
+          {% endfor %}
+          {{ ns.k | round(1) }}
+  # --- 10-10-2026: holidays for the price forecast -------------------------------------------------
+  # HESC finds a Workday calendar by itself (Workday integration, any country and any name; no extra field).
+  # The calendar lists workdays; a Monday-Friday that is NOT in that list is a holiday. The price forecast
+  # treats holidays like weekend days. Without a Workday calendar this sensor stays 0 (weekend only).
+  - triggers:
+      - trigger: time_pattern
+        hours: "/6"
+        minutes: 7
+      - trigger: homeassistant
+        event: start
+      - trigger: event
+        event_type: event_template_reloaded
+    actions:
+      - action: calendar.get_events
+        continue_on_error: true
+        target:
+          entity_id: "{{ (integration_entities('workday') | select('match', 'calendar') | list + states.calendar | map(attribute='entity_id') | select('search', 'workday') | list) | first | default('calendar.none') }}"
+        data:
+          start_date_time: "{{ (now() - timedelta(days=100)).strftime('%Y-%m-%d 00:00:00') }}"
+          end_date_time: "{{ (now() + timedelta(days=31)).strftime('%Y-%m-%d 00:00:00') }}"
+        response_variable: wd_ev
+    sensor:
+      - name: "HESC holidays"
+        unique_id: hesc_holidays
+        icon: mdi:calendar-star
+        state: >-
+          {% set cal = (integration_entities('workday') | select('match', 'calendar') | list + states.calendar | map(attribute='entity_id') | select('search', 'workday') | list) | first | default('') %}
+          {% if cal and wd_ev is defined and wd_ev.get(cal) %}
+            {% set wd = wd_ev[cal].events | map(attribute='start') | list %}
+            {% set ns = namespace(d=[]) %}
+            {% for i in range(-100, 31) %}{% set day = (now() + timedelta(days=i)).date() %}{% if day.weekday() < 5 and day.isoformat() not in wd %}{% set ns.d = ns.d + [day.isoformat()] %}{% endif %}{% endfor %}
+            {{ ns.d | count }}
+          {% else %}0{% endif %}
+        attributes:
+          dates: >-
+            {% set cal = (integration_entities('workday') | select('match', 'calendar') | list + states.calendar | map(attribute='entity_id') | select('search', 'workday') | list) | first | default('') %}
+            {% if cal and wd_ev is defined and wd_ev.get(cal) %}
+              {% set wd = wd_ev[cal].events | map(attribute='start') | list %}
+              {% set ns = namespace(d=[]) %}
+              {% for i in range(-100, 31) %}{% set day = (now() + timedelta(days=i)).date() %}{% if day.weekday() < 5 and day.isoformat() not in wd %}{% set ns.d = ns.d + [day.isoformat()] %}{% endif %}{% endfor %}
+              {{ ns.d }}
+            {% else %}[]{% endif %}
+          source: "{{ (integration_entities('workday') | select('match', 'calendar') | list + states.calendar | map(attribute='entity_id') | select('search', 'workday') | list) | first | default('none') }}"
+  # --- v1.5 (09-10-2026): price adapter ------------------------------------------------------------
+  # HESC reads prices only from sensor.hesc_prices (quarters {start,end,value} in EUR/kWh, Nord Pool layout).
+  # Source = Settings "Price source": a sensor with a price list (Nord Pool HACS, ENTSO-E, Energi Data Service,
+  # EPEX Spot, Frank Energie, Zonneplan, Octopus ...) is read directly; EnergyZero / ANWB Energie, EasyEnergy,
+  # Tibber and Nord Pool (official) only give prices through an action: sensor.hesc_price_fetch asks for them.
+  - triggers:
+      - trigger: time_pattern
+        minutes: "/30"
+      - trigger: homeassistant
+        event: start
+      - trigger: state
+        entity_id:
+          - input_select.hesc_price_source
+          - input_text.hesc_price_sensor
+    conditions:
+      - condition: template
+        value_template: "{{ states('input_select.hesc_price_source') in ['EnergyZero / ANWB Energie', 'EasyEnergy', 'Tibber', 'Nord Pool (official)'] }}"
+    actions:
+      - variables:
+          src: "{{ states('input_select.hesc_price_source') }}"
+          ent: "{{ states('input_text.hesc_price_sensor') | trim }}"
+          entry: "{{ (config_entry_id(ent) if ent not in ['', 'unknown'] else '') or '' }}"
+          t0: "{{ today_at('00:00').isoformat() }}"
+          t2: "{{ (today_at('00:00') + timedelta(days=2)).isoformat() }}"
+          d0: "{{ now().date() | string }}"
+          d1: "{{ (now() + timedelta(days=1)).date() | string }}"
+          svc: >-
+            {{ {'EnergyZero / ANWB Energie': 'energyzero.get_energy_prices', 'EasyEnergy': 'easyenergy.get_energy_usage_prices',
+                'Tibber': 'tibber.get_prices', 'Nord Pool (official)': 'nordpool.get_prices_for_date'}[src] }}
+          dat1: >-
+            {%- if src == 'Tibber' -%}{{ {'start': t0, 'end': t2} }}
+            {%- elif src == 'Nord Pool (official)' -%}{{ {'config_entry': entry, 'date': d0} }}
+            {%- else -%}{{ {'config_entry': entry, 'incl_vat': true, 'start': t0, 'end': t2} }}{%- endif -%}
+          dat2: >-
+            {%- if src == 'Nord Pool (official)' -%}{{ {'config_entry': entry, 'date': d1} }}{%- else -%}{{ dat1 }}{%- endif -%}
+      - action: "{{ svc }}"
+        data: "{{ dat1 }}"
+        response_variable: r1
+        continue_on_error: true
+      - action: "{{ svc }}"
+        data: "{{ dat2 }}"
+        response_variable: r2
+        continue_on_error: true
+    sensor:
+      - name: "HESC price fetch"
+        unique_id: hesc_price_fetch
+        icon: mdi:cloud-download-outline
+        state: "{{ now().isoformat() }}"
+        attributes:
+          source: "{{ src }}"
+          div: "{{ 1000 if src == 'Nord Pool (official)' else 1 }}"
+          rows: >-
+            {%- set ns = namespace(out=[]) -%}
+            {%- for r in [r1 | default({}), r2 | default({})] -%}
+              {%- set x = r -%}
+              {%- if x is mapping and x.get('prices') is not none -%}{%- set x = x.get('prices') -%}{%- endif -%}
+              {%- if x is mapping -%}{%- set x = (x.values() | list)[0] if x | count > 0 else [] -%}{%- endif -%}
+              {%- if x is iterable and x is not string -%}{%- set ns.out = ns.out + (x | list) -%}{%- endif -%}
+            {%- endfor -%}
+            {{ ns.out }}
+  - triggers:
+      - trigger: time_pattern
+        minutes: "/5"
+      - trigger: homeassistant
+        event: start
+      - trigger: event
+        event_type: event_template_reloaded
+      - trigger: state
+        entity_id:
+          - input_select.hesc_price_source
+          - input_select.hesc_price_resolution
+          - input_select.hesc_currency
+          - input_text.hesc_price_sensor
+          - sensor.hesc_price_fetch
+    variables:
+      p: >-
+        {#- HESC price adapter (v1.5, 09-10-2026): any supported price source -> one list of quarters {start,end,value} in EUR/kWh -#}
+        {%- set src = states('input_select.hesc_price_source') -%}
+        {%- set ent = states('input_text.hesc_price_sensor') | trim -%}
+        {%- set resmode = states('input_select.hesc_price_resolution') -%}
+        {%- set ns = namespace(rows=[], div=1) -%}
+        {%- if src in ['Price list in sensor', 'unknown', 'unavailable', ''] -%}
+          {%- set u = (state_attr(ent, 'unit_of_measurement') or '') | string | lower -%}
+          {%- set ns.div = 1000 if 'mwh' in u else 1 -%}
+          {%- for pair in [['raw_today', 'raw_tomorrow'], ['prices_today', 'prices_tomorrow'], ['prices', 'tomorrow_prices'], ['data'], ['forecast'], ['rates'], ['forecasts']] -%}
+            {%- if ns.rows | count == 0 -%}
+              {%- for a in pair -%}
+                {%- set v = state_attr(ent, a) -%}
+                {%- if v is iterable and v is not string and v is not mapping -%}{%- set ns.rows = ns.rows + (v | list) -%}{%- endif -%}
+              {%- endfor -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {#- v2.0.0 (11-10-2026): PVPC (Spain) gives no list but one attribute per hour: price_00h .. price_23h, price_next_day_00h .. -#}
+        {%- if ns.rows | count == 0 and state_attr(ent, 'price_00h') is not none -%}
+          {%- set t0 = today_at('00:00') -%}
+          {%- for dd0 in [0, 1] -%}{%- for h in range(24) -%}
+            {%- set v = state_attr(ent, ('price_' if dd0 == 0 else 'price_next_day_') ~ ('%02d' | format(h)) ~ 'h') -%}
+            {%- if v is not none -%}{%- set ts = t0 + timedelta(days=dd0, hours=h) -%}{%- set ns.rows = ns.rows + [{'start': ts.isoformat(), 'end': (ts + timedelta(hours=1)).isoformat(), 'value': v}] -%}{%- endif -%}
+          {%- endfor -%}{%- endfor -%}
+        {%- endif -%}
+        {%- else -%}
+          {%- set ns.rows = state_attr('sensor.hesc_price_fetch', 'rows') or [] -%}
+          {%- set ns.div = state_attr('sensor.hesc_price_fetch', 'div') | float(1) -%}
+        {%- endif -%}
+        {#- 1. read every item, whatever its field names -#}
+        {%- set it = namespace(list=[]) -%}
+        {%- for r in ns.rows if r is mapping -%}
+          {%- set s = r.get('start') or r.get('start_time') or r.get('time') or r.get('hour') or r.get('from') or r.get('timestamp') or r.get('start_date') or r.get('startsAt') -%}
+          {%- set e = r.get('end') or r.get('end_time') or r.get('till') -%}
+          {%- set v = r.get('value') if r.get('value') is not none else (r.get('price') if r.get('price') is not none else (r.get('price_per_kwh') if r.get('price_per_kwh') is not none else (r.get('value_inc_vat') if r.get('value_inc_vat') is not none else (r.get('total') if r.get('total') is not none else (r.get('electricity_price') if r.get('electricity_price') is not none else (r.get('per_kwh') if r.get('per_kwh') is not none else r.get('price_tax_included'))))))) -%}
+          {%- if v is mapping -%}{%- set v = v.get('amount') -%}{%- endif -%}
+          {%- set sd = s if s is datetime else as_datetime(s | string) -%}
+          {%- set ed = none if e is none else (e if e is datetime else as_datetime(e | string)) -%}
+          {%- if sd is not none and v is not none and (v | string) not in ['', 'None'] -%}
+            {%- set f = v | float(0) -%}
+            {%- set f = f / 10000000 if f | abs > 1000 else f / ns.div -%}
+            {%- set it.list = it.list + [{'s': as_local(sd), 'e': (as_local(ed) if ed is not none else none), 'v': f}] -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {#- 2. sort, drop duplicates, fill missing ends -#}
+        {%- set srt = it.list | sort(attribute='s') -%}
+        {%- set dd = namespace(list=[], last=none, step=3600) -%}
+        {%- for x in srt -%}{%- if dd.last is none or x.s != dd.last -%}{%- set dd.list = dd.list + [x] -%}{%- set dd.last = x.s -%}{%- endif -%}{%- endfor -%}
+        {%- for i in range(1, dd.list | count) -%}{%- set d = (dd.list[i].s - dd.list[i-1].s).total_seconds() -%}{%- if d > 0 and d < dd.step -%}{%- set dd.step = d -%}{%- endif -%}{%- endfor -%}
+        {#- 3. cut into quarters (an hour price becomes four equal quarters) -#}
+        {%- set q = namespace(list=[]) -%}
+        {%- for i in range(dd.list | count) -%}
+          {%- set x = dd.list[i] -%}
+          {%- set en = x.e if x.e is not none else x.s + timedelta(seconds=dd.step) -%}
+          {%- set k = ((en - x.s).total_seconds() / 900) | round(0) | int -%}
+          {%- for j in range([k, 1] | max) -%}
+            {%- set qs = x.s + timedelta(minutes=15 * j) -%}
+            {%- set q.list = q.list + [{'s': qs, 'v': x.v}] -%}
+          {%- endfor -%}
+        {%- endfor -%}
+        {#- 4. "Per hour": every quarter gets the average of its hour -#}
+        {%- set o = namespace(today=[], tomorrow=[], now=none) -%}
+        {%- set d0 = now().date() -%}
+        {%- for x in q.list -%}
+          {%- if resmode == 'Per hour' -%}
+            {%- set hk = x.s.replace(minute=0) -%}
+            {%- set grp = q.list | selectattr('s', 'ge', hk) | selectattr('s', 'lt', hk + timedelta(hours=1)) | map(attribute='v') | list -%}
+            {%- set val = (grp | sum) / (grp | count) -%}
+          {%- else -%}
+            {%- set val = x.v -%}
+          {%- endif -%}
+          {%- set row = {'start': x.s.isoformat(), 'end': (x.s + timedelta(minutes=15)).isoformat(), 'value': val | round(5)} -%}
+          {%- if x.s.date() == d0 -%}{%- set o.today = o.today + [row] -%}{%- elif x.s.date() == d0 + timedelta(days=1) -%}{%- set o.tomorrow = o.tomorrow + [row] -%}{%- endif -%}
+          {%- if x.s <= now() < x.s + timedelta(minutes=15) -%}{%- set o.now = val | round(5) -%}{%- endif -%}
+        {%- endfor -%}
+        {#- 5. v2.0.0 (11-10-2026): currency. Automatic = from the price sensor ('currency' attribute or unit); action sources: EUR unless set in Settings -#}
+        {%- set cs = states('input_select.hesc_currency') -%}
+        {%- set cc = namespace(v=(cs if cs in ['EUR', 'SEK', 'DKK', 'NOK', 'GBP', 'AUD'] else '')) -%}
+        {%- if cc.v == '' -%}
+          {%- set hint = (((state_attr(ent, 'currency') or '') | string) ~ ' ' ~ ((state_attr(ent, 'unit_of_measurement') or '') | string)) | upper if src in ['Price list in sensor', 'unknown', 'unavailable', ''] else '' -%}
+          {%- set cc.v = 'SEK' if 'SEK' in hint else ('DKK' if 'DKK' in hint else ('NOK' if 'NOK' in hint else ('GBP' if ('GBP' in hint or '£' in hint) else ('AUD' if ('AUD' in hint or '$' in hint) else 'EUR')))) -%}
+        {%- endif -%}
+        {{ {'now': o.now, 'today': o.today, 'tomorrow': o.tomorrow, 'step_min': (dd.step / 60) | int, 'items_in': dd.list | count, 'cur': cc.v} | tojson }}
+    sensor:
+      - name: "HESC prices"
+        unique_id: hesc_prices
+        icon: mdi:cash
+        unit_of_measurement: "per kWh"
+        state: "{{ p.now if p.now is not none else 'unknown' }}"
+        attributes:
+          raw_today: "{{ p.today }}"
+          raw_tomorrow: "{{ p.tomorrow }}"
+          tomorrow_valid: "{{ p.tomorrow | count > 0 }}"
+          source_interval_min: "{{ p.step_min }}"
+          source: "{{ states('input_select.hesc_price_source') }}"
+          resolution: "{{ states('input_select.hesc_price_resolution') }}"
+          # v2.0.0 (11-10-2026): currency of all prices (dashboard, Node-RED and the costs use these)
+          currency: "{{ p.cur | default('EUR') }}"
+          symbol: "{{ {'EUR': '€', 'SEK': 'kr', 'DKK': 'kr', 'NOK': 'kr', 'GBP': '£', 'AUD': '$'}.get(p.cur | default('EUR'), '€') }}"
+          minor: "{{ {'EUR': 'ct', 'SEK': 'öre', 'DKK': 'øre', 'NOK': 'øre', 'GBP': 'p', 'AUD': 'c'}.get(p.cur | default('EUR'), 'ct') }}"
+          # v2.0.0 (11-10-2026): way of writing amounts follows the country (from the HA time zone):
+          # kronor after the amount (12,50 kr), the euro after the amount in e.g. Germany, Spain and France (12,50 €), otherwise before (€ 12,50 / £12.50)
+          symbol_after: "{%- set z = now().tzinfo | string -%}{%- set c = p.cur | default('EUR') -%}{{ c in ['SEK', 'DKK', 'NOK'] or (c == 'EUR' and z.split('/')[-1] in ['Berlin', 'Busingen', 'Madrid', 'Canary', 'Ceuta', 'Paris', 'Monaco', 'Rome', 'Vatican', 'San_Marino', 'Lisbon', 'Madeira', 'Azores', 'Helsinki', 'Mariehamn', 'Luxembourg', 'Athens', 'Bratislava', 'Ljubljana', 'Tallinn', 'Riga', 'Vilnius', 'Zagreb', 'Andorra']) }}"
+          # decimal mark: comma in most of Europe, point in the UK, Ireland, Malta, Switzerland and outside Europe (Australia)
+          decimal: "{%- set z = now().tzinfo | string -%}{{ ',' if (z.startswith('Europe/') or z in ['Atlantic/Canary', 'Atlantic/Madeira', 'Atlantic/Azores']) and z.split('/')[-1] not in ['London', 'Dublin', 'Belfast', 'Isle_of_Man', 'Jersey', 'Guernsey', 'Gibraltar', 'Malta', 'Zurich'] else '.' }}"
+          # rough exchange rate against EUR, only to scale built-in defaults (price forecast); the own history corrects it
+          fx_vs_eur: "{{ {'EUR': 1, 'SEK': 11.5, 'DKK': 7.46, 'NOK': 11.7, 'GBP': 0.86, 'AUD': 1.75}.get(p.cur | default('EUR'), 1) }}"
+          # time zone of Home Assistant, so Node-RED uses the same day boundaries everywhere
+          tz: "{{ now().tzinfo | string }}"
   # Diagnostic mirrors of the selected sources (same idea as the hpvc_diag_* sensors).
   # They follow whatever entity is selected in Settings, convert kW to W, and give
   # the dashboard graphs one fixed set of entity ids for every installation.
@@ -578,7 +973,7 @@ template:
         state: >
           {%- set e = states('input_text.hesc_price_sensor') | trim -%}
           {{ e not in ['', 'unknown', 'unavailable'] and states(e) not in ['unknown', 'unavailable']
-             and (state_attr(e, 'raw_today') or []) | count > 0 }}
+             and (state_attr('sensor.hesc_prices', 'raw_today') or []) | count > 0 }}
 
   # Charger profile: ONE table with the data per charger (edit only here), plus a search for
   # matching entities. Recomputed only when the charger type changes, on start and on 'Search again'.
@@ -656,6 +1051,7 @@ template:
           - input_number.hesc_ev_battery_kwh
           - input_number.hesc_plan_charge_kw
           - input_boolean.hesc_rep_enabled
+          - input_boolean.hesc_vacation
           - input_select.hesc_rep_time
           - input_select.hesc_rep_goal
           - input_boolean.hesc_rep_mon
@@ -675,12 +1071,12 @@ template:
           {%- set day = states('input_select.hesc_plan_day') -%}
           {%- set base = today_at(states('input_select.hesc_plan_time')) -%}
           {%- if day == 'Today' -%}{%- set off = 0 -%}{%- elif day == 'Tomorrow' -%}{%- set off = 1 -%}{%- elif day in wds -%}{%- set off = (wds.index(day) - now().weekday()) % 7 -%}{%- if off == 0 and base <= now() -%}{%- set off = 7 -%}{%- endif -%}{%- else -%}{%- set off = 1 -%}{%- endif -%}
-          {%- set fx_ts = state_attr('input_datetime.hesc_plan_deadline', 'timestamp') | float(0) -%}{#- v1.4.0: one-off deadline fixed when day/time is chosen -#}{%- set one_dl = (fx_ts | as_datetime | as_local) if fx_ts > (as_timestamp(now()) - 400 * 86400) else base + timedelta(days=off) -%}
+          {%- set fx_ts = state_attr('input_datetime.hesc_plan_deadline', 'timestamp') | float(0) -%}{#- v1.4.0: one-off deadline fixed when day/time is chosen -#}{%- set one_dl0 = (fx_ts | as_datetime | as_local) if fx_ts > (as_timestamp(now()) - 400 * 86400) else base + timedelta(days=off) -%}{#- v1.5 (09-10-2026): the one-off plan repeats every week on its day, like an extra weekly rule for one day -#}{%- set wk = (((as_timestamp(now()) - as_timestamp(one_dl0)) / 604800) | round(0, 'floor') | int) + 1 if one_dl0 <= now() else 0 -%}{%- set one_dl = one_dl0 + timedelta(days=7 * wk) -%}
           {%- set rb = today_at(states('input_select.hesc_rep_time')) -%}
           {%- set rp = namespace(dl=none) -%}
           {%- for i in range(0, 8) -%}{%- set d = rb + timedelta(days=i) -%}{%- if rp.dl is none and d > now() and is_state('input_boolean.hesc_rep_' ~ (wds[d.weekday()] | lower), 'on') -%}{%- set rp.dl = d -%}{%- endif -%}{%- endfor -%}
           {%- set one_on = is_state('input_boolean.hesc_plan_enabled', 'on') and one_dl > now() -%}
-          {%- set rep_on = is_state('input_boolean.hesc_rep_enabled', 'on') and rp.dl is not none -%}
+          {%- set rep_on = is_state('input_boolean.hesc_rep_enabled', 'on') and not is_state('input_boolean.hesc_vacation', 'on') and rp.dl is not none -%}
           {%- if rep_on and (not one_on or rp.dl < one_dl) -%}{%- set dl = rp.dl -%}{%- set src = 'repeating' -%}{%- set goal_sel = states('input_select.hesc_rep_goal') -%}{%- else -%}{%- set dl = one_dl -%}{%- set src = 'one-off' -%}{%- set goal_sel = states('input_select.hesc_plan_goal') -%}{%- endif -%}
           {{ dl.isoformat() }}
         attributes:
@@ -689,14 +1085,15 @@ template:
             {%- set day = states('input_select.hesc_plan_day') -%}
             {%- set base = today_at(states('input_select.hesc_plan_time')) -%}
             {%- if day == 'Today' -%}{%- set off = 0 -%}{%- elif day == 'Tomorrow' -%}{%- set off = 1 -%}{%- elif day in wds -%}{%- set off = (wds.index(day) - now().weekday()) % 7 -%}{%- if off == 0 and base <= now() -%}{%- set off = 7 -%}{%- endif -%}{%- else -%}{%- set off = 1 -%}{%- endif -%}
-            {%- set fx_ts = state_attr('input_datetime.hesc_plan_deadline', 'timestamp') | float(0) -%}{#- v1.4.0: one-off deadline fixed when day/time is chosen -#}{%- set one_dl = (fx_ts | as_datetime | as_local) if fx_ts > (as_timestamp(now()) - 400 * 86400) else base + timedelta(days=off) -%}
+            {%- set fx_ts = state_attr('input_datetime.hesc_plan_deadline', 'timestamp') | float(0) -%}{#- v1.4.0: one-off deadline fixed when day/time is chosen -#}{%- set one_dl0 = (fx_ts | as_datetime | as_local) if fx_ts > (as_timestamp(now()) - 400 * 86400) else base + timedelta(days=off) -%}{#- v1.5 (09-10-2026): the one-off plan repeats every week on its day, like an extra weekly rule for one day -#}{%- set wk = (((as_timestamp(now()) - as_timestamp(one_dl0)) / 604800) | round(0, 'floor') | int) + 1 if one_dl0 <= now() else 0 -%}{%- set one_dl = one_dl0 + timedelta(days=7 * wk) -%}
             {%- set rb = today_at(states('input_select.hesc_rep_time')) -%}
             {%- set rp = namespace(dl=none) -%}
             {%- for i in range(0, 8) -%}{%- set d = rb + timedelta(days=i) -%}{%- if rp.dl is none and d > now() and is_state('input_boolean.hesc_rep_' ~ (wds[d.weekday()] | lower), 'on') -%}{%- set rp.dl = d -%}{%- endif -%}{%- endfor -%}
             {%- set one_on = is_state('input_boolean.hesc_plan_enabled', 'on') and one_dl > now() -%}
-            {%- set rep_on = is_state('input_boolean.hesc_rep_enabled', 'on') and rp.dl is not none -%}
+            {%- set rep_on = is_state('input_boolean.hesc_rep_enabled', 'on') and not is_state('input_boolean.hesc_vacation', 'on') and rp.dl is not none -%}
             {%- if rep_on and (not one_on or rp.dl < one_dl) -%}{%- set dl = rp.dl -%}{%- set src = 'repeating' -%}{%- set goal_sel = states('input_select.hesc_rep_goal') -%}{%- else -%}{%- set dl = one_dl -%}{%- set src = 'one-off' -%}{%- set goal_sel = states('input_select.hesc_plan_goal') -%}{%- endif -%}
-            {%- set soc_e = states('input_text.hesc_ev_soc_sensor') | trim -%}
+            {#- v2.0.0: sensor.hesc_ev_soc = battery level with fallbacks (Node-RED); otherwise the sensor from Settings -#}
+            {%- set soc_e = 'sensor.hesc_ev_soc' if (states('input_text.hesc_ev_soc_sensor') | trim not in ['', 'unknown', 'unavailable'] and states('sensor.hesc_ev_soc') | is_number) else states('input_text.hesc_ev_soc_sensor') | trim -%}
             {%- set soc = states(soc_e) | float(-1) if soc_e not in ['', 'unknown', 'unavailable'] else -1 -%}
             {%- set goal = goal_sel | replace('%', '') | float(80) -%}
             {%- set cap = states('input_number.hesc_ev_battery_kwh') | float(0) -%}
@@ -724,8 +1121,8 @@ template:
             {%- set solar_kwh = [sol.kwh, need_kwh] | min -%}
             {%- set grid_kwh = [need_kwh - solar_kwh, 0] | max -%}
             {%- set n = ((grid_kwh / (kw * 0.25)) | round(0, 'ceil')) | int if kw > 0 else 0 -%}
-            {%- set a = state_attr(states('input_text.hesc_price_sensor'), 'raw_today') or [] -%}
-            {%- set b = state_attr(states('input_text.hesc_price_sensor'), 'raw_tomorrow') or [] -%}
+            {%- set a = state_attr('sensor.hesc_prices', 'raw_today') or [] -%}
+            {%- set b = state_attr('sensor.hesc_prices', 'raw_tomorrow') or [] -%}
             {%- set pr = namespace(items=[], last=none) -%}
             {%- for p in a + b -%}{%- set pr.last = p.end -%}{%- if as_datetime(p.end) > now() and as_datetime(p.end) <= dl -%}{%- set pr.items = pr.items + [{'start': p.start, 'end': p.end, 'value': p.value, 'sort': p.value, 'fc': false}] -%}{%- endif -%}{%- endfor -%}
             {#- v1.3.0: after the last known price the planner may use the HESC price forecast (sensor.hesc_price_forecast);
@@ -738,8 +1135,8 @@ template:
             {%- set pf = namespace(items=[]) -%}{%- for p in pick if p.fc -%}{%- set pf.items = pf.items + [as_datetime(p.start).isoformat()] -%}{%- endfor -%}
             {%- set pl = namespace(items=[]) -%}{%- for p in pick -%}{%- set pl.items = pl.items + [as_datetime(p.start).isoformat()] -%}{%- endfor -%}
             {%- set avg = ((pick | map(attribute='value') | sum) / (pick | count) * 100) | round(1) if pick | count > 0 else none -%}
-            {%- set hrs = grid_kwh / kw if kw > 0 else 0 -%}
-            {{ {'soc': soc | round(1) if soc >= 0 else none, 'goal': goal | int, 'need_kwh': need_kwh | round(1), 'solar_kwh': solar_kwh | round(1), 'grid_kwh': grid_kwh | round(1), 'quarters': n,
+            {#- v1.4.1: show only what still fits before the ready-by time (quarters left), not what would be needed -#}{%- set fit_kwh = [grid_kwh, (pick | count) * kw * 0.25] | min -%}{%- set hrs = fit_kwh / kw if kw > 0 else 0 -%}
+            {{ {'soc': soc | round(1) if soc >= 0 else none, 'goal': goal | int, 'need_kwh': need_kwh | round(1), 'solar_kwh': solar_kwh | round(1), 'grid_kwh': fit_kwh | round(1), 'grid_kwh_needed': grid_kwh | round(1), 'quarters': pick | count, 'quarters_needed': n, 'short_of_time': n > (pick | count),
                 'charge_time': '%d:%02d' | format((hrs | int), ((hrs * 60) | int) % 60), 'kw': kw, 'avg_price_ct': avg,
                 'planned': pl.items, 'prices_complete': (pr.last is not none and as_datetime(pr.last) >= dl),
                 'prices_until': as_datetime(pr.last).isoformat() if pr.last is not none else none, 'planned_forecast': pf.items, 'forecast_until': as_datetime(fcn.last).isoformat() if fcn.last is not none else none, 'deadline': dl.isoformat(), 'source': src, 'active': one_on or rep_on, 'deadline_text': dl.strftime('%a %d-%m %H:%M') } | tojson }}
@@ -829,7 +1226,7 @@ template:
           {%- set rs = states('input_text.hesc_charger_resume_entity') | trim -%}
           {%- if rs not in ['', 'unknown'] and gone(rs) == 'True' -%}{%- set ns.m = ns.m + ['back-to-solar entity'] -%}{%- endif -%}
           {%- set p = states('input_text.hesc_price_sensor') | trim -%}
-          {%- if bad(p) == 'True' or state_attr(p, 'raw_today') is none -%}{%- set ns.m = ns.m + ['price sensor'] -%}{%- endif -%}
+          {%- if bad(p) == 'True' or (state_attr('sensor.hesc_prices', 'raw_today') or []) | count == 0 -%}{%- set ns.m = ns.m + ['price sensor'] -%}{%- endif -%}
           {%- if bad(states('input_text.hesc_solar_today_sensor') | trim) == 'True' -%}{%- set ns.m = ns.m + ['solar forecast today'] -%}{%- endif -%}
           {{ ns.m | count == 0 }}
         attributes:
@@ -841,7 +1238,7 @@ template:
             {%- set rs = states('input_text.hesc_charger_resume_entity') | trim -%}
             {%- if rs not in ['', 'unknown'] and gone(rs) == 'True' -%}{%- set ns.m = ns.m + ['back-to-solar entity'] -%}{%- endif -%}
             {%- set p = states('input_text.hesc_price_sensor') | trim -%}
-            {%- if bad(p) == 'True' or state_attr(p, 'raw_today') is none -%}{%- set ns.m = ns.m + ['price sensor'] -%}{%- endif -%}
+            {%- if bad(p) == 'True' or (state_attr('sensor.hesc_prices', 'raw_today') or []) | count == 0 -%}{%- set ns.m = ns.m + ['price sensor'] -%}{%- endif -%}
             {%- if bad(states('input_text.hesc_solar_today_sensor') | trim) == 'True' -%}{%- set ns.m = ns.m + ['solar forecast today'] -%}{%- endif -%}
             {{ ns.m | join(', ') }}
       - name: "HESC check home battery and EV"
@@ -881,13 +1278,13 @@ template:
       - name: "HESC expected charge cost"
         unique_id: hesc_planned_cost
         icon: mdi:cash-clock
-        unit_of_measurement: "EUR"
-        device_class: monetary
         state: >-
           {%- set raw = state_attr('sensor.hesc_charge_plan', 'plan') -%}
           {%- set P = (raw | from_json if raw is string else raw) or {} -%}
-          {%- if P.get('active') -%}{{ ((P.get('grid_kwh') | float(0)) * (P.get('avg_price_ct') | float(0)) / 100) | round(2) }}{%- else -%}0{%- endif -%}
+          {#- v1.4.1: no cost while the EV already charges by itself (plan leaves it alone) -#}{%- if P.get('active') and not states('input_text.hesc_plan_status').startswith('EV already charging') -%}{#- v1.5: same cost rules as the Costs page (all-in, or (price + mark-up) x (1 + VAT)) -#}{%- set allin = is_state('input_boolean.hesc_costs_all_in', 'on') -%}{%- set mk = 0 if allin else states('input_number.hesc_costs_markup') | float(0) -%}{%- set vat = 0 if allin else states('input_number.hesc_costs_vat') | float(0) -%}{%- set g = P.get('grid_kwh') | float(0) -%}{{ ((g * (P.get('avg_price_ct') | float(0)) / 100 + g * mk) * (1 + vat / 100)) | round(2) }}{%- else -%}0{%- endif -%}
         attributes:
+          # v2.0.0 (11-10-2026): amount with the currency sign of the prices, for the badge on Main (decimal mark and spacing of the country)
+          display: "{%- set dc = state_attr('sensor.hesc_prices', 'decimal') or ',' -%}{%- set aft = state_attr('sensor.hesc_prices', 'symbol_after') -%}{%- set amt = ('%.2f' | format(this.state | float(0))) | replace('.', dc) -%}{%- set sym = state_attr('sensor.hesc_prices', 'symbol') or '€' -%}{{ (amt ~ ' ' ~ sym) if aft else (sym ~ ('' if dc == '.' else ' ') ~ amt) }}"
           grid_kwh: >-
             {%- set raw = state_attr('sensor.hesc_charge_plan', 'plan') -%}{%- set P = (raw | from_json if raw is string else raw) or {} -%}{{ P.get('grid_kwh') | float(0) | round(1) }}
           avg_price_ct: >-
@@ -898,15 +1295,39 @@ template:
             {%- set raw = state_attr('sensor.hesc_charge_plan', 'plan') -%}{%- set P = (raw | from_json if raw is string else raw) or {} -%}{{ (P.get('planned_forecast') or []) | count > 0 }}
 
 input_button:
+  # v2.0.0 (11-10-2026): export the charging costs (Node-RED writes /homeassistant/hesc-data/charging_costs_days.csv and charging_costs_months.csv)
+  hesc_costs_export:
+    name: "HESC export charging costs"
+    icon: mdi:file-delimited-outline
+  # v2.0.0 (10-10-2026): send a test notification to the chosen phones
+  hesc_notify_test:
+    name: "HESC send a test notification"
+    icon: mdi:message-badge-outline
   hesc_generate_report:
     name: "HESC Generate report"
     icon: mdi:file-document-plus-outline
   hesc_charger_search:
     name: "HESC search charger entities again"
     icon: mdi:magnify
+  # v1.5: settings back-up / restore / back to standard values (Node-RED writes /homeassistant/hesc-data/settings_backup.json)
+  hesc_settings_backup:
+    name: "HESC back up settings"
+    icon: mdi:content-save-cog-outline
+  hesc_settings_restore:
+    name: "HESC restore settings from back-up"
+    icon: mdi:backup-restore
+  hesc_settings_reset:
+    name: "HESC back to standard values"
+    icon: mdi:restore
 
 # --- Charge plan ---
 input_datetime:
+  # v2.0.0 (11-10-2026): optional last day of the holiday; the day after, holiday mode switches itself off
+  hesc_vacation_until:
+    name: "HESC holiday until"
+    has_date: true
+    has_time: false
+    icon: mdi:calendar-end
   hesc_plan_deadline:
     name: "HESC charge plan ready by"
     has_date: true
@@ -916,6 +1337,39 @@ input_datetime:
 # Charger type: fills the brand-specific values and suggests the charger entities.
 # The data per charger lives in one place: sensor.hesc_charger_profile (template section).
 input_select:
+  # v2.0.0 (11-10-2026): time of the daily morning summary
+  hesc_morning_summary_time:
+    name: "HESC morning summary time"
+    options: ["06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30", "10:00"]
+    icon: mdi:clock-outline
+  # v2.0.0 (10-10-2026): pick a phone to add it to / remove it from the notification list.
+  # The options are filled by automation hesc_notify_pick_options from the Home Assistant companion apps
+  # (mobile_app); a tick (✓) means the phone already gets HESC notifications.
+  hesc_notify_pick:
+    name: "HESC notifications: add or remove a phone"
+    icon: mdi:cellphone-message
+    options:
+      - "Choose a phone"
+  # v1.5: where HESC gets its day-ahead prices (see the price adapter under template:)
+  hesc_price_source:
+    name: "HESC price source"
+    options: ["Price list in sensor", "EnergyZero / ANWB Energie", "EasyEnergy", "Tibber", "Nord Pool (official)"]
+    icon: mdi:cash-sync
+  # v1.5: Automatic = follow the source; Per hour = every quarter gets the average of its hour (supplier bills per hour)
+  # v2.0.0 (11-10-2026): currency of the prices. Automatic = from the price sensor (unit or 'currency' attribute)
+  hesc_currency:
+    name: "HESC currency"
+    options: ["Automatic", "EUR", "SEK", "DKK", "NOK", "GBP", "AUD"]
+    icon: mdi:cash-multiple
+  hesc_price_resolution:
+    name: "HESC price resolution"
+    options: ["Automatic", "Per quarter", "Per hour"]
+    icon: mdi:timer-sand
+  # v1.5 dummy: period shown on the charging costs page
+  hesc_costs_period:
+    name: "HESC charging costs period"
+    options: ["Days", "Weeks", "Months", "Quarters", "Year"]
+    icon: mdi:calendar-range
   # --- Charge plan ---
   hesc_plan_day:
     name: "HESC charge plan day"
@@ -955,6 +1409,72 @@ input_select:
       - "Other (manual)"
 
 automation:
+  # v2.0.0 (11-10-2026): holiday mode ends by itself the day after the chosen end date.
+  # The end date only counts when it lies after the day holiday mode was switched on (an old date or today = no end date).
+  - id: hesc_vacation_end
+    alias: "HESC - Holiday mode ends"
+    mode: single
+    triggers:
+      - trigger: time
+        at: "00:01:00"
+      - trigger: homeassistant
+        event: start
+    conditions:
+      - condition: state
+        entity_id: input_boolean.hesc_vacation
+        state: "on"
+      - condition: template
+        value_template: >-
+          {%- set u = states('input_datetime.hesc_vacation_until') -%}
+          {%- set since = (states.input_boolean.hesc_vacation.last_changed | as_local).date() | string -%}
+          {{ u not in ['unknown', 'unavailable', ''] and u > since and (now().date() | string) > u }}
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.hesc_vacation
+  # 10-10-2026: start threshold per month - high in summer, lower in spring/autumn, lowest in winter -
+  # so the charger in Eco starts with as little grid power as possible. Hold threshold = 75 % of start.
+  # Runs every night at 00:05, at HA start and when switched on; only when input_boolean.hesc_seasonal_threshold
+  # is on. Overwrites the two threshold fields (switch it off to set them by hand).
+  - id: hesc_seasonal_threshold
+    alias: "HESC - Seasonal start threshold"
+    mode: single
+    triggers:
+      - trigger: time
+        at: "00:05:00"
+      - trigger: homeassistant
+        event: start
+      - trigger: state
+        entity_id: input_boolean.hesc_seasonal_threshold
+        to: "on"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.hesc_seasonal_threshold
+        state: "on"
+    actions:
+      - variables:
+          m: "{{ now().month }}"
+          p_start: >-
+            {% if m in [6, 7] %}2500{% elif m in [4, 5, 8, 9] %}2000{% elif m in [3, 10] %}1500{% else %}1200{% endif %}
+          p_hold: "{{ ((p_start | int * 0.75 / 50) | round(0) * 50) | int }}"
+      - if:
+          - condition: template
+            value_template: "{{ states('input_number.hesc_p_start') | float(0) != p_start | float(0) }}"
+        then:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.hesc_p_start
+            data:
+              value: "{{ p_start | float(0) }}"
+      - if:
+          - condition: template
+            value_template: "{{ states('input_number.hesc_p_hold') | float(0) != p_hold | float(0) }}"
+        then:
+          - action: input_number.set_value
+            target:
+              entity_id: input_number.hesc_p_hold
+            data:
+              value: "{{ p_hold | float(0) }}"
   # v1.4.0: fix the one-off deadline when day or time is chosen (or the plan is switched on).
   # "Tomorrow" chosen on Wednesday stays Thursday, also after midnight. After the deadline the one-off plan is finished.
   - id: hesc_plan_fix_deadline
@@ -1286,3 +1806,110 @@ automation:
         data: { value: 3 }
       - action: input_boolean.turn_on
         target: { entity_id: input_boolean.hesc_defaults_min_charge_applied }
+
+  # --- v2.0.0 (10-10-2026): notifications to the phone ---------------------------------------
+  # Fill the phone list (✓ = gets notifications) at start, after a reload and whenever the choice changes.
+  - id: hesc_notify_pick_options
+    alias: "HESC - Notification phones: fill the list"
+    mode: queued
+    triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: event
+        event_type: automation_reloaded
+      - trigger: state
+        entity_id: sensor.hesc_notification_phones
+      - trigger: time_pattern
+        hours: "/1"
+    actions:
+      - delay: "00:00:02"
+      - action: input_select.set_options
+        target: { entity_id: input_select.hesc_notify_pick }
+        data:
+          options: >-
+            {%- set ns = namespace(o=['Choose a phone']) -%}
+            {%- for p in state_attr('sensor.hesc_notification_phones', 'phones') or [] -%}
+            {%- set ns.o = ns.o + [('✓ ' if p.chosen else '') ~ p.name] -%}
+            {%- endfor -%}
+            {{ ns.o }}
+  # Picking a phone switches it on or off in input_text.hesc_notify_services; then the list goes back to "Choose a phone".
+  - id: hesc_notify_pick_toggle
+    alias: "HESC - Notification phones: add or remove"
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: input_select.hesc_notify_pick
+        not_to: ["Choose a phone", "unknown", "unavailable"]
+    actions:
+      - variables:
+          picked: "{{ trigger.to_state.state | replace('✓ ', '') }}"
+          phone: >-
+            {{ (state_attr('sensor.hesc_notification_phones', 'phones') or []) | selectattr('name', 'eq', picked) | map(attribute='service') | first | default('') }}
+          current: >-
+            {{ states('input_text.hesc_notify_services').split(',') | map('trim') | reject('eq', '') | list }}
+          new_list: >-
+            {%- if phone == '' -%}{{ current }}
+            {%- elif phone in current -%}{{ current | reject('eq', phone) | list }}
+            {%- else -%}{{ current + [phone] }}{%- endif -%}
+      - action: input_text.set_value
+        target: { entity_id: input_text.hesc_notify_services }
+        data:
+          value: "{{ new_list | join(', ') }}"
+      - action: input_select.select_option
+        target: { entity_id: input_select.hesc_notify_pick }
+        data: { option: "Choose a phone" }
+  # Test: one message to every chosen phone (or only inside Home Assistant when none is chosen).
+  - id: hesc_notify_test
+    alias: "HESC - Notification phones: send a test"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: input_button.hesc_notify_test
+        not_to: ["unknown", "unavailable"]
+    actions:
+      - variables:
+          targets: >-
+            {{ states('input_text.hesc_notify_services').split(',') | map('trim') | select('search', '^notify\\.') | list }}
+      - if: "{{ targets | count == 0 }}"
+        then:
+          - action: persistent_notification.create
+            data:
+              title: "HESC test"
+              message: "No phone chosen yet: HESC notifications only appear inside Home Assistant."
+        else:
+          - repeat:
+              for_each: "{{ targets }}"
+              sequence:
+                - action: "{{ repeat.item }}"
+                  continue_on_error: true
+                  data:
+                    title: "HESC test"
+                    message: "This phone gets the notifications from Home EV Solar Control."
+
+  # --- v2.0.0: auto advice and the seasonal start threshold exclude each other (one system at a time) ---
+  - id: hesc_advice_auto_exclusive
+    alias: "HESC - Auto advice and seasonal threshold exclude each other"
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.hesc_advice_auto
+        to: "on"
+        id: auto
+      - trigger: state
+        entity_id: input_boolean.hesc_seasonal_threshold
+        to: "on"
+        id: season
+    actions:
+      - choose:
+          - conditions:
+              - condition: trigger
+                id: auto
+            sequence:
+              - action: input_boolean.turn_off
+                target: { entity_id: input_boolean.hesc_seasonal_threshold }
+          - conditions:
+              - condition: trigger
+                id: season
+            sequence:
+              - action: input_boolean.turn_off
+                target: { entity_id: input_boolean.hesc_advice_auto }

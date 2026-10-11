@@ -10,6 +10,8 @@ HESC runs **with or without** [Home PV Control (HPVC)](https://github.com/BioPC/
 - **HACS**, for the dashboard cards in step 3.
 - **A solar power forecast** in watts. The easiest is the [Solcast PV Forecast](https://github.com/BJReplay/ha-solcast-solar) integration (via HACS), which gives `power_now` and `power_in_30_minutes`.
 - **Your charger** in Home Assistant, with a connected sensor, a charging power sensor and a mode entity. See [05 Chargers and sources](05-chargers-and-sources.md).
+- **One planner per charger.** Turn off charging schedules in your charger's own app (or in another integration) while HESC plans your charging. Two planners on one charger get in each other's way: the charger does not start when HESC asks, or starts when it shouldn't. After an update of the charger app or firmware, check that no schedule has appeared by itself.
+- **Optional: dynamic prices** for the charge plan, cheap chances and the Costs page. See [Energy prices](05-chargers-and-sources.md#energy-prices) for the supported sources and countries.
 - **Node-RED.** If you already use HPVC or Home Battery Control, you have it. Otherwise:
   1. Home Assistant → **Settings → Add-ons → Add-on store** → install **Node-RED** (Home Assistant Community Add-ons).
   2. On the add-on's **Configuration** tab, fill in `credential_secret` (any long random text; the add-on does not start without it). If you do not use SSL certificates, set `ssl` to off.
@@ -30,6 +32,8 @@ HESC runs **with or without** [Home PV Control (HPVC)](https://github.com/BioPC/
 3. Run a configuration check, then restart Home Assistant.
 4. On first start the automation **HESC - Apply defaults on first install** fills in the defaults once. HESC starts **enabled** and in **shadow mode**.
 
+**Upgrading** from an earlier version? Follow the steps in the release notes of the new version (for v2.0.0: [Upgrade from v1.4.0](../releases/v2.0.0/release.md#upgrade-from-v140)). Your settings and history stay.
+
 ## 2. Node-RED flow
 
 1. Node-RED → Menu → Import → select `node-red/hesc_flow.json`.
@@ -41,6 +45,10 @@ HESC runs **with or without** [Home PV Control (HPVC)](https://github.com/BioPC/
 Files are written to the Home Assistant configuration mount of the Node-RED add-on (`/homeassistant`):
 
 - history: `/homeassistant/hesc-data/history.jsonl`
+- price history for the price forecast: `/homeassistant/hesc-data/price_history.json`
+- charging costs per day: `/homeassistant/hesc-data/charging_costs.json`, and the CSV export `charging_costs_days.csv` / `charging_costs_months.csv`
+- battery level at plug-in (for the fallback): `/homeassistant/hesc-data/ev_soc_plugins.json`
+- settings back-up: `/homeassistant/hesc-data/settings_backup.json` (plus dated copies)
 - report: `/homeassistant/www/hesc/report.html` → `/local/hesc/report.html`
 
 ## 3. Dashboard
@@ -54,9 +62,10 @@ Install these through HACS (Frontend) before adding the dashboard:
 | Card | Needed for | Required |
 |---|---|---|
 | [apexcharts-card](https://github.com/RomRider/apexcharts-card) | *Solar forecast vs actual · EV* and *Solar charging forecast* charts | Yes |
-| [button-card](https://github.com/custom-cards/button-card) | *Expected solar charging* bar (sunrise → sunset, a green block per 30 minutes where charging is expected) | Optional |
+| [button-card](https://github.com/custom-cards/button-card) | *Expected solar charging* bar (sunrise → sunset, a green block per 30 minutes where charging is expected) and the **Costs** page | Optional |
+| [card-mod](https://github.com/thomasloven/lovelace-card-mod) | Tighter padding, equal card heights in a row, and the price-chart title in your own currency (cents, öre, øre, pence) | Optional |
 
-The *Expected solar charging* bar is only shown when button-card is installed. The dashboard checks this with the HACS update entity `update.button_card_update`. Without button-card the bar simply stays hidden; the rest of the dashboard works as normal. If you installed button-card manually (not through HACS), that entity does not exist: remove the `visibility` block from the card to show it.
+The *Expected solar charging* bar and the Costs page are only shown when button-card is installed. The dashboard checks this with the HACS update entity `update.button_card_update`. Without button-card the bar simply stays hidden; the rest of the dashboard works as normal. If you installed button-card manually (not through HACS), that entity does not exist: remove the `visibility` block from the card to show it.
 
 ### Solcast: half-hourly forecast
 
