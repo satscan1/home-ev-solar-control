@@ -16,7 +16,7 @@
   <a href="#quick-install"><b>Quick install</b></a> &nbsp;·&nbsp; <a href="docs/README.md"><b>Documentation</b></a> &nbsp;·&nbsp; <a href="releases/v2.0.0/release.md"><b>What's new in v2.0.0</b></a> &nbsp;·&nbsp; <a href="docs/07-smart-charging-explained.md"><b>Smart charging explained</b></a>
 </p>
 
-<p align="center"><img src="screenshots/hesc_preview.webp" alt="The HESC dashboard: Main, Charge plan, Costs and HESC in other countries" width="100%"></p>
+<p align="center"><img src="screenshots/hesc_preview.webp" alt="The HESC dashboard: Main, Charge plan, Settings and Costs" width="100%"></p>
 
 ## What HESC does
 
