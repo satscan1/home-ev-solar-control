@@ -155,7 +155,7 @@ Full guide: [docs/01-installation.md](docs/01-installation.md)
 
 ## How HESC works
 
-<p align="center"><img src="screenshots/hevs_hpvc.png" alt="HESC and HPVC working together" width="100%"></p>
+<p align="center"><img src="screenshots/hesc_hpvc.png" alt="HESC and HPVC working together" width="100%"></p>
 
 Every 30 seconds HESC reads a bounded set of entities from the Node-RED Home Assistant state cache (no API reads, no copy of the full state table).
 
