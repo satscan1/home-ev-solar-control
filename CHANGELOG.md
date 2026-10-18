@@ -1,5 +1,34 @@
 # Changelog
 
+## v2.0.1 — 2026-10-18
+
+**Small fixes, fewer surprises.**
+
+Maintenance release on top of v2.0.0, no new features. See [Upgrade from v2.0.0](releases/v2.0.1/release.md#upgrade-from-v200).
+
+Kickstart (home battery and EV)
+- Fixed: when handing the charger back to solar charging, the kickstart only pressed the "back to solar" entity (`input_text.hesc_charger_resume_entity`). On a Wallbox that does not undo the start command, so the EV kept charging at full power from the grid until full. It now also selects the solar mode value (`input_text.hesc_charger_eco_value`) on the charger mode entity (`input_text.hesc_charger_mode_entity`) after a start, after a pause and after *home batteries first*, and keeps asking during the watch phase while the charger is not in its solar mode. No change when no charger mode entity is set. Known limit: see *Questions and answers*.
+
+Charge plan
+- A charger that refuses to start is no longer retried all morning: after 3 starts in a row in which the EV took no power at all, the plan stops trying and sends one P1 notification *Charger refuses to start* (history line `start_refused`). Within the final-check window before the ready-by time (default 60 min) the plan still makes one more try, whatever the start reason (status *Final check: one more try after refused starts*); if that fails too, it stops for this plan. The count resets when the EV charges, is unplugged or the plan changes. An EV that charged and then stopped by itself does not count.
+
+Charger setup
+- Fixed: on a new installation, picking a brand other than Wallbox kept the install default `eco_mode` in `input_text.hesc_charger_eco_value`, so HESC did not see that charger's solar mode. The brand's value is now filled in at the first choice (from *Not chosen*), and existing installations with another brand that still have exactly `eco_mode` are repaired at the next start (automation *HESC - Apply charger type*). A value typed by the user is never overwritten; Wallbox is never touched.
+
+Advice
+- Fixed: after a Home Assistant restart `sensor.hesc_advice_threshold` was gone and the advice block showed *Working it out…* until 21:35, because Node-RED still had the old value in its cache. The node *Advice: when to run* now detects the restart and works the advice out again.
+
+Costs
+- Fixed: *Charging costs (sun / grid)* used the Node-RED time zone for day boundaries; it now uses the Home Assistant time zone like the rest of HESC (matters for Node-RED in Docker on UTC).
+
+Other
+- Removed a duplicate definition of *HESC solar still to come today* (`unique_id: hesc_solar_remaining_today`) from the package; no more warning at start-up.
+- *Home battery and EV (kickstart)*: status text is written at once on a new situation, number-only changes at most every 15 minutes.
+- New docs page *Questions and answers* (`docs/09-questions-and-answers.md`).
+- Version label v2.0.1 on Main, in the report and in the round timer.
+
+Upgrade from v2.0.0: replace the package and restart Home Assistant, re-import the flow and deploy *Modified flows*, replace the dashboard. Settings and history are kept.
+
 ## v2.0.0 — 2026-10-11
 
 **One dashboard, any country: prices, costs and notifications grown up.**
