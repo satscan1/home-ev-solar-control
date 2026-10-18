@@ -8,7 +8,7 @@
 *Now with: what charging cost, any price source and currency, and notifications on your phone.*
 
 <p>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v2.0.0-blue" alt="Release v2.0.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/release-v2.0.1-blue" alt="Release v2.0.1"></a>
   <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-ready-41BDF5" alt="Home Assistant ready"></a>
   <a href="https://nodered.org/"><img src="https://img.shields.io/badge/Node--RED-flow-8F0000" alt="Node-RED flow"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="GPL-3.0-or-later"></a>
@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="#quick-install"><b>Quick install</b></a> &nbsp;·&nbsp; <a href="docs/README.md"><b>Documentation</b></a> &nbsp;·&nbsp; <a href="releases/v2.0.0/release.md"><b>What's new in v2.0.0</b></a> &nbsp;·&nbsp; <a href="docs/07-smart-charging-explained.md"><b>Smart charging explained</b></a>
+  <a href="#quick-install"><b>Quick install</b></a> &nbsp;·&nbsp; <a href="docs/README.md"><b>Documentation</b></a> &nbsp;·&nbsp; <a href="releases/v2.0.1/release.md"><b>What's new in v2.0.1</b></a> &nbsp;·&nbsp; <a href="docs/07-smart-charging-explained.md"><b>Smart charging explained</b></a>
 </p>
 
 <p align="center"><img src="screenshots/hesc_dashboard_tour.webp" alt="The HESC dashboard: Main, Charge plan, Settings and Costs" width="100%"></p>
@@ -52,7 +52,7 @@ HPVC is optional: HESC runs **on its own (standalone)** or **together with HPVC*
 
 **New to HESC?** Start with [Smart charging explained](docs/07-smart-charging-explained.md): what HESC does between plugging in and leaving, and what to do in common situations.
 
-**Upgrading from v1.4.0?** Read the [v2.0.0 release notes](releases/v2.0.0/release.md#upgrade-from-v140) first.
+**Upgrading from v2.0.0?** Read the [v2.0.1 release notes](releases/v2.0.1/release.md#upgrade-from-v200). **Coming from v1.4.0?** Follow the [v2.0.0 upgrade](releases/v2.0.0/release.md#upgrade-from-v140) first.
 
 > [!IMPORTANT]
 > A new install starts in **shadow mode**: HESC evaluates and logs every decision, but never starts the charger and never asks HPVC for anything. Switch shadow mode off after you have checked the report for your own installation.
@@ -417,8 +417,10 @@ The Node-RED flow has four tabs: **Inputs** (30-second trigger and startup safet
 - [A day in practice](docs/06-a-day-in-practice.md)
 - [Smart charging explained](docs/07-smart-charging-explained.md) · [Nederlands](docs/07-smart-charging-explained.nl.md)
 - [The dashboard explained](docs/08-dashboard.md) · [Nederlands](docs/08-dashboard.nl.md)
+- [Questions and answers](docs/09-questions-and-answers.md)
 - [Documentation index](docs/README.md)
 - [Changelog](CHANGELOG.md)
+- [v2.0.1 release notes](releases/v2.0.1/release.md)
 - [v2.0.0 release notes](releases/v2.0.0/release.md)
 - [v1.4.0 release notes](releases/v1.4.0/release.md)
 - [v1.3.0 release notes](releases/v1.3.0/release.md)
@@ -501,6 +503,7 @@ docs/
   07-smart-charging-explained.nl.md
   08-dashboard.md
   08-dashboard.nl.md
+  09-questions-and-answers.md
   README.md
 
 releases/
@@ -510,6 +513,7 @@ releases/
   v1.3.0/
   v1.4.0/
   v2.0.0/
+  v2.0.1/
 ```
 
 </details>

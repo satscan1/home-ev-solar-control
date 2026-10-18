@@ -1,6 +1,6 @@
 # =============================================================================
 # Home EV Solar Control (HESC) — Home Assistant package
-# Version: v2.0.0 (2026-10-11)
+# Version: v2.0.1 (2026-10-18)
 # Project tag: [WALLBOX] [PV]
 #
 # Makes sure the EV has the energy you want at the time you want, charged the
@@ -599,25 +599,6 @@ template:
             {%- set ns.p = ns.p + [{'name': device_attr(d, 'name_by_user') or device_attr(d, 'name'), 'service': sv, 'chosen': sv in chosen}] -%}
             {%- endfor -%}
             {{ ns.p }}
-  # --- 10-10-2026: solar still to come today (Live Inputs on Main) ----------------------------------
-  # Same forecast HESC decides on: the "solar today" sensor from Settings (Solcast detailedForecast) and the
-  # forecast attribute from Settings (cautious estimate by default); half hours from now to the end of the day.
-  - sensor:
-      - name: "HESC solar still to come today"
-        unique_id: hesc_solar_remaining_today
-        unit_of_measurement: kWh
-        icon: mdi:weather-sunset-down
-        availability: "{{ state_attr(states('input_text.hesc_solar_today_sensor'), 'detailedForecast') is not none }}"
-        state: >-
-          {% set src = states('input_text.hesc_solar_today_sensor') %}
-          {% set key = {'estimate':'pv_estimate','estimate10':'pv_estimate10','estimate90':'pv_estimate90'}.get(states('input_text.hesc_forecast_attribute'), 'pv_estimate10') %}
-          {% set ns = namespace(k=0) %}
-          {% for p in state_attr(src, 'detailedForecast') or [] %}
-            {% set s = as_datetime(p.period_start) if p.period_start is string else p.period_start %}
-            {% set e = s + timedelta(minutes=30) %}
-            {% if e > now() %}{% set frac = [ (e - [s, now()] | max).total_seconds() / 1800, 1 ] | min %}{% set ns.k = ns.k + (p[key] | float(0)) * 0.5 * frac %}{% endif %}
-          {% endfor %}
-          {{ ns.k | round(1) }}
   # --- 10-10-2026: solar still to come today (Live Inputs on Main) ----------------------------------
   # Same forecast HESC decides on: the "solar today" sensor from Settings (Solcast detailedForecast) and the
   # forecast attribute from Settings (cautious estimate by default); half hours from now to the end of the day.
@@ -1527,8 +1508,17 @@ automation:
             {{ trigger.platform == 'state' and trigger.entity_id == 'sensor.hesc_charger_profile'
                and trigger.from_state is not none and trigger.from_state.state != trigger.to_state.state
                and trigger.from_state.state not in ['Not chosen', 'Other (manual)', 'unknown', 'unavailable'] }}
+          # v2.0.1 (12-10-2026): first brand choice after a new install (from "Not chosen"): the install default "eco_mode"
+          # is replaced by the brand's own solar value(s), e.g. Alfen. A value the user typed in is never overwritten.
+          first_choice: >-
+            {{ trigger.platform == 'state' and trigger.entity_id == 'sensor.hesc_charger_profile'
+               and trigger.from_state is not none and trigger.from_state.state == 'Not chosen'
+               and (states('input_text.hesc_charger_eco_value') | trim) == 'eco_mode' }}
+          # v2.0.1: repair non-Wallbox installs still on install default "eco_mode"; never touches Wallbox
+          stale_default: >-
+            {{ (states('input_text.hesc_charger_eco_value') | trim) == 'eco_mode' and 'eco_mode' not in (p['values'] | string) }}
           empty: "{{ ['', 'unknown', 'unavailable'] }}"
-      - if: "{{ brand_changed or (states('input_text.hesc_charger_eco_value') | trim) in empty }}"
+      - if: "{{ brand_changed or first_choice or stale_default or (states('input_text.hesc_charger_eco_value') | trim) in empty }}"
         then:
           - action: input_text.set_value
             target: { entity_id: input_text.hesc_charger_eco_value }
