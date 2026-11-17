@@ -1,4 +1,4 @@
-<a href="screenshots/banner.png" title="Click for the full overview"><img src="screenshots/hesc_logo.png" alt="HESC logo, click for the full overview" align="right" width="140"></a>
+<a href="screenshots/banner.png" title="Click for the full overview"><img src="https://raw.githubusercontent.com/satscan1/hesc-home-ev-solar-control/main/docs/images/hesc-v4-logo.png" alt="HESC logo, click for the full overview" align="right" width="140"></a>
 
 # Home EV Solar Control
 
